@@ -1,0 +1,23 @@
+# CS-80 patch portraits advance on every knob turn, including at a saturated value.
+wait 2000
+turn SELECT 5
+expect instrument 6
+press EDIT
+turn SELECT 1
+release EDIT
+expect cs80_preset 1
+turn K1 1
+expect knob_image_visible 1
+expect knob_image_frame 3
+turn K1 1
+expect knob_image_frame 0
+turn K2 1
+expect knob_image_frame 1
+turn K3 1
+expect knob_image_frame 2
+turn K4 100
+expect fx4 127
+expect knob_image_frame 0
+turn K4 1
+expect fx4 127
+expect knob_image_frame 1

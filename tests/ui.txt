@@ -1,0 +1,11 @@
+# The application draws the main screen after the splash.
+wait 1700
+shot ui.png
+turn SELECT 4
+turn K1 1
+turn K2 2
+turn K3 3
+turn K4 4
+shot ui_drums.png
+turn SELECT 1
+shot ui_synth.png

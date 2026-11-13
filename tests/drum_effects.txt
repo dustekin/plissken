@@ -1,0 +1,65 @@
+# Presets are independent, zero is dry, and EDIT+K1 changes tempo.
+wait 2000
+expect solo5 32
+turn SELECT 4
+expect instrument 5
+expect drum_chorus 0
+expect drum_reverb 0
+expect drum_compression 0
+wav drum_fx_dry.wav
+key 0 down 100
+wait 1000
+key 0 up
+wait 1000
+wavstop
+turn K1 1
+expect drum_chorus 1
+expect tempo 80
+wav drum_fx_chorus.wav
+key 0 down 100
+wait 1000
+key 0 up
+wait 1000
+wavstop
+turn K1 -1
+turn K2 2
+expect drum_reverb 2
+wav drum_fx_reverb.wav
+key 0 down 100
+wait 1000
+key 0 up
+wait 1000
+wavstop
+turn K2 -2
+turn K3 3
+expect drum_compression 3
+wav drum_fx_compression.wav
+key 0 down 100
+wait 1000
+key 0 up
+wait 1000
+wavstop
+turn K1 9
+turn K2 9
+turn K3 9
+expect drum_chorus 3
+expect drum_reverb 3
+expect drum_compression 3
+press EDIT
+turn K1 5
+release EDIT
+expect tempo 85
+expect drum_chorus 3
+turn SELECT 1
+turn K1 -4
+turn K2 -4
+turn K3 -4
+turn SELECT -1
+expect drum_chorus 3
+expect drum_reverb 3
+expect drum_compression 3
+reboot
+wait 2000
+expect drum_chorus 0
+expect drum_reverb 0
+expect drum_compression 0

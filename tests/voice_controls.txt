@@ -1,0 +1,86 @@
+wait 2000
+# Piano controls clamp independently.
+turn K1 10
+turn K2 2
+turn K3 1
+turn K4 3
+expect fx1 3
+expect fx2 2
+expect fx3 1
+expect fx4 3
+press EDIT
+turn K1 5
+release EDIT
+expect tempo 85
+expect fx1 3
+# Juno, Pro-1 and CS-50 retain separate settings.
+turn SELECT -1
+expect fx1 0
+expect fx2 0
+expect fx3 0
+expect fx4 0
+turn K1 1
+turn K2 2
+turn K3 3
+turn K4 1
+turn SELECT 2
+expect fx1 0
+turn K1 2
+turn K2 1
+turn K3 2
+turn K4 3
+turn SELECT 4
+expect fx1 0
+turn K1 3
+turn K2 3
+turn K3 1
+turn K4 2
+turn SELECT -6
+expect fx1 1
+expect fx2 2
+expect fx3 3
+expect fx4 1
+turn SELECT 1
+expect fx1 3
+expect fx2 2
+expect fx3 1
+expect fx4 3
+turn K1 -10
+turn K2 -10
+turn K3 -10
+turn K4 -10
+expect fx1 0
+expect fx2 0
+expect fx3 0
+expect fx4 0
+turn SELECT 1
+expect fx1 2
+expect fx2 1
+expect fx3 2
+expect fx4 3
+turn SELECT 4
+expect fx1 3
+expect fx2 3
+expect fx3 1
+expect fx4 2
+reboot
+wait 2000
+expect fx1 0
+expect fx2 0
+expect fx3 0
+expect fx4 0
+turn SELECT -1
+expect fx1 0
+expect fx2 0
+expect fx3 0
+expect fx4 0
+turn SELECT 2
+expect fx1 0
+expect fx2 0
+expect fx3 0
+expect fx4 0
+turn SELECT 4
+expect fx1 0
+expect fx2 0
+expect fx3 0
+expect fx4 0

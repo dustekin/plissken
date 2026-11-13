@@ -1,0 +1,41 @@
+# REC records a live key phrase, loops it, stops it, and EDIT+REC clears it.
+wait 2000
+expect phrase_state 0
+tap REC
+expect phrase_state 1
+key 3 down 100
+wait 300
+key 3 up
+wait 300
+key 5 down 100
+wait 300
+key 5 up
+wait 200
+tap REC
+expect phrase_state 2
+expect phrase_count 4
+wait 150
+expect phrase_held 8
+wait 300
+expect phrase_held 0
+wav phrase_loop.wav
+wait 2500
+wavstop
+expect peak_db_min -30
+tap REC
+expect phrase_state 0
+expect phrase_held 0
+expect phrase_count 4
+tap REC
+expect phrase_state 2
+press EDIT
+tap REC
+release EDIT
+expect phrase_state 0
+expect phrase_count 0
+# A too-short or empty take is discarded.
+tap REC
+wait 100
+tap REC
+expect phrase_state 0
+expect phrase_count 0

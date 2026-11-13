@@ -1,0 +1,29 @@
+# The template's build settings (tools/build.py)
+name = "plissken"
+id_prefix = "FM-1_1981"
+usb_manufacturer = "Plissken"
+usb_product = "Plissken FM-1"
+o2 = []                        # separate units compiled at -O2 (an app's DSP)
+vendored = ["base/"]            # the sibling fm1-base submodule is outside the app's hardware-code audit
+words = "words.tsv"
+gen = [
+    "tools/pack_lm1.py references/rossf-lm1-drum-set --output {gen}/lm1_samples.h",
+    "tools/pack_bass.py assets --output {gen}/bass_samples.h",
+    "tools/pack_splash.py assets/startup.png --out {gen}/startup_splash.h",
+    "tools/pack_portrait.py assets/jc-face.png --out {gen}/jc_face.h",
+    "tools/pack_knob_images.py assets/snake-sma4.png assets/snake-sma2.png assets/snake-sma3.png assets/snake-sma.png --out {gen}/knob_images.h",
+]
+ble = false
+ble_central = false
+# the site (tools/make_site.py, tools/publish_site.sh)
+tagline = "Seven-part soundtrack sketch instrument for the FM-1"
+repo = "https://github.com/dustekin/plissken"
+licence = "MPL-2.0"
+credits = "Built on fm1-base and felucca-bsp, from Felucca by Leo Kuroshita (Hügelton Instruments). All 13 Linn LM-1 drum samples are by Rossf and converted to 8-bit mono; user-provided portrait, knob artwork, original bass recordings, and skyline sketch are included. Color startup splash is an AI-generated adaptation of the user-provided sketch. Original reduced CS-80-inspired renderer and patches informed by CS-1 as a design reference; no CS-1 code or preset data copied. Juno filter design informed by JAZZY as a reference; no JAZZY code or data copied. Zero-delay filter design informed by J6 (MPL-2.0) as a reference; no J6 code copied. See CREDITS.md for details. No SLOOP or ChoralRoot code is imported."
+# firmware.json, for firmware hubs (docs/FIRMWARE-JSON.md): the build writes it from these and the keys above
+author = "Plissken contributors"
+description = "A seven-part FM-1 soundtrack sketch prototype with Juno-style chords, piano, Pro One-style synth, guitar, bass, LM-1 drum samples and a switchable CS-50 / reduced CS-80-inspired synth family."
+tags = ["synth", "sequencer"]
+install = "https://github.com/dustekin/plissken/releases/latest"
+site = ""
+screenshot = "docs/img/screen-playing.png"

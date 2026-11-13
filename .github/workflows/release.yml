@@ -1,0 +1,38 @@
+name: Build and attest firmware
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    uses: zvenson/fm1-build/.github/workflows/build.yml@v1
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    with:
+      sdk: true
+      build: |
+        set -euo pipefail
+        git submodule update --init --recursive
+        python3 base/tools/build.py . --release "${GITHUB_REF_NAME#v}"
+      packages: build/plissken-*.fwsc
+
+  title-release:
+    needs: release
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Name the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          version=${TAG#v}
+          gh release edit "$TAG" --title "Plissken $version Release"

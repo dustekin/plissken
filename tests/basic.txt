@@ -1,0 +1,21 @@
+# Plissken controls and saved tempo
+wait 500
+expect playing 0
+expect tempo 80
+press EDIT
+turn K1 12
+release EDIT
+wait 50
+expect tempo 92
+tap SAVE
+wait 50
+expect store_writes 1
+reboot
+wait 500
+expect tempo 92
+tap PLAY
+wait 400
+expect playing 1
+tap PLAY
+wait 50
+expect playing 0

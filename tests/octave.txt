@@ -1,0 +1,110 @@
+# Octaves belong to each pitched instrument; drums retain their sample mapping.
+wait 2000
+expect instrument 1
+expect octave 0
+key 7 down 100
+wait 50
+expect live_hz 262
+tap OCT+
+expect octave 1
+expect live_hz 262
+key 7 up
+wait 50
+key 7 down 100
+wait 50
+expect live_hz 523
+key 7 up
+wait 50
+tap OCT+
+tap OCT+
+expect octave 2
+key 7 down 100
+wait 50
+expect live_hz 1047
+key 7 up
+wait 50
+tap OCT-
+tap OCT-
+tap OCT-
+tap OCT-
+tap OCT-
+expect octave -2
+key 7 down 100
+wait 50
+expect live_hz 65
+key 7 up
+wait 50
+press OCT+
+wait 400
+expect octave -1
+release OCT+
+turn SELECT 1
+expect instrument 2
+expect octave 0
+key 7 down 100
+wait 50
+expect live_hz 262
+key 7 up
+wait 50
+tap OCT+
+key 7 down 100
+wait 50
+expect live_hz 523
+key 7 up
+wait 50
+turn SELECT 1
+expect instrument 3
+tap OCT-
+key 7 down 100
+wait 50
+expect live_hz 131
+key 7 up
+wait 50
+turn SELECT 1
+expect instrument 4
+tap OCT-
+key 7 down 100
+wait 50
+expect live_hz 131
+key 7 up
+wait 50
+turn SELECT 1
+expect instrument 5
+tap OCT+
+expect octave 0
+key 7 down 100
+wait 50
+expect live_hz 0
+key 7 up
+wait 50
+turn SELECT 1
+expect instrument 6
+tap OCT+
+key 7 down 100
+wait 50
+expect live_hz 523
+key 7 up
+wait 50
+turn SELECT 1
+expect instrument 0
+tap OCT+
+key 7 down 100
+wait 50
+expect live_hz 523
+key 7 up
+wait 50
+turn SELECT 1
+expect instrument 1
+expect octave -1
+key 7 down 100
+wait 50
+expect live_hz 131
+key 7 up
+wait 50
+turn SELECT 1
+expect instrument 2
+expect octave 1
+reboot
+wait 2000
+expect instrument 1
+expect octave 0

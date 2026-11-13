@@ -1,0 +1,13 @@
+# Keyboard selection labels/highlights follow the instrument rows.
+wait 2000
+expect instrument 1
+shot instrument_list_piano.png
+turn SELECT 3
+expect instrument 4
+shot instrument_list_bass.png
+turn SELECT 2
+expect instrument 6
+shot instrument_list_cs50_cs80.png
+turn SELECT 1
+expect instrument 7
+shot instrument_list_chord.png

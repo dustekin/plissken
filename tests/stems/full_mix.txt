@@ -1,0 +1,8 @@
+expect solo9 >0
+wait 500
+tap PLAY
+wait 1000
+wav stem_full_mix.wav
+wait 200000
+wavstop
+tap PLAY

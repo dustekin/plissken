@@ -1,0 +1,55 @@
+# Exercise all controls together during the full arrangement.
+wait 2000
+press EDIT
+turn K1 60
+release EDIT
+expect tempo 140
+turn SELECT -1
+turn K1 3
+turn K2 3
+turn K3 3
+turn K4 3
+turn SELECT 1
+turn K1 3
+turn K2 3
+turn K3 3
+turn K4 3
+turn SELECT 1
+turn K1 3
+turn K2 3
+turn K3 3
+turn K4 3
+turn SELECT 1
+turn K1 3
+turn K2 3
+turn K3 3
+turn K4 3
+turn SELECT 1
+turn K1 3
+turn K2 3
+turn K3 3
+turn K4 3
+turn SELECT 1
+turn K1 3
+turn K2 3
+turn K3 3
+turn K4 3
+turn SELECT 1
+turn K1 3
+turn K2 3
+turn K3 3
+turn K4 3
+tap PLAY
+wait 49000
+expect hits0 >0
+expect hits1 >0
+expect hits2 >0
+expect hits3 >0
+expect hits4 >0
+expect hits5 >0
+expect hits6 >0
+wav voice_all_parts.wav
+wait 5000
+wavstop
+expect peak_db_min -45
+tap PLAY

@@ -1,0 +1,39 @@
+wait 2000
+expect portrait_color_visible 0
+turn K1 2
+turn K2 2
+turn K3 2
+turn K4 2
+expect portrait_color_visible 0
+press EDIT
+turn K1 1
+turn K2 1
+turn K3 1
+turn K4 1
+release EDIT
+expect portrait_color_visible 0
+turn ALGO 1
+expect portrait_color_visible 1
+expect portrait_color 0
+turn PRESET 1
+expect portrait_color 1
+turn SELECT 1
+expect instrument 2
+expect portrait_color 2
+master 2079
+expect portrait_color 2
+master 2080
+expect portrait_color 3
+master 2048
+expect portrait_color 0
+press EDIT
+turn ALGO -2
+expect portrait_color 2
+turn PRESET 1
+expect portrait_color 3
+release EDIT
+turn K1 -2
+turn K2 -2
+turn K3 -2
+turn K4 -2
+expect portrait_color 3

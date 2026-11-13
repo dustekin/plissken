@@ -1,0 +1,8 @@
+expect solo6 >0
+wait 500
+tap PLAY
+wait 1000
+wav stem_cs50.wav
+wait 200000
+wavstop
+tap PLAY

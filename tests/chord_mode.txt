@@ -1,0 +1,109 @@
+# The eighth keyboard selection plays a user-triggered chord with configurable voicing.
+wait 2000
+turn SELECT 6
+expect instrument 7
+shot chord_piano_ui.png
+turn K1 2
+turn K2 1
+turn K3 2
+turn K4 1
+expect fx1 2
+expect fx2 1
+expect fx3 2
+expect fx4 1
+wav chord_mode.wav
+key 3 down 250
+wait 500
+key 3 up
+wait 100
+wavstop
+expect peak_db_min -30
+press EDIT
+turn SELECT 1
+release EDIT
+expect instrument 7
+expect chord_voice 1
+shot chord_juno_ui.png
+wav chord_juno.wav
+key 3 down 250
+wait 500
+key 3 up
+wait 100
+wavstop
+expect peak_db_min -30
+press EDIT
+turn SELECT 1
+release EDIT
+expect chord_voice 2
+wav chord_cs50.wav
+key 3 down 250
+wait 500
+key 3 up
+wait 100
+wavstop
+expect peak_db_min -30
+press EDIT
+turn SELECT 1
+release EDIT
+expect chord_voice 3
+wav chord_pro1.wav
+key 3 down 250
+wait 500
+key 3 up
+wait 100
+wavstop
+expect peak_db_min -30
+press EDIT
+turn SELECT 1
+release EDIT
+expect chord_voice 4
+shot chord_guitar_ui.png
+wav chord_guitar.wav
+key 3 down 250
+wait 500
+key 3 up
+wait 100
+wavstop
+expect peak_db_min -30
+press EDIT
+turn SELECT 1
+release EDIT
+expect chord_voice 0
+expect instrument 7
+
+# Split layout: EDIT+K4 toggles; upper keys pick the chord type and play nothing.
+press EDIT
+turn K4 1
+release EDIT
+expect chord_layout 1
+expect fx4 1
+key 17 down 100
+wait 300
+key 17 up
+wait 300
+expect fx1 5
+key 19 down 100
+wait 300
+key 19 up
+wait 300
+expect fx1 7
+key 25 down 100
+wait 300
+key 25 up
+wait 300
+expect fx1 7
+wav chord_split.wav
+key 3 down 250
+wait 500
+key 3 up
+wait 100
+wavstop
+expect peak_db_min -30
+press EDIT
+turn K4 -1
+release EDIT
+expect chord_layout 0
+turn K1 -10
+expect fx1 0
+turn K1 10
+expect fx1 7

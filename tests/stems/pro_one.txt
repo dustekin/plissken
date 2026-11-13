@@ -1,0 +1,8 @@
+expect solo2 >0
+wait 500
+tap PLAY
+wait 1000
+wav stem_pro_one.wav
+wait 200000
+wavstop
+tap PLAY

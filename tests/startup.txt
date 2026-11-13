@@ -1,0 +1,5 @@
+# The CS-50 phrase plays automatically after boot.
+wav startup.wav
+wait 1900
+wavstop
+expect peak_db_min -35

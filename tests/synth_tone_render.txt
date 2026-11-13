@@ -1,0 +1,29 @@
+# Renders sustained low bass and guitar notes for tone analysis (tools/analyze_tone.py).
+wait 2000
+turn SELECT 2
+expect instrument 3
+tap OCT-
+wav tone_guitar_a.wav
+key 7 down 100
+wait 1500
+key 7 up
+wait 800
+wavstop
+tap OCT+
+turn SELECT 1
+expect instrument 4
+tap OCT-
+tap OCT-
+wav tone_bass_a.wav
+key 0 down 100
+wait 1800
+key 0 up
+wait 800
+wavstop
+tap OCT+
+wav tone_bass_b.wav
+key 0 down 100
+wait 1800
+key 0 up
+wait 800
+wavstop

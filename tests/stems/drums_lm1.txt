@@ -1,0 +1,8 @@
+expect solo5 >0
+wait 500
+tap PLAY
+wait 1000
+wav stem_drums_lm1.wav
+wait 200000
+wavstop
+tap PLAY

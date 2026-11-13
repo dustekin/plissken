@@ -1,0 +1,31 @@
+# EDIT+PLAY starts the preloaded song, blocks live keys, and toggles back to normal mode.
+wait 200
+press EDIT
+press PLAY
+wait 20
+release PLAY
+release EDIT
+expect escape_mode 1
+expect playing 0
+key 7 down 100
+wait 50
+expect live_hz 0
+key 7 up
+wav escape_mode.wav
+wait 3500
+wavstop
+expect hits0 >0
+expect peak_db_min -45
+press EDIT
+press PLAY
+wait 20
+release PLAY
+release EDIT
+expect escape_mode 0
+expect playing 0
+tap PLAY
+wait 100
+expect playing 1
+tap PLAY
+wait 50
+expect playing 0

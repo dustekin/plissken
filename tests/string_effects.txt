@@ -1,0 +1,69 @@
+wait 2000
+expect solo3 8
+turn SELECT 2
+expect instrument 3
+expect fx1 0
+wav guitar_dry.wav
+key 7 down 100
+wait 800
+key 7 up
+wait 1000
+wavstop
+turn K1 2
+turn K2 2
+turn K3 3
+turn K4 2
+expect fx1 2
+expect fx2 2
+expect fx3 3
+expect fx4 2
+wav guitar_wet.wav
+key 7 down 100
+wait 800
+key 7 up
+wait 1000
+wavstop
+turn SELECT 1
+expect instrument 4
+expect solo4 16
+expect fx1 0
+expect fx2 0
+expect fx3 0
+expect fx4 0
+wav bass_dry.wav
+key 7 down 100
+wait 800
+key 7 up
+wait 1000
+wavstop
+turn K1 2
+turn K2 2
+turn K3 1
+turn K4 2
+wav bass_wet.wav
+key 7 down 100
+wait 800
+key 7 up
+wait 1000
+wavstop
+turn SELECT -1
+expect fx1 2
+expect fx2 2
+expect fx3 3
+expect fx4 2
+press EDIT
+turn K1 5
+release EDIT
+expect tempo 85
+expect fx1 2
+turn K1 10
+expect fx1 3
+turn K1 -10
+expect fx1 0
+reboot
+wait 2000
+turn SELECT 2
+expect fx1 0
+expect fx2 0
+expect fx3 0
+expect fx4 0

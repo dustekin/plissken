@@ -1,0 +1,68 @@
+# SELECT cycles all backing sounds and CHORD for the keys, preserving note-off behavior.
+wait 2000
+key 7 down 100
+wait 50
+expect keys 128
+wav piano_keyboard.wav
+wait 250
+wavstop
+expect peak_db_min -30
+key 7 up
+wait 50
+expect keys 0
+turn SELECT 1
+expect instrument 2
+key 7 down 100
+wav pro_one_keyboard.wav
+wait 250
+wavstop
+expect peak_db_min -30
+key 7 up
+turn SELECT 1
+expect instrument 3
+key 7 down 100
+wav guitar_keyboard.wav
+wait 250
+wavstop
+expect peak_db_min -30
+key 7 up
+turn SELECT 1
+expect instrument 4
+key 7 down 100
+wav bass_keyboard.wav
+wait 250
+wavstop
+expect peak_db_min -30
+key 7 up
+turn SELECT 1
+expect instrument 5
+key 7 down 100
+wav drums_keyboard.wav
+wait 250
+wavstop
+expect peak_db_min -30
+key 7 up
+turn SELECT 1
+expect instrument 6
+key 7 down 100
+wav cs50_keyboard.wav
+wait 250
+wavstop
+expect peak_db_min -30
+key 7 up
+turn SELECT 1
+expect instrument 7
+key 7 down 100
+wav chord_keyboard.wav
+wait 250
+wavstop
+expect peak_db_min -30
+key 7 up
+turn SELECT 1
+expect instrument 0
+key 7 down 100
+wav juno_keyboard.wav
+wait 250
+wavstop
+expect peak_db_min -30
+key 7 up

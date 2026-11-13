@@ -1,0 +1,8 @@
+expect solo0 >0
+wait 500
+tap PLAY
+wait 1000
+wav stem_juno.wav
+wait 200000
+wavstop
+tap PLAY

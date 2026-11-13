@@ -1,0 +1,52 @@
+# Renders short listening demos: demo_juno.wav, demo_cs50.wav, demo_guitar.wav, demo_bass.wav (build/host).
+wait 2000
+turn SELECT -1
+expect instrument 0
+wav demo_juno.wav
+key 0 down 100
+key 4 down 100
+key 7 down 100
+wait 2500
+key 0 up
+key 4 up
+key 7 up
+wait 1200
+wavstop
+turn SELECT 6
+expect instrument 6
+wav demo_cs50.wav
+key 0 down 100
+key 4 down 100
+key 7 down 100
+wait 2500
+key 0 up
+key 4 up
+key 7 up
+wait 1200
+wavstop
+turn SELECT -3
+expect instrument 3
+wav demo_guitar.wav
+key 7 down 100
+wait 1500
+key 7 up
+key 9 down 100
+wait 1500
+key 9 up
+wait 800
+wavstop
+turn SELECT 1
+expect instrument 4
+tap OCT-
+wav demo_bass.wav
+key 0 down 100
+wait 700
+key 0 up
+key 7 down 100
+wait 700
+key 7 up
+key 0 down 100
+wait 1200
+key 0 up
+wait 800
+wavstop
