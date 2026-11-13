@@ -171,6 +171,11 @@ used for the `sma1` slot because no `snake-sma1.png` asset is present.
 The image and most recently used knob's color remain visible until another knob is turned. The portrait is
 hidden at startup until the first knob turn.
 
+## License
+
+Plissken's application code is licensed under [MPL-2.0](LICENSE). Third-party code and assets may have different
+terms; see [CREDITS.md](CREDITS.md) and [base/LICENSING.md](base/LICENSING.md).
+
 ## Future direction
 
 Planned work includes further improving sound quality within the FM-1's RAM and processor budget, expanding the
