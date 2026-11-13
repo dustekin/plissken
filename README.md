@@ -32,6 +32,8 @@ audio buffers.
 At startup, a color skyline splash is shown for at least 1.5 seconds while the CS-50 voice plays its opening
 six-note phrase; the 240×144 image is packed into a four-color RGB565 palette for the FM-1 display.
 
+DON'T PRESS PLAY, IT SOUNDS AWFUL.
+I c
 ## Build and test
 
 From this directory, use the VS Code terminal opened in WSL (Ubuntu), not PowerShell. The build commands use Bash
