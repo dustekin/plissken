@@ -1,9 +1,7 @@
 # Both cleared bass samples must produce audible output from live keys.
 wait 2000
 turn SELECT 3
-press EDIT
-turn K4 1
-release EDIT
+turn PRESET 1
 expect bass_sound 1
 wav bass_nomore.wav
 key 3 down 250
@@ -12,11 +10,45 @@ key 3 up
 wait 100
 wavstop
 expect peak_db_min -30
-press EDIT
-turn K4 1
-release EDIT
+turn PRESET 1
 expect bass_sound 2
-wav bass_buzz.wav
+wav bass_808.wav
+key 3 down 250
+wait 500
+key 3 up
+wait 100
+wavstop
+expect peak_db_min -30
+turn PRESET 1
+expect bass_sound 3
+wav bass_plunk1.wav
+key 3 down 250
+wait 500
+key 3 up
+wait 100
+wavstop
+expect peak_db_min -30
+turn PRESET 1
+expect bass_sound 4
+wav bass_plunk2.wav
+key 3 down 250
+wait 500
+key 3 up
+wait 100
+wavstop
+expect peak_db_min -30
+turn PRESET 1
+expect bass_sound 5
+wav bass_plunk3.wav
+key 3 down 250
+wait 500
+key 3 up
+wait 100
+wavstop
+expect peak_db_min -30
+turn PRESET 1
+expect bass_sound 6
+wav bass_plunk4.wav
 key 3 down 250
 wait 500
 key 3 up

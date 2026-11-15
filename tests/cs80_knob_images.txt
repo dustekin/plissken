@@ -2,9 +2,7 @@
 wait 2000
 turn SELECT 5
 expect instrument 6
-press EDIT
-turn SELECT 1
-release EDIT
+turn PRESET 1
 expect cs80_preset 1
 turn K1 1
 expect knob_image_visible 1

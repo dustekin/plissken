@@ -11,6 +11,9 @@ release.
   ([@kurogedelic](https://github.com/kurogedelic), Hügelton Instruments). See [fm1-base credits](./base/CREDITS.md)
   and [licensing notes](./base/LICENSING.md) for additional contributors, provenance, and license details.
 - **SLOOP** is a workflow and sample-configuration reference only; no SLOOP code has been imported into Plissken.
+- **Felucca** (hugelton/Felucca, GPL-3.0-only) is the design reference for the hold-a-button quick layers (GLO mutes and
+  tap tempo, FX momentary effects, SEQ tools, LFO momentary changes). Only the behaviour was copied, in a smaller form;
+  the code in `app.c` was written for Plissken and no Felucca source was imported.
 - **ChoralRoot FM-1** ([Quixotic7/ChoralRootFM1](https://github.com/Quixotic7/ChoralRootFM1)) is an Orchid-style
   chord-workflow reference only. License review (2026-11-09): it is Felucca-derived and `GPL-3.0-only` (Copyright
   (C) 2026 Leo Kuroshita; some ported parts keep BSD-3/MIT/Apache-2.0/GPL-3.0-or-later terms). Its code is not
@@ -37,9 +40,14 @@ release.
 
 ## Samples
 
-- **Original bass recordings:** [`assets/NoMoreBass.wav`](assets/NoMoreBass.wav) and
-  [`assets/BuzzBassBuzz.wav`](assets/BuzzBassBuzz.wav) are the project owner's own one-note recordings; the owner
-  holds the rights and no credit is required. They are converted to 8-bit mono for firmware at build time.
+- **Original bass recordings:** [`assets/NoMoreBass.wav`](assets/NoMoreBass.wav),
+  [`assets/Bass808.wav`](assets/Bass808.wav) and `assets/BassPlunk1.wav` through `assets/BassPlunk4.wav` are the
+  project owner's own recordings; the owner holds the rights, confirmed they may be used freely, and no credit is
+  required. They are converted (and resampled from 48 kHz where needed) to 8-bit mono for firmware at build time.
+  The earlier BuzzBassBuzz sample was removed.
+- **Guitar riffs:** `assets/GuitarRiff1.wav` through `assets/GuitarRiff3.wav` were supplied by the project owner from
+  their own riff folder (`r1.wav`, `r11.wav`, `r13.wav`) as free-to-use material for this project; no credit is required.
+  They are converted (resampled from 48 kHz) to 8-bit mono at build time.
 - All 13 samples packed into Plissken builds are from **Rossf's**
   [Linn LM1 (LM-1) Drum Set pack 4919](https://freesound.org/people/rossf/packs/4919/), licensed under
   [Creative Commons Sampling+ 1.0](https://creativecommons.org/licenses/sampling+/1.0/). They are converted from

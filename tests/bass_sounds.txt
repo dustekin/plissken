@@ -6,21 +6,17 @@ expect bass_sound 0
 turn K4 2
 expect bass_sound 0
 expect fx4 2
-press EDIT
-turn K4 1
-release EDIT
+turn PRESET 1
 expect bass_sound 1
 expect fx4 2
-press EDIT
-turn K4 1
-release EDIT
+turn PRESET 1
 expect bass_sound 2
 expect fx4 2
 turn K4 -1
 expect bass_sound 2
 expect fx4 1
-press EDIT
-turn K4 -4
-release EDIT
+turn PRESET -4
 expect bass_sound 0
+turn PRESET 9
+expect bass_sound 6
 expect fx4 1

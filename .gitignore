@@ -3,3 +3,5 @@ renders/
 web/words/
 dsp/lm1_samples.h
 dsp/song.h
+
+builds/*.fwsc

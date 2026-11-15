@@ -9,7 +9,11 @@ from pathlib import Path
 SAMPLE_RATE = 44100
 SAMPLES = (
     ("bass_nomore", "BASS_NOMORE_LENGTH", "NoMoreBass.wav"),
-    ("bass_buzz", "BASS_BUZZ_LENGTH", "BuzzBassBuzz.wav"),
+    ("bass_808", "BASS_808_LENGTH", "Bass808.wav"),
+    ("bass_plunk1", "BASS_PLUNK1_LENGTH", "BassPlunk1.wav"),
+    ("bass_plunk2", "BASS_PLUNK2_LENGTH", "BassPlunk2.wav"),
+    ("bass_plunk3", "BASS_PLUNK3_LENGTH", "BassPlunk3.wav"),
+    ("bass_plunk4", "BASS_PLUNK4_LENGTH", "BassPlunk4.wav"),
 )
 
 
@@ -21,9 +25,10 @@ def read_sample(path):
             wav.getcomptype() != "NONE"
             or channels not in (1, 2)
             or width not in (2, 3)
-            or wav.getframerate() != SAMPLE_RATE
+            or wav.getframerate() not in (44100, 48000)
         ):
-            raise ValueError(f"{path}: expected uncompressed 44.1 kHz, mono or stereo, 16- or 24-bit PCM")
+            raise ValueError(f"{path}: expected uncompressed 44.1 or 48 kHz, mono or stereo, 16- or 24-bit PCM")
+        source_rate = wav.getframerate()
         raw = wav.readframes(wav.getnframes())
 
     frame_width = channels * width
@@ -35,12 +40,21 @@ def read_sample(path):
                            "little", signed=True)
             for channel in range(channels)
         ]
-        value = sum(frame) // channels
-        quantized = (value + scale // 2) // scale if value >= 0 else -((-value + scale // 2) // scale)
-        samples.append(max(-128, min(127, quantized)))
+        samples.append(sum(frame) / channels / scale)
     if not samples:
         raise ValueError(f"{path}: sample is empty")
-    return samples
+    if source_rate != SAMPLE_RATE:
+        # Linear resample so pitch matches the 44.1 kHz playback clock.
+        count = int(len(samples) * SAMPLE_RATE / source_rate)
+        step = source_rate / SAMPLE_RATE
+        resampled = []
+        for i in range(count):
+            position = i * step
+            index = int(position)
+            nxt = samples[min(index + 1, len(samples) - 1)]
+            resampled.append(samples[index] + (nxt - samples[index]) * (position - index))
+        samples = resampled
+    return [max(-128, min(127, int(round(value)))) for value in samples]
 
 
 def low_pass(samples, cutoff):

@@ -1,0 +1,21 @@
+# Guitar riff samples: EDIT+K4 selects a riff on the guitar; each plays audibly.
+wait 2000
+turn SELECT 2
+expect instrument 3
+expect guitar_sound 0
+turn PRESET 1
+expect guitar_sound 1
+wav guitar_riff1.wav
+key 3 down 100
+wait 600
+key 3 up
+wait 200
+wavstop
+expect peak_db_min -35
+tap SEL
+wait 100
+expect guitar_sound 2
+turn PRESET 20
+expect guitar_sound 3
+turn PRESET -20
+expect guitar_sound 0

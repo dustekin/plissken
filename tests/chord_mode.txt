@@ -18,9 +18,7 @@ key 3 up
 wait 100
 wavstop
 expect peak_db_min -30
-press EDIT
-turn SELECT 1
-release EDIT
+turn PRESET 1
 expect instrument 7
 expect chord_voice 1
 shot chord_juno_ui.png
@@ -31,9 +29,7 @@ key 3 up
 wait 100
 wavstop
 expect peak_db_min -30
-press EDIT
-turn SELECT 1
-release EDIT
+turn PRESET 1
 expect chord_voice 2
 wav chord_cs50.wav
 key 3 down 250
@@ -42,9 +38,7 @@ key 3 up
 wait 100
 wavstop
 expect peak_db_min -30
-press EDIT
-turn SELECT 1
-release EDIT
+turn PRESET 1
 expect chord_voice 3
 wav chord_pro1.wav
 key 3 down 250
@@ -53,9 +47,7 @@ key 3 up
 wait 100
 wavstop
 expect peak_db_min -30
-press EDIT
-turn SELECT 1
-release EDIT
+turn PRESET 1
 expect chord_voice 4
 shot chord_guitar_ui.png
 wav chord_guitar.wav
@@ -65,16 +57,12 @@ key 3 up
 wait 100
 wavstop
 expect peak_db_min -30
-press EDIT
-turn SELECT 1
-release EDIT
+turn PRESET 1
 expect chord_voice 0
 expect instrument 7
 
 # Split layout: EDIT+K4 toggles; upper keys pick the chord type and play nothing.
-press EDIT
-turn K4 1
-release EDIT
+turn ALGO 1
 expect chord_layout 1
 expect fx4 1
 key 17 down 100
@@ -99,9 +87,7 @@ key 3 up
 wait 100
 wavstop
 expect peak_db_min -30
-press EDIT
-turn K4 -1
-release EDIT
+turn ALGO -1
 expect chord_layout 0
 turn K1 -10
 expect fx1 0

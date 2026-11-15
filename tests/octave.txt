@@ -86,6 +86,8 @@ expect live_hz 523
 key 7 up
 wait 50
 turn SELECT 1
+expect instrument 7
+turn SELECT 1
 expect instrument 0
 tap OCT+
 key 7 down 100

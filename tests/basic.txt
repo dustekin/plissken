@@ -13,9 +13,7 @@ expect store_writes 1
 reboot
 wait 500
 expect tempo 92
+# PLAY is disabled for now (BACKING_ENABLED 0 in app.c)
 tap PLAY
 wait 400
-expect playing 1
-tap PLAY
-wait 50
 expect playing 0

@@ -8,8 +8,12 @@ simple guitar power chords, electric bass, and LM-1 kick, snare, and hi-hat samp
 
 | Control | Function |
 | --- | --- |
-| PLAY | Start or stop the loop |
-| SELECT encoder | Choose the sound played by the piano keys |
+| PLAY | Currently disabled (backing track and song mode are switched off) |
+| SELECT encoder | Choose the sound played by the piano keys: Juno, piano, Pro-1, guitar, bass, LM-1 drums, CS-50/CS-80 or CHORD |
+| PRESET / ALGO knobs | Switch the sound of the selected instrument: bass (synth or six samples), guitar (synth or three riffs), CS-50/CS-80 patches, CHORD voice (PRESET) and layout (ALGO) |
+| SEQ | Start or stop the drum sequencer; with an empty pattern it starts a basic kick/snare/hat beat. A SEQ marker shows mid-screen while it runs |
+| FX / SEL | FX cycles the selected sound's effect setting; SEL steps to the next variant |
+| REC | Record, loop and replay a live phrase; EDIT + REC clears it |
 | OCT− / OCT+ | Shift the selected pitched keyboard sound down or up an octave, within −2 to +2 |
 | EDIT + K1 | Set tempo from 70 to 140 BPM |
 | K1–K3 (LM-1 selected) | Choose chorus, reverb and compression presets: 0 off, 1–3 on |
@@ -32,14 +36,16 @@ Piano and synth controls also affect live and backing notes, reset on reboot, an
 sound. The existing Juno chorus remains enabled as part of that base sound. Piano reverb uses a lightweight
 multi-tap delay rather than a physical room model.
 
-The screen lists all seven parts, shows the selected keyboard sound, and counts triggered events as the loop runs.
+The screen lists the instruments in white, with the selected keyboard sound in cyan-blue. The small bars beside the
+names are activity meters only. In drum sequencer use, drum keys record only while LM-1 is selected, on the nearest
+16th step. CHORD plays one chord per key; K1 sets the chord type and ALGO chooses the 1 KEY or SPLIT layout.
 At startup, the display shows the color skyline artwork from `assets/startup.png`, packed into a four-color RGB565 palette, for at least 1.5 seconds while the CS-50 voice plays the opening six-note phrase.
 
 ## Current limitations
 
-The build uses a generated fixed MIDI arrangement when `dsp/song.h` is present and otherwise a fixed 16-step
-fallback. Neither can be edited in the firmware, and selecting and playing preloaded MIDI files is planned but not
-yet implemented. Drum playback uses three locally supplied WAV samples;
+PLAY and song mode are disabled in this build because the backing arrangement distorted; they are planned to return
+after further work on gain staging and instrument count. The arrangement cannot be edited in the firmware, and
+selecting and playing preloaded MIDI files is planned but not yet implemented. Drum playback uses three locally supplied WAV samples;
 the generated sample data is not included in the repository. Confirm their license before distributing firmware.
 Guitar and bass modeling are intentionally simple. Bluetooth and per-track mute/level controls are not implemented.
 
