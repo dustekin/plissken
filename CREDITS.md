@@ -48,6 +48,8 @@ release.
 - **Guitar riffs:** `assets/GuitarRiff1.wav` through `assets/GuitarRiff3.wav` were supplied by the project owner from
   their own riff folder (`r1.wav`, `r11.wav`, `r13.wav`) as free-to-use material for this project; no credit is required.
   They are converted (resampled from 48 kHz) to 8-bit mono at build time.
+- **Splice (permission noted, none used yet):** Splice has told the project owner that Splice sounds may be used in
+  the firmware with artist credits. When any Splice sound is added, list its name, artist and pack here at that time.
 - All 13 samples packed into Plissken builds are from **Rossf's**
   [Linn LM1 (LM-1) Drum Set pack 4919](https://freesound.org/people/rossf/packs/4919/), licensed under
   [Creative Commons Sampling+ 1.0](https://creativecommons.org/licenses/sampling+/1.0/). They are converted from
