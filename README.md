@@ -1,4 +1,4 @@
-# Plissken 0.1 Release
+# Plissken 0.11 Release
 
 Plissken is an early seven-part soundtrack sketch prototype for the M-VAVE FM-1. It is built on `fm1-base`; the
 `base/` directory is the build system and platform submodule.
@@ -106,7 +106,7 @@ An audio initialization failure is shown on the main screen as **AUDIO INIT FAIL
 ## GitHub releases
 
 The first release is version **0.1**. Push the `v0.1` tag to build and attest `plissken-0.1.fwsc` and publish the
-GitHub release titled **Plissken 0.1 Release**. Do not replace the attested package by hand. Future releases use the same `v*`
+GitHub release titled **Plissken 0.11 Release**. Do not replace the attested package by hand. Future releases use the same `v*`
 tag workflow. Release metadata is in `fm1.toml`, and the Firmware Hub card text and sound provenance are in the root
 `fmhub.json`.
 
