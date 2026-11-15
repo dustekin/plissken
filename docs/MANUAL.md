@@ -54,7 +54,8 @@ CPU, memory, and audio stability before refining the sound engines.
 
 ## Emulator and hardware safety
 
-The browser emulator needs the separately built `build/emulator-only/plissken-emulator-only.fwsc` compatibility
+The browser emulator needs the separately built
+`build/emulator-only/dont-install-on-your-fm1-plissken-emulator-only.fwsc` compatibility
 package. **Never install it on an FM-1:** it relaxes the audio clock check for an emulator-specific case, and the
 package can still be installed despite its `EMU ONLY` label. The normal hardware-target package retains the stock
 clock check. `AUDIO INIT FAILED` indicates an audio initialization failure.

@@ -1608,7 +1608,7 @@ def main():
     if not re.fullmatch(r"FM-1_\d+", prefix):
         raise SystemExit(f"fm1.toml id_prefix {prefix!r}: FM-1_ and digits only (the update tools parse it)")
     PRODUCT = prefix + "00"
-    name = STEM + ("-emulator-only.fwsc" if EMULATOR_ONLY else ".fwsc")
+    name = "dont-install-on-your-fm1-plissken-emulator-only.fwsc" if EMULATOR_ONLY else STEM + ".fwsc"
     if EMULATOR_ONLY:
         print("WARNING: emulator-only build; never install this firmware on hardware.")
     if a.release:
