@@ -1,0 +1,36 @@
+wait 2000
+tap SEQ
+master 4096
+wait 100
+tapkey 0
+turn PRESET 1
+turn ALGO 1
+tapkey 1
+turn PRESET 1
+turn ALGO 1
+tapkey 2
+turn PRESET 1
+turn ALGO 1
+tapkey 3
+expect seq_events 4
+# Four long notes already occupy the sound budget at step 4.
+turn PRESET 2
+turn ALGO 1
+tapkey 4
+expect seq_events 4
+expect seq_warning 1
+# Turning an existing note into a chord cannot exceed the same voice limit.
+spin ALGO -4
+expect seq_sound 0
+spin SELECT 24
+expect seq_instrument 0
+expect seq_events 4
+expect seq_warning 1
+# The limit also applies to piano-key insertion during playback.
+tap PLAY
+spin ALGO 4
+tapkey 4
+expect seq_events 4
+expect seq_warning 1
+tap PLAY
+tap HOME

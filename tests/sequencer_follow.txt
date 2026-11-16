@@ -1,0 +1,25 @@
+# Playback advances the view and edit cursor until ALGO pauses follow.
+wait 2000
+tap SEQ
+spin ALGO 16
+tapkey 0
+spin ALGO -16
+tap PLAY
+expect seq_follow 1
+wait 3150
+expect seq_playing 1
+expect seq_view_bar 1
+expect seq_cursor >15
+tapkey 1
+expect seq_note 54
+expect seq_events 2
+spin ALGO -16
+expect seq_follow 0
+expect seq_view_bar 0
+wait 500
+expect seq_view_bar 0
+tap PLAY
+tap PLAY
+expect seq_follow 1
+tap PLAY
+tap HOME

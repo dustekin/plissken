@@ -1,0 +1,20 @@
+# Full drum tails share the four-voice budget, even after a tempo increase.
+wait 2000
+tap SEQ
+master 4096
+tapkey 0
+spin PRESET 1
+tapkey 1
+spin PRESET 1
+tapkey 2
+spin PRESET 2
+tapkey 5
+expect seq_events 4
+spin ALGO 5
+tapkey 0
+expect seq_events 4
+expect seq_warning 1
+spin ALGO 1
+tapkey 0
+expect seq_events 5
+tap HOME

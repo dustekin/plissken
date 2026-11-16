@@ -1,0 +1,30 @@
+# Tempo changes extend the song when a drum sample crosses a bar.
+wait 2000
+tap SEQ
+press EDIT
+spin K1 -10
+release EDIT
+expect seq_tempo 70
+spin PRESET 4
+spin ALGO 15
+tapkey 0
+expect seq_bars 1
+press EDIT
+spin K1 70
+release EDIT
+expect seq_tempo 140
+expect seq_bars 2
+# Refuse a tempo that would place a sample beyond the 128-bar limit.
+press EDIT
+spin K1 -70
+release EDIT
+spin ALGO 2032
+tapkey 0
+expect seq_events 2
+expect seq_bars 128
+press EDIT
+spin K1 70
+release EDIT
+expect seq_tempo 70
+expect seq_warning 2
+tap HOME

@@ -1,8 +1,12 @@
-# Plissken 0.11 Release
+# Plissken
 
 Plissken is a live-performance instrument prototype for the M-VAVE FM-1. It is built on `fm1-base`; the `base/`
 directory is the build system and platform submodule. The keyboard offers Juno, piano, Pro-1, guitar, bass, LM-1
-drums, CS-50/CS-80 and CHORD sounds, along with a live phrase recorder and a four-track drum sequencer.
+drums, CS-50/CS-80 and CHORD sounds, along with a live phrase recorder and a visual five-track sequencer with
+saved-song playback.
+
+This checkout contains development changes beyond the published v0.11 release; its sequencer is not part of that
+signed release.
 
 It's a crappy little firmware, not meant to be serious, just wanted to prove I could do it with vibecoding.
 
@@ -14,8 +18,9 @@ Contact: raggadus@gmail.com
 Please do what you like with the firmware, but give credit.
 
 The seven-part backing arrangement and preloaded MIDI song mode are disabled in this release because their mix
-distorted (`BACKING_ENABLED` is 0 in `app.c`). PLAY and EDIT+PLAY therefore do not start playback. This remains a
-concurrency and resource-budget prototype, not a finished instrument. All 13 Rossf Linn LM-1 one-shots are packed
+distorted (`BACKING_ENABLED` is 0 in `app.c`). PLAY now opens the saved-song selector; it does not start the
+disabled backing arrangement. This remains a concurrency and resource-budget prototype, not a finished instrument.
+All 13 Rossf Linn LM-1 one-shots are packed
 from the source WAVs at build time; the generated sample header is ignored and not checked in. Synthesis and
 effects are deliberately simple and need further listening and refinement on the FM-1. The instrument screen shows
 the user-provided portrait at the top center,
@@ -61,7 +66,7 @@ is in `tests/disabled/` while song playback is disabled.
 
 The build automatically packs all 13 Rossf Linn LM-1 WAVs from `references/rossf-lm1-drum-set/` as 8-bit mono.
 The original audio files are preserved; converted firmware samples are generated at build time.
-`NoMoreBass.wav` and the Bass808/BassPlunk1–4 WAVs and the three GuitarRiff WAVs are the project owner's recordings packed as
+`NoMoreBass.wav`, Bass808, BassPlunk1, BassPlunk3 and BassPlunk4, and the three GuitarRiff WAVs are the project owner's recordings packed as
 8-bit mono. See [CREDITS.md](CREDITS.md)
 for sample details.
 
@@ -85,8 +90,9 @@ are in the root `fmhub.json`.
 
 ## Controls
 
-- **PLAY** and **song mode (EDIT + PLAY)** are currently disabled (the backing track and song distorted); the
-  buttons do nothing for now. Do not re-enable by changing `BACKING_ENABLED` alone; first fix and verify the mix.
+- **PLAY** opens the saved-song selector. Choose a song with PRESET and press PLAY to start or stop it; HOME exits.
+  The preloaded MIDI/backing arrangement and EDIT + PLAY remain disabled because their mix distorted. Do not
+  re-enable that arrangement by changing `BACKING_ENABLED` alone; first fix and verify the mix.
 - **SELECT encoder** chooses the sound played by the piano keys: Juno, piano, Pro-1, guitar, bass, LM-1 drums,
   CS-50/CS-80, or CHORD. The left-side instrument list highlights the current keyboard selection in cyan-blue;
   Bass is labeled BASS, CS-50/CS-80 shares one row, and CHORD appears below it.
@@ -97,18 +103,30 @@ are in the root `fmhub.json`.
 - **ENV / LFO / GLO** mute backing chords / bass / drums (lit while muted). They have no audible effect while
   backing playback is disabled; Pro-1 is unaffected.
 - **ARP** arpeggiates held keys at 16th-note rate (lit while on). **HOME** stops playback and releases all notes.
-  **SEQ** starts/stops the drum sequencer; a small SEQ marker shows mid-screen over the portrait while it runs.
-- **Drum sequencer:** four tracks (kick, snare, closed hat, and one free percussion sound) on 16 steps at the current
-  tempo. Tapping SEQ with an empty pattern starts a basic beat (kick, snare, hats). Select the drums (LM-1) and
-  play drum keys: each hit is recorded on the nearest 16th step and loops.
-  Key 1 = kick, key 2 = snare, key 3 = hat, any other drum key goes on the percussion track (one sound per step).
-  SAVE stores the pattern with the tempo. GLO's drum mute silences it too.
+- **Visual sequencer:** **SEQ** opens the editor with four pitched-sound tracks and a fifth LM-1 drum track;
+  press SEQ or HOME to exit. PRESET selects a track,
+  ALGO moves the step cursor, SELECT chooses that track's sound, SEL cycles the time signature, MASTER sets
+  the selected note's length, and EDIT + K1 adjusts the song's BPM (70–140). Piano keys play and insert or replace a
+  note at the cursor, including while the sequence plays. REC deletes the selected note or adds one in an empty
+  cell. OCT− / OCT+ change the octave of pitched sounds. Note, octave and K1–K4 effect changes briefly appear as
+  text. PLAY starts or stops the working sequence. GLO opens the larger-text help; turn any knob to change pages.
+  During playback the display and cursor follow the music. Moving ALGO pauses follow so you can edit another
+  position; stop and restart playback to resume following. On the LM-1 track, SELECT chooses a drum sound and
+  piano keys choose and insert individual samples; different samples can share a step. REC adds or removes only
+  the selected sample. Drum hits play their full samples; their bar length reflects the sample duration and tempo,
+  and MASTER does not change it. LM-1 is excluded from the other tracks' sound choices; older saved songs retain
+  their original drum lengths.
+  SAVE names and saves the sequence; up to 16 songs can
+  be stored, with about 950 events per song and up to 128 bars. Playback is limited to four simultaneous sound
+  voices (chord sounds count as multiple voices); pitched samples are limited to their note length.
+  Song tempo is saved with each song and does not change the main-screen tempo. Older saved songs without a tempo
+  play at the current main-screen tempo.
 - **Quick layers** (after Felucca): holding FX, GLO, SEQ or LFO for 0.4 s, or touching a key, knob or PLAY meanwhile,
   gives a layer instead of the tap action above. The keys are silent while FX, GLO or SEQ is held; the numbers count
   from the lowest key.
   - **FX held:** keys 1–4 set the effect to 0–3 for as long as the key is down.
   - **GLO held:** keys 1–3 mute chords / bass / drums, key 4 unmutes all, and key 5 taps the tempo.
-  - **SEQ held:** key 1 clears the recorded phrase, key 2 reverses it, key 3 clears the drum sequencer.
+  - **SEQ held:** key 1 clears the recorded phrase, key 2 reverses it, key 3 clears the legacy drum pattern.
   - **LFO held:** the keys still play; any knob turns are undone when LFO is let go.
 - **Battery:** the JC portrait at the top dims as the battery bars drop (100%, 70%, 45%, 25% for 3 to 0 bars). It is
   full brightness on USB power.
@@ -124,9 +142,10 @@ are in the root `fmhub.json`.
   modulo 13. The sample name flashes on the lower screen line for about 0.8 seconds whenever a drum is triggered.
 - **K1–K4**, when guitar or bass is selected: drive, chorus, modulation and delay for live notes. Each is 0 (off) to 3;
   modulation 1–2 are flangers and 3 is a phaser. Settings are independent per instrument and reset on reboot.
-- **Bass sound:** while BASS is selected, turn PRESET (or ALGO) to select the built-in synth or one of six
-  samples (NoMore, 808, Plunk 1–4). K4 adjusts bass delay. All sampled bass sounds play two octaves below the
+- **Bass sound:** while BASS is selected, turn PRESET (or ALGO) to select the built-in synth or one of five
+  samples (NoMore, 808, Plunk 1, 3 or 4). K4 adjusts bass delay. All sampled bass sounds play two octaves below the
   key's normal pitch by default; octave controls still transpose them.
+  Plunk 2 is no longer packed; previously saved sequencer songs containing it cannot play and show a load error.
 - **Guitar sound:** while GUITAR is selected, turn PRESET (or ALGO) to select the built-in synth or one of three riff
   samples (Riff 1–3); SEL also steps through them. Key 1 plays a riff at its recorded pitch and other keys transpose it.
   K4 adjusts guitar delay.
@@ -157,9 +176,9 @@ are in the root `fmhub.json`.
   enabled, these patches replace the CS-50 backing part while selected; CHORD CS-50 retains the original renderer.
   This compact renderer is an inspiration, not a full CS-80 emulation. Verify timing and sound on an FM-1 before
   relying on its CPU headroom; host timing does not measure device DSP load.
-- **SAVE** stores the tempo for the next boot.
+- **SAVE** stores the tempo for the next boot on the main screen; in the sequencer editor it saves the named song.
 - **MASTER** controls output level.
-- **Piano keys** play the selected sound; for LM-1 drums, keys map cyclically to kick, snare, and hi-hat.
+- **Piano keys** play the selected sound; LM-1 keys cycle through all 13 drum samples.
 - Live key velocity and MIDI-note velocity affect the level of Juno, Pro-1, guitar, bass, and CS-50 voices;
   piano already uses velocity for level and brightness.
 
@@ -187,8 +206,8 @@ Known issues and ideas for upcoming work:
 2. Juno is still quiet compared with the other instruments.
 3. Bass FX knobs K1–K3 have the same problem as the guitar's.
 4. CHORD is still too loud.
-5. Consider a visual (grid) sequencer.
-6. Getting the MIDI song/PLAY working again will probably require trimming instruments (e.g. dropping guitar).
+5. Getting the preloaded MIDI song/backing arrangement working again will probably require trimming instruments
+   (e.g. dropping guitar); saved visual-sequencer playback is implemented separately.
 7. Splice sounds may be used with artist credits (see [CREDITS.md](CREDITS.md)).
 
 Planned work includes further improving sound quality within the FM-1's RAM and processor budget, expanding the

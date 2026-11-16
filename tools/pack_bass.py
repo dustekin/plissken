@@ -11,7 +11,6 @@ SAMPLES = (
     ("bass_nomore", "BASS_NOMORE_LENGTH", "NoMoreBass.wav"),
     ("bass_808", "BASS_808_LENGTH", "Bass808.wav"),
     ("bass_plunk1", "BASS_PLUNK1_LENGTH", "BassPlunk1.wav"),
-    ("bass_plunk2", "BASS_PLUNK2_LENGTH", "BassPlunk2.wav"),
     ("bass_plunk3", "BASS_PLUNK3_LENGTH", "BassPlunk3.wav"),
     ("bass_plunk4", "BASS_PLUNK4_LENGTH", "BassPlunk4.wav"),
 )

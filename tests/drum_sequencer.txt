@@ -1,38 +1,92 @@
-# SEQ tap runs the four-track drum sequencer; drum keys pressed while it runs are recorded on 16th steps.
+# Melodic tracks skip LM-1; the fifth track selects individual drum samples.
 wait 2000
-turn SELECT 4
-expect instrument 5
-expect seq_run 0
-expect seq_steps 0
-key 0 down 100
-wait 100
-key 0 up
-wait 100
-expect seq_steps 0
 tap SEQ
+expect seq_screen 1
+spin SELECT 11
+expect instrument 4
+expect bass_sound 5
+spin SELECT 1
+expect bass_sound 6
+spin SELECT 1
+expect instrument 6
+expect seq_sound 26
+spin SELECT 15
+expect instrument 7
+expect seq_sound 41
+spin SELECT 1
+expect instrument 0
+expect seq_sound 0
+spin SELECT -1
+expect seq_sound 41
+spin SELECT 1
+spin PRESET 4
+expect seq_track 4
+expect seq_instrument 5
+# Different keys add different samples at the same step.
+tapkey 0
+tapkey 1
+expect seq_events 2
+expect seq_note 1
+tap REC
+expect seq_events 1
+expect seq_note -1
+spin SELECT -1
+expect seq_note 0
+tap REC
+expect seq_events 0
+tap REC
+expect seq_events 1
+tapkey 1
+expect seq_events 2
+expect seq_cursor 0
+# Distinct hits share the four-voice budget.
+tapkey 2
+tapkey 3
+expect seq_events 4
+tapkey 4
+expect seq_events 4
+expect seq_note -1
+expect seq_warning 1
+spin SELECT -1
+tap REC
+spin SELECT -1
+tap REC
+expect seq_events 2
+spin SELECT -1
+# Drum and pitched notes share the same limit.
+spin PRESET 1
+tapkey 0
+spin PRESET 1
+tapkey 1
+expect seq_events 4
+spin PRESET 3
+tapkey 2
+expect seq_events 4
+expect seq_note -1
+expect seq_warning 1
+spin PRESET 1
+tap REC
+spin PRESET 1
+tap REC
+expect seq_events 2
+spin PRESET 3
+spin SELECT -1
+wait 100
+shot seq_five_tracks.png
+tap SAVE
+spin PRESET 1
+tap SAVE
+reboot
+expect seq_saved 1
+tap PLAY
+tap PLAY
 wait 200
-expect seq_run 1
-key 0 down 100
-wait 100
-key 0 up
-wait 100
-key 6 down 100
-wait 100
-key 6 up
-wait 100
-expect seq_steps >0
-wait 3000
-# SEQ held + key 2 clears the pattern
-press SEQ
-wait 500
-key 2 down 100
-wait 100
-key 2 up
-wait 100
-release SEQ
-wait 200
-expect seq_steps 0
-expect seq_run 1
+expect hits5 2
+tap HOME
 tap SEQ
-wait 200
-expect seq_run 0
+tap GLO
+expect seq_help 1
+tap GLO
+expect seq_screen 1
+tap HOME
+expect seq_screen 0

@@ -30,10 +30,14 @@ key 3 up
 tap ARP
 wait 200
 expect arp_on 0
-# PLAY is disabled for now (BACKING_ENABLED 0 in app.c)
+# PLAY opens the saved-song playback selector.
 tap PLAY
 wait 100
 expect playing 0
+expect playback_mode 1
+tap HOME
+wait 100
+expect playback_mode 0
 expect jc_brightness 100
 # Layers: GLO held, keys 0..2 mute parts and key 3 unmutes all; a tap alone still toggles drums.
 press GLO

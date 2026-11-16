@@ -43,7 +43,8 @@ release.
 - **Original bass recordings:** [`assets/NoMoreBass.wav`](assets/NoMoreBass.wav),
   [`assets/Bass808.wav`](assets/Bass808.wav) and `assets/BassPlunk1.wav` through `assets/BassPlunk4.wav` are the
   project owner's own recordings; the owner holds the rights, confirmed they may be used freely, and no credit is
-  required. They are converted (and resampled from 48 kHz where needed) to 8-bit mono for firmware at build time.
+  required. The samples used by the firmware (excluding BassPlunk2) are converted (and resampled from 48 kHz where
+  needed) to 8-bit mono at build time. BassPlunk2 remains as a source recording but is not packed.
   The earlier BuzzBassBuzz sample was removed.
 - **Guitar riffs:** `assets/GuitarRiff1.wav` through `assets/GuitarRiff3.wav` were supplied by the project owner from
   their own riff folder (`r1.wav`, `r11.wav`, `r13.wav`) as free-to-use material for this project; no credit is required.

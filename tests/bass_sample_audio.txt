@@ -1,4 +1,4 @@
-# Both cleared bass samples must produce audible output from live keys.
+# All included bass samples must produce audible output from live keys.
 wait 2000
 turn SELECT 3
 turn PRESET 1
@@ -22,15 +22,6 @@ expect peak_db_min -30
 turn PRESET 1
 expect bass_sound 3
 wav bass_plunk1.wav
-key 3 down 250
-wait 500
-key 3 up
-wait 100
-wavstop
-expect peak_db_min -30
-turn PRESET 1
-expect bass_sound 4
-wav bass_plunk2.wav
 key 3 down 250
 wait 500
 key 3 up

@@ -1,0 +1,50 @@
+# Drum notes play their full samples, independently of MASTER.
+wait 2000
+master 0
+tap SEQ
+spin PRESET 4
+tapkey 5
+expect seq_note 5
+expect seq_event_duration 7
+master 4096
+expect seq_event_duration 7
+wait 100
+shot seq_drum_info.png
+spin PRESET 1
+wait 100
+shot seq_drum_length_80.png
+press EDIT
+spin K1 60
+release EDIT
+expect seq_tempo 140
+wait 100
+shot seq_drum_length_140.png
+spin PRESET 4
+# A sample that starts at the end of a bar continues into the next.
+spin ALGO 15
+tapkey 5
+expect seq_bars 2
+spin ALGO 1
+spin PRESET 1
+wait 100
+shot seq_drum_tail.png
+spin PRESET 4
+spin ALGO -16
+tap PLAY
+wait 300
+expect drum_active5 1
+wait 400
+expect drum_active5 0
+tap PLAY
+tap SAVE
+spin PRESET 1
+tap SAVE
+reboot
+expect seq_saved 1
+tap PLAY
+tap PLAY
+wait 300
+expect drum_active5 1
+wait 400
+expect drum_active5 0
+tap HOME

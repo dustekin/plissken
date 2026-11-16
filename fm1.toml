@@ -16,6 +16,7 @@ gen = [
 ]
 ble = false
 ble_central = false
+wifi = false
 # the site (tools/make_site.py, tools/publish_site.sh)
 tagline = "Seven-part soundtrack sketch instrument for the FM-1"
 repo = "https://github.com/dustekin/plissken"

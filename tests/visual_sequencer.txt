@@ -1,0 +1,39 @@
+wait 2000
+tap SEQ
+expect seq_screen 1
+turn PRESET 2
+expect seq_track 2
+turn ALGO 2
+expect seq_cursor 2
+master 4096
+wait 100
+expect seq_duration 6
+tapkey 4
+expect seq_events 1
+expect seq_bars 5
+# SELECT edits the sound at the cursor. SEL cycles the time signature.
+turn SELECT 1
+expect seq_instrument 3
+tap SEL
+expect seq_meter 1
+tap SAVE
+turn PRESET 1
+tap SAVE
+wait 200
+expect seq_saved 1
+reboot
+expect seq_saved 1
+tap PLAY
+expect playback_mode 1
+tap PLAY
+expect seq_playing 1
+wait 500
+expect hits3 >0
+tap PLAY
+expect seq_playing 0
+tap HOME
+expect playback_mode 0
+tap SEQ
+expect seq_screen 1
+expect seq_events 0
+tap HOME

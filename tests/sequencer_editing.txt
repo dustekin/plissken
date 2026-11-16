@@ -1,0 +1,79 @@
+# Each note keeps its length when the cursor moves without moving MASTER.
+wait 2000
+tap SEQ
+master 0
+tapkey 0
+expect seq_events 1
+expect seq_note 53
+expect seq_duration 0
+spin ALGO 1
+master 1200
+tapkey 1
+expect seq_events 2
+expect seq_duration 2
+spin ALGO -1
+wait 100
+expect seq_duration 0
+expect seq_note 53
+spin ALGO 1
+wait 100
+expect seq_duration 2
+tapkey 9
+expect seq_events 2
+expect seq_note 62
+expect seq_duration 2
+# REC removes an existing note; a key inserts it again.
+tap REC
+expect seq_events 1
+expect seq_note -1
+tapkey 9
+expect seq_events 2
+expect seq_note 62
+# Octave buttons change future pitches, not existing notes.
+tap OCT+
+expect octave 1
+expect seq_notice 2
+wait 100
+shot seq_octave_notice.png
+spin ALGO 1
+tapkey 0
+expect seq_note 65
+expect seq_notice 1
+wait 100
+shot seq_note_notice.png
+spin ALGO -1
+expect seq_note 62
+tap OCT-
+expect octave 0
+# FX feedback records the actual knob and value, then expires.
+spin K2 2
+expect seq_notice 3
+expect seq_notice_knob 1
+expect seq_notice_value 2
+expect fx2 2
+wait 100
+shot seq_fx_notice.png
+wait 1900
+expect seq_notice 0
+# Help uses any encoder or MASTER to change pages without altering settings.
+tap GLO
+expect seq_help 1
+expect seq_help_page 0
+wait 100
+shot seq_help_1.png
+spin SELECT 1
+expect seq_help_page 1
+wait 100
+shot seq_help_2.png
+spin K2 1
+expect seq_help_page 2
+wait 100
+shot seq_help_3.png
+spin PRESET 1
+expect seq_help_page 0
+master 1280
+expect seq_help_page 1
+tap GLO
+expect seq_screen 1
+expect fx2 2
+tap HOME

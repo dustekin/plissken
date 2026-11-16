@@ -17,6 +17,14 @@ expect bass_sound 2
 expect fx4 1
 turn PRESET -4
 expect bass_sound 0
+turn PRESET 3
+expect bass_sound 3
+turn PRESET 1
+expect bass_sound 5
+turn PRESET -1
+expect bass_sound 3
+tap SEL
+expect bass_sound 5
 turn PRESET 9
 expect bass_sound 6
 expect fx4 1

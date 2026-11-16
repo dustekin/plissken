@@ -1,0 +1,28 @@
+# Notes placed during playback are saved at the cursor and played at their step.
+wait 2000
+tap SEQ
+master 0
+tapkey 0
+expect seq_note 53
+tap PLAY
+expect seq_playing 1
+spin ALGO 20
+tapkey 7
+expect seq_events 2
+expect seq_note 60
+expect seq_bars 2
+wait 3900
+expect seq_playing 1
+expect seq_audio_step >19
+expect hits0 >1
+tap PLAY
+tap SAVE
+spin PRESET 1
+tap SAVE
+expect seq_saved 1
+reboot
+tap PLAY
+tap PLAY
+wait 3900
+expect hits0 >3
+tap HOME

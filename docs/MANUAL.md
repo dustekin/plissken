@@ -2,16 +2,16 @@
 
 Plissken is a seven-part soundtrack sketch for the M-VAVE FM-1. It is an early prototype: one shared clock drives
 an eight-voice Juno-style synth with chord stabs and stereo chorus, piano chords and notes, a Pro One-style line,
-simple guitar power chords, electric bass, and LM-1 kick, snare, and hi-hat samples.
+simple guitar power chords, electric bass, and 13 LM-1 drum samples.
 
 ## Controls
 
 | Control | Function |
 | --- | --- |
-| PLAY | Currently disabled (backing track and song mode are switched off) |
+| PLAY | Open the saved-song selector; start or stop the selected song |
 | SELECT encoder | Choose the sound played by the piano keys: Juno, piano, Pro-1, guitar, bass, LM-1 drums, CS-50/CS-80 or CHORD |
-| PRESET / ALGO knobs | Switch the sound of the selected instrument: bass (synth or six samples), guitar (synth or three riffs), CS-50/CS-80 patches, CHORD voice (PRESET) and layout (ALGO) |
-| SEQ | Start or stop the drum sequencer; with an empty pattern it starts a basic kick/snare/hat beat. A SEQ marker shows mid-screen while it runs |
+| PRESET / ALGO knobs | Switch the sound of the selected instrument: bass (synth or five samples), guitar (synth or three riffs), CS-50/CS-80 patches, CHORD voice (PRESET) and layout (ALGO) |
+| SEQ | Open the visual sequencer editor |
 | FX / SEL | FX cycles the selected sound's effect setting; SEL steps to the next variant |
 | REC | Record, loop and replay a live phrase; EDIT + REC clears it |
 | OCT− / OCT+ | Shift the selected pitched keyboard sound down or up an octave, within −2 to +2 |
@@ -21,9 +21,34 @@ simple guitar power chords, electric bass, and LM-1 kick, snare, and hi-hat samp
 | K1–K4 (guitar or bass selected) | Drive, chorus, modulation and delay; 0 off, 1–3 presets |
 | K1–K4 (piano selected) | Tone, decay, chorus and reverb; 0 unchanged, 1–3 settings |
 | K1–K4 (Juno, Pro-1 or CS-50 selected) | Filter cutoff, resonance, filter envelope and modulation; 0 unchanged, 1–3 settings |
-| SAVE | Store the current tempo |
+| SAVE | Store the current tempo on the main screen; save a named song in the sequencer editor |
 | MASTER | Set output volume |
-| Piano keys | Play the selected sound; LM-1 maps keys cyclically to kick, snare, and hi-hat |
+| Piano keys | Play the selected sound; LM-1 maps keys cyclically to its 13 samples |
+
+In the sequencer editor, PRESET chooses one of four pitched-sound tracks or the fifth LM-1 track, ALGO moves the step cursor, SELECT chooses the track's
+sound, SEL cycles the time signature, and moving MASTER changes only the selected pitched note's length. Piano keys play and
+insert or replace the note at the cursor, including during playback. REC removes a selected note or adds one at an
+empty cell. OCT− / OCT+ change the octave of pitched sounds; note, octave and K1–K4 effect changes briefly appear
+as text. PLAY starts or stops the working sequence. GLO opens the larger-text help, where any knob changes pages;
+GLO, SEQ or HOME returns to the editor. SEQ or HOME exits the editor. SAVE prompts for a name and stores the song.
+During playback the display and cursor follow the music; moving ALGO pauses follow for editing. Stop and restart
+playback to resume following. On the LM-1 track, SELECT chooses a sample and piano keys choose and insert their
+individual samples. Different drum samples can share a step; REC adds or removes only the selected sample.
+New drum hits play the full sample, and their displayed length follows the sample duration and song tempo; MASTER
+does not change drum lengths. LM-1 is not offered in the other tracks' sound choices. Existing saved songs remain
+playable with their original drum lengths.
+Up to 16 songs can be saved, each with about 950 events
+and up to 128 bars. Playback allows at most four simultaneous sound voices; chord events count as multiple voices
+and pitched samples are cut off at their selected duration. Drum tails reserve voices conservatively at the fastest
+tempo so later tempo changes cannot exceed that limit.
+
+In the sequencer, EDIT + K1 adjusts the working song's tempo (70–140 BPM), shown beside the time signature;
+K1 alone still adjusts the sound. SAVE stores the tempo with the song, and playback uses that saved tempo without
+changing the main-screen tempo. Older songs saved without a tempo play at the current main-screen tempo. On the main
+screen, EDIT + K1 adjusts its separate tempo, and SAVE keeps that tempo across reboot.
+BPM counts quarter notes. The sequencer uses a fixed sixteenth-note grid, so one grid
+step lasts 15/BPM seconds. A 4/4 bar has 16 steps, an 8/4 bar has 32, and 8/8 and 16/16 bars have 16 each.
+Changing the time signature changes the bar grouping, not the playback speed.
 
 Each pitched sound remembers its own octave until reboot. Held notes keep their pitch until released; new notes use
 the new setting. Octave buttons do not change the LM-1 samples or the backing parts. The screen shows the selected
@@ -37,15 +62,15 @@ sound. The existing Juno chorus remains enabled as part of that base sound. Pian
 multi-tap delay rather than a physical room model.
 
 The screen lists the instruments in white, with the selected keyboard sound in cyan-blue. The small bars beside the
-names are activity meters only. In drum sequencer use, drum keys record only while LM-1 is selected, on the nearest
-16th step. CHORD plays one chord per key; K1 sets the chord type and ALGO chooses the 1 KEY or SPLIT layout.
+names are activity meters only. In the sequencer, the editor grid displays tracks and note lengths. CHORD plays one
+chord per key; K1 sets the chord type and ALGO chooses the 1 KEY or SPLIT layout.
 At startup, the display shows the color skyline artwork from `assets/startup.png`, packed into a four-color RGB565 palette, for at least 1.5 seconds while the CS-50 voice plays the opening six-note phrase.
 
 ## Current limitations
 
-PLAY and song mode are disabled in this build because the backing arrangement distorted; they are planned to return
-after further work on gain staging and instrument count. The arrangement cannot be edited in the firmware, and
-selecting and playing preloaded MIDI files is planned but not yet implemented. Drum playback uses three locally supplied WAV samples;
+The preloaded MIDI/backing arrangement is disabled in this build because it distorted; it may return after further
+work on gain staging and instrument count. PLAY instead selects and plays songs saved in the visual sequencer.
+Selecting and playing preloaded MIDI files is not implemented. Drum playback uses locally supplied WAV samples;
 the generated sample data is not included in the repository. Confirm their license before distributing firmware.
 Guitar and bass modeling are intentionally simple. Bluetooth and per-track mute/level controls are not implemented.
 

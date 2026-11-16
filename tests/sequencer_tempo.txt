@@ -1,0 +1,65 @@
+# Song tempo is independent of the main tempo and K1's sound control.
+wait 2000
+expect tempo 80
+tap SEQ
+expect seq_tempo 80
+expect fx1 0
+spin K1 1
+expect fx1 1
+press EDIT
+spin K1 -100
+expect seq_tempo 70
+spin K1 100
+expect seq_tempo 140
+spin K1 -20
+release EDIT
+expect seq_tempo 120
+expect tempo 80
+expect fx1 1
+tap REC
+tap PLAY
+wait 900
+expect seq_playback_tempo 120
+expect seq_audio_step >6
+expect seq_audio_step <10
+press EDIT
+spin K1 10
+release EDIT
+expect seq_tempo 130
+expect seq_playback_tempo 130
+expect fx1 1
+tap PLAY
+press EDIT
+spin K1 -10
+release EDIT
+# Save two songs with different tempos.
+tap SAVE
+spin PRESET 1
+tap SAVE
+expect seq_saved 1
+press EDIT
+spin K1 -30
+release EDIT
+tap SAVE
+spin PRESET 2
+tap SAVE
+expect seq_saved 2
+reboot
+expect tempo 80
+expect seq_saved 2
+tap PLAY
+tap PLAY
+expect seq_playback_tempo 120
+wait 900
+expect seq_audio_step >6
+expect seq_audio_step <10
+expect tempo 80
+tap PLAY
+spin PRESET 1
+tap PLAY
+expect seq_playback_tempo 90
+wait 900
+expect seq_audio_step >4
+expect seq_audio_step <8
+expect tempo 80
+tap HOME
