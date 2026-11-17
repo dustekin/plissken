@@ -5,8 +5,8 @@ directory is the build system and platform submodule. The keyboard offers Juno, 
 drums, CS-50/CS-80 and CHORD sounds, along with a live phrase recorder and a visual five-track sequencer with
 saved-song playback.
 
-This checkout contains development changes beyond the published v0.11 release; its sequencer is not part of that
-signed release.
+This checkout is the **v0.12 release candidate**. The published, signed v0.11 release does not include the visual
+sequencer and saved-song playback features described below.
 
 It's a crappy little firmware, not meant to be serious, just wanted to prove I could do it with vibecoding.
 
@@ -17,10 +17,11 @@ Contact: raggadus@gmail.com
 
 Please do what you like with the firmware, but give credit.
 
-The seven-part backing arrangement and preloaded MIDI song mode are disabled in this release because their mix
-distorted (`BACKING_ENABLED` is 0 in `app.c`). PLAY now opens the saved-song selector; it does not start the
-disabled backing arrangement. This remains a concurrency and resource-budget prototype, not a finished instrument.
-All 13 Rossf Linn LM-1 one-shots are packed
+The original seven-part backing arrangement and EDIT + PLAY song mode are disabled because their mix distorted
+(`BACKING_ENABLED` is 0 in `app.c`). A reduced, four-voice sequencer transcription of the authorized render-test
+MIDI is available as **Escape From Firmware**; if deleted, it is restored on the next boot. PLAY opens the saved-song
+selector, not the disabled backing arrangement. This remains a concurrency and resource-budget prototype, not a
+finished instrument. All 13 Rossf Linn LM-1 one-shots are packed
 from the source WAVs at build time; the generated sample header is ignored and not checked in. Synthesis and
 effects are deliberately simple and need further listening and refinement on the FM-1. The instrument screen shows
 the user-provided portrait at the top center,
@@ -33,6 +34,20 @@ audio buffers.
 At startup, a color skyline splash is shown for at least 1.5 seconds while the CS-50 voice plays its opening
 six-note phrase; the 240×144 image is packed into a four-color RGB565 palette for the FM-1 display.
 
+## v0.12 release candidate
+
+Build 012 has been physically tested on the FM-1 and confirmed working. This candidate adds:
+
+- A saved-song Playback screen with 16 user slots plus the built-in **Escape From Firmware** track. REC deletes the
+  selected song; pressing a piano key loads it into the sequencer for editing, and that opening key is not recorded.
+  SAVE updates the selected song.
+- A visual five-track sequencer with four pitched lanes and an LM-1 drum lane, saved tempo, playback-follow, and
+  note/sample editing.
+- Contextual GLO help on the main, Playback, and sequencer screens.
+
+The candidate is function-complete for its current feature scope. Further work may explore a higher voice budget,
+sound-quality improvements, and general quality-of-life refinements.
+
 ## Build and test
 
 From this directory, use the VS Code terminal opened in WSL (Ubuntu), not PowerShell. The build commands use Bash
@@ -43,6 +58,7 @@ python3 base/tools/build.py . --host
 for test in tests/*.txt; do
   build/host/plissken_host "$test" build/host
 done
+python3 tests/test_song_to_sequence.py
 python3 tests/check_chord_render.py build/host/plissken_host
 python3 tests/check_keyboard_tones.py build/host/plissken_host
 python3 tests/check_cs80_render.py build/host/plissken_host
@@ -53,11 +69,31 @@ python3 tests/check_drum_effects.py build/host
 python3 tests/check_drum_boost.py build/host
 ```
 
+The checked-in v0.12 candidate `dsp/escape_sequence.h` is derived from the authorized render MIDI via
+`python3 tools/midi_to_song.py <file.mid>` and `python3 tools/song_to_sequence.py`. It uses a sixteenth-step
+onset grid for CS-50 while preserving baseline per-part event counts; the transcription remains within the
+sequencer's event and four-voice limits. Regenerate it with
+`python3 tools/song_to_sequence.py --part-grid 6=1 --preserve-part-counts dsp/song.h build/gen/lm1_samples.h dsp/escape_sequence.h`.
+Before changing the conversion settings, `python3 tools/song_to_sequence.py --report` prints per-part merge,
+polyphony, event-cap, onset-error and duration-error diagnostics without writing the generated header.
+Use `--report --part-grid 6=1 --preserve-part-counts` to test a CS-50 sixteenth-note onset grid while preserving
+the default conversion's per-part event counts. Matching baseline events are retained where they survive the
+voice limit, and remaining slots are sampled evenly within each part. This diagnostic still does not write the
+arrangement.
+To write a separate candidate header for a hardware experiment, omit `--report` and provide an explicit output
+path; for example:
+
+```sh
+python3 tools/song_to_sequence.py --part-grid 6=1 --preserve-part-counts \
+  dsp/song.h build/gen/lm1_samples.h build/escape_sequence.cs50.h
+```
+
 The chord render check verifies that a held Pro One chord sustains all three notes, not just the last-triggered
 voice, and that each note has its octave-sub component. The keyboard tone check verifies Juno, piano and Pro One
 fundamentals across the playable range, velocity response and headroom, and all eight Juno voices sounding
 together. The CS-80 render check exercises all ten independently designed patches, their output levels, and the
-four continuous tone controls.
+four continuous tone controls. Drum boost checks compare low-frequency energy for both live and saved-sequence
+drums.
 
 The chord-demo command writes one 44.1 kHz, 16-bit stereo F-major WAV per CS-80-inspired patch to
 `renders/cs80-chords/`. The matching VS Code task, **Render CS-80 chord demos**, rebuilds the host renderer first.
@@ -84,15 +120,20 @@ An audio initialization failure is shown on the main screen as **AUDIO INIT FAIL
 
 ## GitHub releases
 
-The current release, **v0.11**, is published and signed. Do not replace its attested package by hand. Future releases
-use the `v*` tag workflow. Release metadata is in `fm1.toml`, and the Firmware Hub card text and sound provenance
-are in the root `fmhub.json`.
+The current published release, **v0.11**, remains signed and unchanged. This checkout is the **v0.12 release
+candidate**; build 012 was tested on hardware. Pushing a `v0.12` tag triggers the release workflow, which builds
+and attests the versioned package from that tag. Do not replace the attested v0.11 package by hand. Product and
+install metadata are in `fm1.toml`; the Firmware Hub card text and sound provenance are in the root `fmhub.json`.
 
 ## Controls
 
-- **PLAY** opens the saved-song selector. Choose a song with PRESET and press PLAY to start or stop it; HOME exits.
-  The preloaded MIDI/backing arrangement and EDIT + PLAY remain disabled because their mix distorted. Do not
-  re-enable that arrangement by changing `BACKING_ENABLED` alone; first fix and verify the mix.
+- **PLAY** opens the saved-song selector. Choose a song with PRESET and press PLAY to start or stop it; REC deletes
+  the selected song (stopping playback first if needed). Press any piano key to load the selected song into the
+  sequencer for editing; that first key only opens the editor. SAVE writes edits back to the selected song. HOME exits.
+  **GLO** opens playback help; turn any knob to change pages, and press GLO, SEQ or HOME to return.
+  The original MIDI/backing arrangement and EDIT + PLAY remain disabled because their mix distorted. The reduced
+  **Escape From Firmware** track is a separate sequencer transcription. Do not re-enable the original arrangement
+  by changing `BACKING_ENABLED` alone; first fix and verify the mix.
 - **SELECT encoder** chooses the sound played by the piano keys: Juno, piano, Pro-1, guitar, bass, LM-1 drums,
   CS-50/CS-80, or CHORD. The left-side instrument list highlights the current keyboard selection in cyan-blue;
   Bass is labeled BASS, CS-50/CS-80 shares one row, and CHORD appears below it.
@@ -100,23 +141,28 @@ are in the root `fmhub.json`.
   setting until reboot; held notes keep their pitch. LM-1 drum samples are not transposed.
 - **FX** cycles the K2 effect setting (0–3) of the selected sound; **SEL** steps to the next variant (guitar riff, bass sample,
   CS-80 preset, or chord voice).
-- **ENV / LFO / GLO** mute backing chords / bass / drums (lit while muted). They have no audible effect while
-  backing playback is disabled; Pro-1 is unaffected.
+- **ENV / LFO** mute backing chords / bass (lit while muted). They have no audible effect while backing playback
+  is disabled; Pro-1 is unaffected.
+- **GLO** opens main-screen help; turn any knob to change pages, and press GLO, SEQ or HOME to return. In playback
+  and the sequencer, GLO opens help for that screen.
 - **ARP** arpeggiates held keys at 16th-note rate (lit while on). **HOME** stops playback and releases all notes.
 - **Visual sequencer:** **SEQ** opens the editor with four pitched-sound tracks and a fifth LM-1 drum track;
-  press SEQ or HOME to exit. PRESET selects a track,
+  press SEQ or HOME to exit. PRESET moves between tracks,
   ALGO moves the step cursor, SELECT chooses that track's sound, SEL cycles the time signature, MASTER sets
   the selected note's length, and EDIT + K1 adjusts the song's BPM (70–140). Piano keys play and insert or replace a
-  note at the cursor, including while the sequence plays. REC deletes the selected note or adds one in an empty
-  cell. OCT− / OCT+ change the octave of pitched sounds. Note, octave and K1–K4 effect changes briefly appear as
-  text. PLAY starts or stops the working sequence. GLO opens the larger-text help; turn any knob to change pages.
+  note at the cursor, including while the sequence plays. REC deletes the selected note and does nothing when the
+  cursor is on an empty cell. OCT− / OCT+ change the octave of pitched sounds. Note, octave and K1–K4 effect
+  changes briefly appear as text. PLAY starts or stops the working sequence; a quick double-press stops it and
+  returns the cursor to the beginning. Grid lines are emphasized after every four steps. GLO opens the larger-text
+  help; turn any knob to change pages. To edit a saved song, select it in the playback screen and press any piano
+  key; the opening key is not recorded, and SAVE updates that song.
   During playback the display and cursor follow the music. Moving ALGO pauses follow so you can edit another
   position; stop and restart playback to resume following. On the LM-1 track, SELECT chooses a drum sound and
-  piano keys choose and insert individual samples; different samples can share a step. REC adds or removes only
-  the selected sample. Drum hits play their full samples; their bar length reflects the sample duration and tempo,
-  and MASTER does not change it. LM-1 is excluded from the other tracks' sound choices; older saved songs retain
-  their original drum lengths.
-  SAVE names and saves the sequence; up to 16 songs can
+  piano keys choose and insert individual samples; different samples can share a step. REC removes only the
+  selected sample and never adds one. Drum hits play their full samples; their bar length reflects sample duration
+  and tempo. MASTER does not change it. LM-1 is excluded from the other tracks' sound choices; older
+  saved songs retain their original drum lengths.
+  SAVE names and saves the sequence; up to 16 user songs plus **Escape From Firmware** can
   be stored, with about 950 events per song and up to 128 bars. Playback is limited to four simultaneous sound
   voices (chord sounds count as multiple voices); pitched samples are limited to their note length.
   Song tempo is saved with each song and does not change the main-screen tempo. Older saved songs without a tempo
@@ -134,7 +180,7 @@ are in the root `fmhub.json`.
 - **K1–K3**, when LM-1 is selected, choose chorus, reverb, and compression presets respectively: 0 is off and 1–3
   select progressively different settings. These apply to live drums and reset on reboot. Reverb is a
   lightweight multi-tap delay, not a physical room model.
-- **K4**, when LM-1 is selected, adjusts drum bass boost from 0 (off) to 8. It affects live drums.
+- **K4**, when LM-1 is selected, adjusts drum bass boost from 0 (off) to 8. It affects live and sequencer drums.
   The setting resets on reboot.
 - **LM-1 keys:** key indices 0–12 trigger Rossf samples in this order: kick, snare, closed hat, open hat, high tom,
   low tom, clap, cowbell, tambourine, cabasa, clave, high conga, low conga. The mapping repeats every 13 keys;

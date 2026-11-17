@@ -7,6 +7,7 @@
 #include "startup_splash.h"
 #include "jc_face.h"
 #include "knob_images.h"
+#include "dsp/escape_sequence.h"
 
 #define SETTINGS_MAGIC 0x504C4953u
 #define SEQUENCE_MAGIC 0x53455131u
@@ -20,7 +21,11 @@
 #define SEQUENCE_VOICES 4u
 #define SEQUENCE_DRUM_NATURAL 7u
 #define SEQUENCE_MAX_TEMPO 140u
-#define SEQUENCE_SLOTS 16u
+#define SEQUENCE_PLAY_RESET_MS 500u
+#define SEQUENCE_USER_SLOTS 16u
+#define SEQUENCE_BUILTIN_SLOT SEQUENCE_USER_SLOTS
+#define SEQUENCE_SLOTS (SEQUENCE_USER_SLOTS + 1u)
+#define SEQUENCE_BUILTIN_NAME "Escape From Firmware"
 #define SEQUENCE_NAME_LENGTH 12u
 #define SEQUENCE_MAX_STEPS 4096u
 #define TRACKS 7
@@ -140,6 +145,8 @@ typedef char sequence_header_layout_check[
         && offsetof(sequence_header_t, drum_variant) == 30u ? 1 : -1];
 
 #define SEQUENCE_EVENT_MAX ((PLAT_STORE_MAX - sizeof(sequence_header_t)) / sizeof(uint32_t))
+typedef char escape_sequence_fits[
+    ESCAPE_SEQUENCE_EVENT_COUNT <= SEQUENCE_EVENT_MAX ? 1 : -1];
 typedef struct {
     sequence_header_t header;
     uint32_t events[SEQUENCE_EVENT_MAX];
@@ -197,9 +204,14 @@ static volatile uint8_t sequence_playback_tempo;
 static uint8_t sequence_screen;
 static uint8_t sequence_tempo_initialized;
 static uint8_t sequence_selected_slot;
+static uint8_t sequence_editing_saved;
+static uint8_t sequence_editing_slot;
+static uint8_t sequence_builtin_seed_failed;
 static uint8_t sequence_cursor_track;
 static uint16_t sequence_cursor_step;
 static uint8_t sequence_follow_playback;
+static uint32_t sequence_last_play_press;
+static uint8_t sequence_last_play_press_valid;
 static uint8_t sequence_duration_index;
 static uint8_t sequence_selected_sound;
 static uint8_t sequence_warning;
@@ -219,6 +231,7 @@ static uint8_t sequence_last_note;
 static uint8_t sequence_last_note_valid;
 static uint8_t sequence_help_page;
 static uint32_t sequence_help_master;
+static uint8_t sequence_help_return_screen;
 enum { SEQUENCE_NOTICE_NONE, SEQUENCE_NOTICE_NOTE, SEQUENCE_NOTICE_OCTAVE, SEQUENCE_NOTICE_FX };
 static uint8_t sequence_notice, sequence_notice_note, sequence_notice_instrument, sequence_notice_variant;
 static uint8_t sequence_notice_knob, sequence_notice_value;
@@ -228,7 +241,7 @@ static uint32_t sequence_notice_until;
 static sequence_t sequence;
 static sequence_t sequence_playback;
 static sequence_slot_t sequence_slots[SEQUENCE_SLOTS];
-/* Backing-part mutes set by ENV (chords), LFO (bass) and GLO (drums) taps, or by the GLO layer. */
+/* Backing-part mutes set by ENV (chords), LFO (bass) or the GLO layer. */
 static volatile uint8_t backing_mute;
 #define MUTE_CHORDS 1u
 #define MUTE_BASS 2u
@@ -933,7 +946,13 @@ static const char *const sequence_meter_names[METER_COUNT] = {"4/4", "8/4", "8/8
 
 static uint32_t sequence_slot_object(uint32_t slot)
 {
-    return (uint32_t)OBJ_SEQ0 + slot;
+    return slot == SEQUENCE_BUILTIN_SLOT ? (uint32_t)OBJ_SEQ_BUILTIN
+        : (uint32_t)OBJ_SEQ0 + slot;
+}
+
+static const char *sequence_slot_name(uint32_t slot)
+{
+    return slot == SEQUENCE_BUILTIN_SLOT ? SEQUENCE_BUILTIN_NAME : sequence_slots[slot].name;
 }
 
 static uint32_t sequence_event_step(uint32_t event)
@@ -1218,6 +1237,36 @@ static int sequence_store_slot(uint32_t slot)
     sequence.header.version = SEQUENCE_VERSION;
     bytes = (uint32_t)sizeof sequence.header + (uint32_t)sequence.header.count * sizeof(uint32_t);
     return plat_store_save(sequence_slot_object(slot), &sequence, bytes);
+}
+
+static void sequence_seed_builtin(void)
+{
+    sequence_header_t header;
+    uint32_t object = sequence_slot_object(SEQUENCE_BUILTIN_SLOT);
+    int size = plat_store_size(object);
+    int loaded = size >= (int)sizeof header && size <= (int)PLAT_STORE_MAX
+        ? plat_store_head(object, &header, sizeof header) : -1;
+    static const char name[] = "escape from";
+    if (loaded == (int)sizeof header && sequence_header_valid(&header, size))
+        return;
+
+    sequence_reset();
+    sequence.header.count = ESCAPE_SEQUENCE_EVENT_COUNT;
+    sequence.header.meter = METER_4_4;
+    sequence.header.bars = ESCAPE_SEQUENCE_BARS;
+    sequence.header.tempo = ESCAPE_SEQUENCE_BPM;
+    sequence.header.instrument[0] = 0u;
+    sequence.header.instrument[1] = 1u;
+    sequence.header.instrument[2] = 2u;
+    sequence.header.instrument[3] = 6u;
+    for (uint32_t i = 0; i < SEQUENCE_NAME_LENGTH; i++)
+        sequence.header.name[i] = 0;
+    for (uint32_t i = 0; i < sizeof name; i++)
+        sequence.header.name[i] = name[i];
+    for (uint32_t i = 0; i < ESCAPE_SEQUENCE_EVENT_COUNT; i++)
+        sequence.events[i] = escape_sequence_events[i];
+    sequence_builtin_seed_failed = sequence_store_slot(SEQUENCE_BUILTIN_SLOT) != 0;
+    sequence_reset();
 }
 
 /* Live record: a drum key pressed while the sequencer runs lands on the nearest 16th step. */
@@ -2305,7 +2354,7 @@ void app_render(int32_t *lr, uint32_t n, uint32_t master_q12)
             juno_pwm_phase = 0.0f;
         for (j = 0; j < JUNO_VOICES; j++) {
             if (juno[j].active)
-                juno_mix += juno_voice(&juno[j], 0.312f, voice_settings[0]);
+                juno_mix += juno_voice(&juno[j], 0.624f, voice_settings[0]);
             voices_active |= juno[j].active;
         }
         juno_mix *= (solo_mask & 1u) ? 1.0f : 0.0f;
@@ -2530,10 +2579,15 @@ void app_ui_init(void)
     sequence_duration_index = 0u;
     sequence_selected_sound = 0u;
     sequence_warning = 0u;
+    sequence_editing_saved = 0u;
+    sequence_editing_slot = 0u;
+    sequence_builtin_seed_failed = 0u;
     sequence_notice = SEQUENCE_NOTICE_NONE;
     sequence_help_page = 0u;
     sequence_last_note = 60u;
     sequence_last_note_valid = 0u;
+    sequence_reset();
+    sequence_seed_builtin();
     sequence_reset();
     sequence_scan_slots();
 }
@@ -3012,11 +3066,15 @@ static void sequence_change_duration(uint8_t duration)
 
 static void sequence_remove_event(uint32_t index)
 {
+    uint32_t lock;
     if (index >= sequence.header.count)
         return;
+    lock = plat_lock();
     for (uint32_t i = index + 1u; i < sequence.header.count; i++)
         sequence.events[i - 1u] = sequence.events[i];
     sequence.header.count--;
+    plat_unlock(lock);
+    ui_drawn = 0u;
 }
 
 static int sequence_insert_note(uint8_t note)
@@ -3057,19 +3115,11 @@ static int sequence_insert_note(uint8_t note)
     return 1;
 }
 
-static void sequence_toggle_note(void)
+static void sequence_delete_note(void)
 {
     int32_t event_index = sequence_find_event(sequence_cursor_track, sequence_cursor_step);
-    if (event_index >= 0) {
+    if (event_index >= 0)
         sequence_remove_event((uint32_t)event_index);
-        return;
-    }
-    {
-        uint8_t variant = sequence_current_variant();
-        uint8_t note = selected_instrument == 5u && variant < ROSSFLM1_SAMPLE_COUNT
-            ? variant : sequence_last_note_valid ? sequence_last_note : 60u;
-        sequence_insert_note(note);
-    }
 }
 
 static uint8_t sequence_master_duration(uint32_t position)
@@ -3128,6 +3178,7 @@ static void sequence_enter(void)
     sequence_screen = SCREEN_SEQUENCE;
     sequence_warning = 0u;
     sequence_notice = SEQUENCE_NOTICE_NONE;
+    sequence_last_play_press_valid = 0u;
     sequence_cursor_track = 0u;
     sequence_cursor_step = 0u;
     sequence_duration_index = sequence_master_duration(plat_master());
@@ -3155,6 +3206,38 @@ static void sequence_open_playback(void)
         sequence_selected_slot++;
     sequence_screen = SCREEN_PLAYBACK;
     sequence_stop();
+    if (sequence_builtin_seed_failed)
+        sequence_show_warning(7u);
+    ui_drawn = 0u;
+}
+
+static void sequence_edit_selected(void)
+{
+    uint8_t slot = sequence_selected_slot;
+    if (slot >= SEQUENCE_SLOTS || !sequence_slots[slot].used) {
+        sequence_show_warning(5u);
+        return;
+    }
+    if (sequence_playing)
+        sequence_stop();
+    if (!sequence_load_slot(slot, &sequence)) {
+        sequence_show_warning(4u);
+        return;
+    }
+    sequence_editing_saved = 1u;
+    sequence_editing_slot = slot;
+    sequence_tempo_initialized = 1u;
+    sequence_screen = SCREEN_SEQUENCE;
+    sequence_warning = 0u;
+    sequence_notice = SEQUENCE_NOTICE_NONE;
+    sequence_last_play_press_valid = 0u;
+    sequence_cursor_track = 0u;
+    sequence_cursor_step = 0u;
+    sequence_duration_index = sequence_master_duration(plat_master());
+    sequence_follow_playback = 0u;
+    sequence_load_cursor_sound();
+    sequence_last_note = 60u;
+    sequence_last_note_valid = 0u;
     ui_drawn = 0u;
 }
 
@@ -3180,16 +3263,63 @@ static void sequence_step_slot(int32_t delta)
     ui_drawn = 0u;
 }
 
+static void sequence_step_user_slot(int32_t delta)
+{
+    int32_t slot = sequence_selected_slot;
+    int32_t steps;
+    uint32_t used = 0u;
+    if (!delta || sequence_playing)
+        return;
+    for (uint32_t i = 0; i < SEQUENCE_USER_SLOTS; i++)
+        if (sequence_slots[i].used)
+            used++;
+    if (!used)
+        return;
+    if (slot >= (int32_t)SEQUENCE_USER_SLOTS || !sequence_slots[slot].used) {
+        slot = 0;
+        while (slot < (int32_t)SEQUENCE_USER_SLOTS && !sequence_slots[slot].used)
+            slot++;
+    }
+    steps = delta % (int32_t)used;
+    if (steps < 0)
+        steps = -steps;
+    while (steps--) {
+        int32_t moved;
+        for (moved = 0; moved < (int32_t)SEQUENCE_USER_SLOTS; moved++) {
+            slot = (slot + (delta > 0 ? 1 : (int32_t)SEQUENCE_USER_SLOTS - 1))
+                % (int32_t)SEQUENCE_USER_SLOTS;
+            if (sequence_slots[slot].used)
+                break;
+        }
+    }
+    sequence_selected_slot = (uint8_t)slot;
+    ui_drawn = 0u;
+}
+
 static void sequence_start_name_prompt(uint8_t slot)
 {
     sequence_save_slot = slot;
     sequence_warning = 0u;
     sequence_name_cursor = 0u;
-    sequence_name_value = (uint8_t)(sizeof SEQUENCE_NAME_ALPHABET - 2u);
     sequence_name_length = 0u;
-    for (uint32_t i = 0; i < SEQUENCE_NAME_LENGTH; i++)
-        sequence.header.name[i] = ' ';
-    sequence.header.name[SEQUENCE_NAME_LENGTH - 1u] = 0;
+    if (sequence_editing_saved && slot == sequence_editing_slot) {
+        for (uint32_t i = 0; i < SEQUENCE_NAME_LENGTH - 1u && sequence.header.name[i]; i++)
+            sequence_name_length = (uint8_t)(i + 1u);
+        while (sequence_name_length && sequence.header.name[sequence_name_length - 1u] == ' ')
+            sequence_name_length--;
+        sequence_name_value = (uint8_t)(sizeof SEQUENCE_NAME_ALPHABET - 2u);
+        for (uint32_t i = 0; i < sizeof SEQUENCE_NAME_ALPHABET - 1u; i++) {
+            if (SEQUENCE_NAME_ALPHABET[i] == sequence.header.name[0]) {
+                sequence_name_value = (uint8_t)i;
+                break;
+            }
+        }
+    } else {
+        sequence_name_value = (uint8_t)(sizeof SEQUENCE_NAME_ALPHABET - 2u);
+        for (uint32_t i = 0; i < SEQUENCE_NAME_LENGTH; i++)
+            sequence.header.name[i] = ' ';
+        sequence.header.name[SEQUENCE_NAME_LENGTH - 1u] = 0;
+    }
     sequence_screen = SCREEN_NAME;
     ui_drawn = 0u;
 }
@@ -3197,14 +3327,21 @@ static void sequence_start_name_prompt(uint8_t slot)
 static void sequence_begin_save(void)
 {
     sequence_scan_slots();
-    for (uint32_t slot = 0; slot < SEQUENCE_SLOTS; slot++) {
+    if (sequence_editing_saved) {
+        if (sequence_editing_slot < SEQUENCE_SLOTS && sequence_slots[sequence_editing_slot].used) {
+            sequence_start_name_prompt(sequence_editing_slot);
+            return;
+        }
+        sequence_editing_saved = 0u;
+    }
+    for (uint32_t slot = 0; slot < SEQUENCE_USER_SLOTS; slot++) {
         if (!sequence_slots[slot].used) {
             sequence_start_name_prompt((uint8_t)slot);
             return;
         }
     }
     sequence_selected_slot = 0u;
-    while (sequence_selected_slot < SEQUENCE_SLOTS && !sequence_slots[sequence_selected_slot].used)
+    while (sequence_selected_slot < SEQUENCE_USER_SLOTS && !sequence_slots[sequence_selected_slot].used)
         sequence_selected_slot++;
     sequence_screen = SCREEN_DELETE;
     ui_drawn = 0u;
@@ -3279,7 +3416,7 @@ static void sequence_save_named(void)
 
 static void sequence_delete_selected(void)
 {
-    if (sequence_selected_slot >= SEQUENCE_SLOTS || !sequence_slots[sequence_selected_slot].used)
+    if (sequence_selected_slot >= SEQUENCE_USER_SLOTS || !sequence_slots[sequence_selected_slot].used)
         return;
     if (plat_store_save(sequence_slot_object(sequence_selected_slot), &sequence, 0u) != 0) {
         sequence_show_warning(4u);
@@ -3287,6 +3424,31 @@ static void sequence_delete_selected(void)
     }
     sequence_scan_slots();
     sequence_start_name_prompt(sequence_selected_slot);
+}
+
+static void sequence_delete_saved_track(void)
+{
+    uint8_t deleted_slot = sequence_selected_slot;
+    if (deleted_slot >= SEQUENCE_SLOTS || !sequence_slots[deleted_slot].used)
+        return;
+    if (sequence_playing)
+        sequence_stop();
+    if (plat_store_save(sequence_slot_object(deleted_slot), &sequence, 0u) != 0) {
+        sequence_show_warning(6u);
+        return;
+    }
+    if (sequence_editing_saved && sequence_editing_slot == deleted_slot)
+        sequence_editing_saved = 0u;
+    sequence_scan_slots();
+    sequence_selected_slot = 0u;
+    for (uint32_t offset = 1u; offset <= SEQUENCE_SLOTS; offset++) {
+        uint32_t slot = ((uint32_t)deleted_slot + offset) % SEQUENCE_SLOTS;
+        if (sequence_slots[slot].used) {
+            sequence_selected_slot = (uint8_t)slot;
+            break;
+        }
+    }
+    ui_drawn = 0u;
 }
 
 static void sequence_change_meter(void)
@@ -3336,13 +3498,22 @@ static int sequence_set_tempo(uint8_t tempo)
 
 static void sequence_help_toggle(void)
 {
-    if (sequence_screen == SCREEN_SEQUENCE) {
+    if (sequence_screen == SCREEN_HELP) {
+        sequence_screen = sequence_help_return_screen;
+    } else if (sequence_screen == SCREEN_MAIN || sequence_screen == SCREEN_SEQUENCE
+               || sequence_screen == SCREEN_PLAYBACK) {
+        sequence_help_return_screen = sequence_screen;
         sequence_help_page = 0u;
         sequence_help_master = plat_master();
         sequence_screen = SCREEN_HELP;
-    } else if (sequence_screen == SCREEN_HELP)
-        sequence_screen = SCREEN_SEQUENCE;
+    }
     ui_drawn = 0u;
+}
+
+static uint8_t sequence_help_page_count(void)
+{
+    return sequence_help_return_screen == SCREEN_SEQUENCE ? 4u
+        : sequence_help_return_screen == SCREEN_PLAYBACK ? 2u : 3u;
 }
 
 static void sequence_show_notice(uint8_t notice)
@@ -3476,7 +3647,7 @@ static void layer_tap(uint8_t button)
     if (button == B_FX)
         cycle_effect();
     else if (button == B_GLO)
-        backing_mute ^= MUTE_DRUMS;
+        sequence_help_toggle();
     else if (button == B_LFO)
         backing_mute ^= MUTE_BASS;
     else if (button == B_SEQ)
@@ -3559,9 +3730,10 @@ static void sequence_input(uint32_t buttons, uint32_t pressed, uint32_t keys,
                            int32_t k1, int32_t k2, int32_t k3, int32_t k4, uint32_t master_position)
 {
     uint8_t screen = sequence_screen;
+    uint32_t keys_pressed = keys & ~previous_keys;
     if (screen == SCREEN_HELP) {
         if (pressed & ((1u << B_GLO) | (1u << B_SEQ) | (1u << B_HOME)))
-            sequence_screen = SCREEN_SEQUENCE;
+            sequence_help_toggle();
         else {
             int32_t page_delta = select_delta + algorithm_delta + preset_delta + k1 + k2 + k3 + k4;
             int32_t master_delta = (int32_t)master_position - (int32_t)sequence_help_master;
@@ -3571,7 +3743,9 @@ static void sequence_input(uint32_t buttons, uint32_t pressed, uint32_t keys,
                 sequence_help_master = master_position;
             }
             if (page_delta)
-                sequence_help_page = (uint8_t)((sequence_help_page + (page_delta > 0 ? 1u : 2u)) % 3u);
+                sequence_help_page = (uint8_t)((sequence_help_page
+                    + (page_delta > 0 ? 1u : sequence_help_page_count() - 1u))
+                    % sequence_help_page_count());
         }
         previous_keys = keys;
         previous_buttons = buttons;
@@ -3606,21 +3780,14 @@ static void sequence_input(uint32_t buttons, uint32_t pressed, uint32_t keys,
         ui_drawn = 0u;
         return;
     }
-    if ((pressed & (1u << B_GLO)) && screen == SCREEN_SEQUENCE) {
+    if ((pressed & (1u << B_GLO))
+        && (screen == SCREEN_SEQUENCE || screen == SCREEN_PLAYBACK)) {
         sequence_help_toggle();
         previous_keys = keys;
         previous_buttons = buttons;
         portrait_master_last = master_position;
         return;
     }
-    if ((pressed & (1u << B_GLO)) && screen == SCREEN_HELP) {
-        sequence_help_toggle();
-        previous_keys = keys;
-        previous_buttons = buttons;
-        portrait_master_last = master_position;
-        return;
-    }
-
     if (screen == SCREEN_SEQUENCE && sequence_playing && sequence_follow_playback) {
         uint32_t step_index = sequence_audio_step;
         if (step_index < SEQUENCE_MAX_STEPS && step_index != sequence_cursor_step) {
@@ -3699,11 +3866,27 @@ static void sequence_input(uint32_t buttons, uint32_t pressed, uint32_t keys,
         if ((pressed & (1u << B_SEL)) && !sequence_playing)
             sequence_change_meter();
         if ((pressed & (1u << B_REC)) && !sequence_playing)
-            sequence_toggle_note();
-        if ((pressed & (1u << B_PLAY)) && sequence_playing)
-            sequence_stop();
-        else if ((pressed & (1u << B_PLAY)) && !sequence_playing)
-            sequence_start(0u);
+            sequence_delete_note();
+        if (pressed & (1u << B_PLAY)) {
+            uint32_t now = plat_ms();
+            if (sequence_last_play_press_valid
+                && (uint32_t)(now - sequence_last_play_press) <= SEQUENCE_PLAY_RESET_MS) {
+                if (sequence_playing)
+                    sequence_stop();
+                sequence_cursor_step = 0u;
+                sequence_follow_playback = 0u;
+                sequence_last_play_press_valid = 0u;
+                sequence_load_cursor_sound();
+                ui_drawn = 0u;
+            } else {
+                if (sequence_playing)
+                    sequence_stop();
+                else
+                    sequence_start(0u);
+                sequence_last_play_press = now;
+                sequence_last_play_press_valid = 1u;
+            }
+        }
         if ((pressed & (1u << B_SAVE)) && !sequence_playing)
             sequence_begin_save();
         {
@@ -3757,12 +3940,16 @@ static void sequence_input(uint32_t buttons, uint32_t pressed, uint32_t keys,
         if (pressed & (1u << B_SAVE))
             sequence_save_named();
     } else if (screen == SCREEN_DELETE) {
-        sequence_step_slot(preset_delta);
+        sequence_step_user_slot(preset_delta);
         if (pressed & (1u << B_SEL))
             sequence_delete_selected();
     } else if (screen == SCREEN_PLAYBACK) {
         sequence_step_slot(preset_delta);
-        if (pressed & (1u << B_PLAY)) {
+        if (keys_pressed) {
+            sequence_edit_selected();
+        } else if (pressed & (1u << B_REC)) {
+            sequence_delete_saved_track();
+        } else if (pressed & (1u << B_PLAY)) {
             if (sequence_playing)
                 sequence_stop();
             else if (sequence_slot_count)
@@ -4274,7 +4461,13 @@ static void sequence_draw_grid(void)
         cv_line(x0 + width - 1, y, x0 + width - 1, y + row_height - 1, color);
         for (uint32_t step_index = 1u; step_index < steps_per_bar; step_index++) {
             int32_t x = x0 + (int32_t)(cell_width * (float)step_index);
-            cv_line(x, y + 1, x, y + row_height - 2, dim_color(color, 55u));
+            if (step_index % 4u == 0u) {
+                uint16_t accent = dim_color(color, 78u);
+                cv_line(x, y + 1, x, y + row_height - 2, accent);
+                cv_line(x + 1, y + 1, x + 1, y + row_height - 2, accent);
+            } else {
+                cv_line(x, y + 1, x, y + row_height - 2, dim_color(color, 55u));
+            }
         }
     }
     for (uint32_t i = 0; i < sequence.header.count; i++) {
@@ -4382,7 +4575,7 @@ static void sequence_draw_info(void)
     }
     sequence_draw_notice();
     draw_text(6, 56, "PRESET: TRACK   ALGO: STEP   REC: ADD/DEL", C_DIM);
-    draw_text(6, 78, "GLO=HELP", C_GRAY);
+    draw_text(6, 78, "GLO=HELP", C_HI);
     draw_text(101, 78, sequence_meter_names[sequence.header.meter], C_HI);
     tempo_text[4] = (char)('0' + tempo / 100u);
     tempo_text[5] = (char)('0' + (tempo / 10u) % 10u);
@@ -4393,15 +4586,47 @@ static void sequence_draw_info(void)
 
 static void sequence_draw_help(void)
 {
-    static const char *const lines[3][4] = {
+    static const char *const main_lines[3][4] = {
+        {"SELECT: SOUND", "KEYS: PLAY NOTES", "OCT: SHIFT PITCH", "SEL: SOUND VARIANT"},
+        {"K1-K4: SOUND FX", "ENV: MUTE CHORDS", "LFO: MUTE BASS", "ARP: ARPEGGIATOR"},
+        {"EDIT+K1: TEMPO", "SAVE: STORE TEMPO", "PLAY OPENS PLAYBACK", "SEQ OPENS SEQUENCER"}
+    };
+    static const char *const playback_lines[2][4] = {
+        {"PRESET: PICK SONG", "PLAY: START / STOP", "REC: DELETE SONG", "KEY: LOAD TO EDIT"},
+        {"FIRST KEY: IGNORED", "SAVE: UPDATE SONG", "HOME: EXIT PLAYBACK", "PRESET: NEXT SONG"}
+    };
+    static const char *const sequence_lines[4][4] = {
         {"PRESET: TRACK", "ALGO: STEP", "SELECT: SOUND", "MASTER: LENGTH"},
         {"KEYS: SET NOTE", "REC: ADD / DEL", "OCT +/-: OCTAVE", "K1-K4: FX"},
-        {"EDIT+K1: BPM", "SEL: METER", "PLAY: START / STOP", "SAVE: STORE"}
+        {"EDIT+K1: BPM", "SEL: METER", "PLAY: START / STOP", "SAVE: STORE"},
+        {"PLAYBACK: PICK SONG", "KEY: LOAD TO EDIT", "FIRST KEY: IGNORED", "SAVE: UPDATE SONG"}
     };
-    char title[] = "SEQUENCER HELP 1/3";
-    title[15] = (char)('1' + sequence_help_page);
+    char main_title[] = "MAIN HELP 1/3";
+    char playback_title[] = "PLAYBACK HELP 1/2";
+    char sequence_title[] = "SEQUENCER HELP 1/4";
+    const char *const (*lines)[4];
+    char *title;
+    int32_t title_x;
+    uint8_t title_page_index;
+    if (sequence_help_return_screen == SCREEN_SEQUENCE) {
+        lines = sequence_lines;
+        title = sequence_title;
+        title_x = 55;
+        title_page_index = 15u;
+    } else if (sequence_help_return_screen == SCREEN_PLAYBACK) {
+        lines = playback_lines;
+        title = playback_title;
+        title_x = 61;
+        title_page_index = 14u;
+    } else {
+        lines = main_lines;
+        title = main_title;
+        title_x = 80;
+        title_page_index = 10u;
+    }
+    title[title_page_index] = (char)('1' + sequence_help_page);
     cv_begin(240, 144, C_BLACK);
-    draw_text(55, 4, title, C_WHITE);
+    draw_text(title_x, 4, title, C_WHITE);
     for (uint32_t i = 0; i < 4u; i++)
         cv_text(8, 24 + (int32_t)i * 28, &FONT_M, lines[sequence_help_page][i], C_GRAY);
     cv_blit(0, 0);
@@ -4419,9 +4644,9 @@ static void sequence_draw_name(void)
     name[SEQUENCE_NAME_LENGTH - 1u] = 0;
     cv_begin(240, 144, C_BLACK);
     draw_text(84, 14, "SAVE TRACK", C_WHITE);
-    draw_text(26, 54, name, C_HI);
+    cv_text(26, 54, &FONT_M, name, C_HI);
     if ((plat_ms() / 300u) & 1u)
-        cv_rect(26 + (int32_t)sequence_name_cursor * 6, 70, 5, 2, C_WHITE);
+        cv_rect(26 + (int32_t)sequence_name_cursor * 12, 78, 10, 2, C_WHITE);
     draw_text(10, 98, "PRESET: LETTER / NUMBER", C_GRAY);
     draw_text(10, 112, "ALGO: MOVE   SEL: DELETE", C_GRAY);
     if (sequence_warning && ((plat_ms() / 250u) & 1u) == 0u)
@@ -4436,7 +4661,7 @@ static void sequence_draw_name(void)
 static void sequence_draw_delete(void)
 {
     uint32_t selected_ordinal = 0u, total = 0u, first;
-    for (uint32_t i = 0; i < SEQUENCE_SLOTS; i++) {
+    for (uint32_t i = 0; i < SEQUENCE_USER_SLOTS; i++) {
         if (!sequence_slots[i].used)
             continue;
         if (i == sequence_selected_slot)
@@ -4449,7 +4674,7 @@ static void sequence_draw_delete(void)
     cv_begin(240, 144, C_BLACK);
     draw_text(65, 8, "DELETE A TRACK", C_WHITE);
     draw_text(18, 30, "PRESET: CHOOSE TRACK", C_GRAY);
-    for (uint32_t i = 0, ordinal = 0; i < SEQUENCE_SLOTS; i++) {
+    for (uint32_t i = 0, ordinal = 0; i < SEQUENCE_USER_SLOTS; i++) {
         if (!sequence_slots[i].used)
             continue;
         if (ordinal >= first && ordinal < first + 8u) {
@@ -4495,19 +4720,22 @@ static void sequence_draw_playback(void)
                 int32_t y = 31 + (int32_t)(ordinal - first) * 14;
                 if (i == sequence_selected_slot)
                     cv_rect(12, y - 1, 210, 14, RGB(70, 70, 90));
-                draw_text(18, y, sequence_slots[i].name,
+                draw_text(18, y, sequence_slot_name(i),
                           i == sequence_selected_slot ? C_WHITE : C_GRAY);
             }
             ordinal++;
         }
     }
     if (sequence_warning && ((plat_ms() / 250u) & 1u) == 0u)
-        draw_text(48, 120, sequence_warning == 5u ? "NO SAVED TRACKS" : "TRACK LOAD FAILED",
+        draw_text(48, 120, sequence_warning == 5u ? "NO SAVED TRACKS"
+                  : sequence_warning == 6u ? "DELETE FAILED"
+                  : sequence_warning == 7u ? "BUILT-IN SAVE FAILED" : "TRACK LOAD FAILED",
                   RGB(255, 45, 45));
     cv_blit(0, 0);
     cv_begin(240, 96, C_BLACK);
-    draw_text(6, 70, "PLAY: START / STOP AND RESET", C_HI);
-    draw_text(6, 82, "PRESET: SELECT   HOME: EXIT", C_GRAY);
+    draw_text(6, 70, "PLAY START/STOP  REC DELETE", C_HI);
+    draw_text(6, 82, "PRESET SELECT  KEY EDIT  HOME EXIT", C_GRAY);
+    draw_text(180, 70, "GLO: HELP", C_HI);
     cv_blit(0, 144);
 }
 
@@ -4578,13 +4806,21 @@ void app_frame(void)
         }
         {
             uint32_t lights = 0u;
-            if (sequence_screen == SCREEN_SEQUENCE || sequence_screen == SCREEN_HELP
-                || sequence_screen == SCREEN_NAME || sequence_screen == SCREEN_DELETE)
+            if (sequence_screen == SCREEN_SEQUENCE || sequence_screen == SCREEN_NAME
+                || sequence_screen == SCREEN_DELETE
+                || (sequence_screen == SCREEN_HELP && sequence_help_return_screen == SCREEN_SEQUENCE))
                 lights |= 1u << B_SEQ;
-            if (sequence_playing || sequence_screen == SCREEN_PLAYBACK)
+            if (sequence_screen == SCREEN_HELP && sequence_help_return_screen == SCREEN_MAIN)
+                lights |= 1u << B_GLO;
+            if (sequence_playing || sequence_screen == SCREEN_PLAYBACK
+                || (sequence_screen == SCREEN_HELP && sequence_help_return_screen == SCREEN_PLAYBACK))
                 lights |= 1u << B_PLAY;
             if (sequence_screen == SCREEN_SEQUENCE
                 && sequence_find_event(sequence_cursor_track, sequence_cursor_step) >= 0)
+                lights |= 1u << B_REC;
+            if (sequence_screen == SCREEN_PLAYBACK && sequence_slot_count
+                && sequence_selected_slot < SEQUENCE_SLOTS
+                && sequence_slots[sequence_selected_slot].used)
                 lights |= 1u << B_REC;
             if (sequence_screen == SCREEN_NAME)
                 lights |= 1u << B_SAVE;
@@ -4698,10 +4934,11 @@ void app_frame(void)
                   selected_instrument == 7u ? (chord_layout ? "ALGO: SPLIT" : "ALGO: 1 KEY") : "EDIT+K1: BPM  SAVE: STORE",
                   plat_audio_status() || save_failed ? C_HI : C_GRAY);
         if (phrase_state != PHRASE_IDLE)
-            draw_text(204, 78, phrase_state == PHRASE_REC ? "REC" : "LOOP",
+            draw_text(204, 63, phrase_state == PHRASE_REC ? "REC" : "LOOP",
                       phrase_state == PHRASE_REC ? RGB(255, 90, 90) : C_HI);
         else if (phrase_count)
-            draw_text(204, 78, "PHR", C_GRAY);
+            draw_text(204, 63, "PHR", C_GRAY);
+        draw_text(178, 82, "GLO: HELP", C_HI);
         cv_blit(0, 144);
         ui_tempo = tempo;
         ui_phrase_state = (uint8_t)(phrase_state | (phrase_count ? 4u : 0u));
@@ -4783,6 +5020,14 @@ int app_expect(const char *what, int *got)
     }
     if (text_is(what, "seq_help")) {
         *got = sequence_screen == SCREEN_HELP;
+        return 1;
+    }
+    if (text_is(what, "main_help")) {
+        *got = sequence_screen == SCREEN_HELP && sequence_help_return_screen == SCREEN_MAIN;
+        return 1;
+    }
+    if (text_is(what, "playback_help")) {
+        *got = sequence_screen == SCREEN_HELP && sequence_help_return_screen == SCREEN_PLAYBACK;
         return 1;
     }
     if (text_is(what, "seq_help_page")) {

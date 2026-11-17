@@ -4,9 +4,14 @@ tap ENV
 expect backing_mute 1
 tap LFO
 tap GLO
-expect backing_mute 7
+expect main_help 1
+expect backing_mute 3
+spin SELECT 1
+expect seq_help_page 1
+tap GLO
+expect main_help 0
 tap ENV
-expect backing_mute 6
+expect backing_mute 2
 turn SELECT 3
 expect instrument 4
 tap SEL
@@ -35,11 +40,17 @@ tap PLAY
 wait 100
 expect playing 0
 expect playback_mode 1
+tap GLO
+expect playback_help 1
+spin K2 1
+expect seq_help_page 1
+tap GLO
+expect playback_mode 1
 tap HOME
 wait 100
 expect playback_mode 0
 expect jc_brightness 100
-# Layers: GLO held, keys 0..2 mute parts and key 3 unmutes all; a tap alone still toggles drums.
+# Layers: GLO held, keys 0..2 mute parts and key 3 unmutes all; a short tap opens main help.
 press GLO
 wait 100
 key 3 down 100
@@ -60,7 +71,10 @@ wait 100
 expect backing_mute 2
 tap GLO
 wait 100
-expect backing_mute 6
+expect main_help 1
+tap GLO
+expect main_help 0
+expect backing_mute 2
 # FX held, key 2 sets the effect to 2 only while the key is down.
 expect fx2 0
 press FX

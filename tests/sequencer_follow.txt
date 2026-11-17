@@ -19,6 +19,7 @@ expect seq_view_bar 0
 wait 500
 expect seq_view_bar 0
 tap PLAY
+wait 600
 tap PLAY
 expect seq_follow 1
 tap PLAY

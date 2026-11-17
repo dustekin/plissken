@@ -1,0 +1,32 @@
+# The built-in sequencer arrangement is loaded, playable, deletable, and restored on boot.
+wait 2000
+expect seq_saved 1
+tap PLAY
+expect playback_mode 1
+tapkey 0
+expect seq_screen 1
+expect seq_events 950
+expect seq_bars 65
+expect seq_tempo 80
+tap HOME
+tap PLAY
+expect playback_mode 1
+tap REC
+expect seq_saved 0
+tap HOME
+reboot
+expect seq_saved 1
+tap PLAY
+tap PLAY
+wait 65000
+expect seq_playing 1
+expect hits0 >0
+expect hits1 >0
+expect hits2 >0
+expect hits5 >0
+expect hits6 >0
+tapkey 0
+expect seq_screen 1
+expect seq_playing 0
+expect seq_events 950
+tap HOME

@@ -27,17 +27,28 @@ turn SELECT -1
 turn K4 -20
 expect drum_bass_boost 0
 tap PLAY
+expect playback_mode 1
+tap PLAY
+expect seq_playing 1
 wav drum_sequence_off.wav
 wait 15000
-wavstop
+expect hits5 >0
 tap PLAY
+wavstop
+tap HOME
 wait 500
 turn K4 8
+expect drum_bass_boost 8
 tap PLAY
+expect playback_mode 1
+tap PLAY
+expect seq_playing 1
 wav drum_sequence_on.wav
 wait 15000
-wavstop
+expect hits5 >0
 tap PLAY
+wavstop
+tap HOME
 reboot
 wait 2000
 expect drum_bass_boost 0

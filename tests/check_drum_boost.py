@@ -1,4 +1,4 @@
-"""Verify low-frequency energy increases in the drum boost test renders."""
+"""Verify low-frequency energy increases in live and sequencer drum renders."""
 import math
 from pathlib import Path
 import struct

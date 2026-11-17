@@ -47,9 +47,7 @@ def render(host, directory, patch, control=None):
         "wait 2000\n"
         "turn SELECT 5\n"
         "expect instrument 6\n"
-        "press EDIT\n"
-        f"turn SELECT {patch}\n"
-        "release EDIT\n"
+        f"turn PRESET {patch}\n"
         f"expect cs80_preset {patch}\n"
     )
     for knob, value in enumerate(PATCH_CONTROLS[patch - 1], 1):
@@ -86,9 +84,7 @@ def render_chord(host, directory):
     scenario.write_text(
         "wait 2000\n"
         "turn SELECT 5\n"
-        "press EDIT\n"
-        "turn SELECT 1\n"
-        "release EDIT\n"
+        "turn PRESET 1\n"
         "wav cs80_chord.wav\n"
         "key 2 down 100 0\n"
         "key 5 down 100 0\n"

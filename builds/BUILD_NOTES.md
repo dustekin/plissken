@@ -3,6 +3,22 @@
 Each test build is saved as `plissken###.fwsc` with an increasing number. Newest first.
 Add an entry here whenever a new build is saved.
 
+## 012
+- Hardware candidate: Escape From Firmware uses a sixteenth-step onset grid for CS-50 with baseline per-part event counts preserved (Juno/Piano/Pro-1/CS-50/drums = 204/76/35/242/393).
+- Selected CS-50 onset error improves to 0.00 average / 0.04 maximum sixteenth steps.
+- Physical FM-1 test passed; user confirmed the build is fine.
+- Device image 481,952 B; package 614,938 B.
+
+## 011
+- GLO: HELP text is now highlighted yellow on the main, playback, and sequencer screens.
+- Physical FM-1 test passed; user confirmed the GLO help labels work correctly.
+- Device image 481,952 B; package 614,938 B.
+
+## 010
+- Added the built-in Escape From Firmware sequencer track and loading saved tracks from Playback for editing.
+- GLO opens contextual help; the main help identifies PLAY as Playback and SEQ as the sequencer screen.
+- Device image 481,952 B; package 614,938 B.
+
 ## 008
 - All instrument names white (the selected one stays cyan).
 - CHORD another 20% quieter (Juno chord voice compensated for the Juno boost).

@@ -3,6 +3,10 @@ tap SEQ
 expect seq_screen 1
 turn PRESET 2
 expect seq_track 2
+turn PRESET 3
+expect seq_track 0
+turn PRESET 2
+expect seq_track 2
 turn ALGO 2
 expect seq_cursor 2
 master 4096
@@ -18,22 +22,51 @@ tap SEL
 expect seq_meter 1
 tap SAVE
 turn PRESET 1
+wait 100
+shot seq_save_name.png
 tap SAVE
 wait 200
-expect seq_saved 1
+expect seq_saved 2
+tap SAVE
+turn PRESET 1
+tap SAVE
+expect seq_saved 3
 reboot
-expect seq_saved 1
+expect seq_saved 3
+tap PLAY
+expect playback_mode 1
+tapkey 0
+expect seq_screen 1
+expect seq_events 1
+expect seq_cursor 0
+tapkey 1
+expect seq_events 2
+tap SAVE
+tap SAVE
+expect seq_saved 3
+tap HOME
+tap PLAY
+expect playback_mode 1
+tapkey 0
+expect seq_events 2
+tap HOME
 tap PLAY
 expect playback_mode 1
 tap PLAY
 expect seq_playing 1
 wait 500
 expect hits3 >0
-tap PLAY
+tap REC
 expect seq_playing 0
+expect seq_saved 2
+tap PLAY
+expect seq_playing 1
+tap REC
+expect seq_playing 0
+expect seq_saved 1
 tap HOME
 expect playback_mode 0
 tap SEQ
 expect seq_screen 1
-expect seq_events 0
+expect seq_events 2
 tap HOME

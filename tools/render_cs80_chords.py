@@ -24,9 +24,7 @@ SCRIPT_TEMPLATE = """\
 wait 2000
 turn SELECT 5
 expect instrument 6
-press EDIT
-turn SELECT {patch}
-release EDIT
+turn PRESET {patch}
 expect cs80_preset {patch}
 wav {filename}
 key 0 down 100 0

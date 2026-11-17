@@ -107,6 +107,11 @@ def main():
                     raise SystemExit(f"instrument {instrument} note {expected_note}: invalid render")
                 renders[instrument, key, 100] = audio
 
+        juno_piano_ratio = rms(renders[0, 13, 100]) / rms(renders[1, 13, 100])
+        print(f"Juno-to-piano midrange RMS ratio={juno_piano_ratio:.2f}")
+        if not 0.8 <= juno_piano_ratio <= 1.2:
+            raise SystemExit("Juno midrange level is not balanced with piano")
+
         for instrument in INSTRUMENTS:
             soft = render(host, directory, instrument, 13, 20)
             loud = renders[instrument, 13, 100]

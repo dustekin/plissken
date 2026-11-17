@@ -22,7 +22,10 @@ tapkey 9
 expect seq_events 2
 expect seq_note 62
 expect seq_duration 2
-# REC removes an existing note; a key inserts it again.
+# REC only removes existing notes; keys insert notes into empty cells.
+tap REC
+expect seq_events 1
+expect seq_note -1
 tap REC
 expect seq_events 1
 expect seq_note -1
@@ -70,10 +73,19 @@ expect seq_help_page 2
 wait 100
 shot seq_help_3.png
 spin PRESET 1
+expect seq_help_page 3
+shot seq_help_4.png
+spin ALGO 1
 expect seq_help_page 0
 master 1280
 expect seq_help_page 1
 tap GLO
 expect seq_screen 1
 expect fx2 2
+spin ALGO 5
+tap PLAY
+expect seq_playing 1
+tap PLAY
+expect seq_playing 0
+expect seq_cursor 0
 tap HOME
