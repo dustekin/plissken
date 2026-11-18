@@ -38,8 +38,7 @@ seconds while the Pro-1 voice plays a short keyboard phrase taken from the autho
 ## v0.13 release candidate
 
 Builds 013 and 014 add the animated startup splash and the Pro-1 startup phrase. Build 014 drops the phrase's final
-second, whose stacked closing chord distorted on hardware. Build 014 has not yet been tested on the FM-1; build 012
-was the last build tested on hardware.
+second, whose stacked closing chord distorted on hardware. Build 014 was physically tested on the FM-1 and the startup no longer distorts.
 
 ## v0.12 features
 
@@ -128,7 +127,7 @@ An audio initialization failure is shown on the main screen as **AUDIO INIT FAIL
 ## GitHub releases
 
 The current published release, **v0.11**, remains signed and unchanged. This checkout is the **v0.13 release
-candidate**; build 014 is not yet hardware-tested. Pushing a `v0.13` tag triggers the release workflow, which builds
+candidate**; build 014 was tested on hardware. Pushing a `v0.13` tag triggers the release workflow, which builds
 and attests the versioned package from that tag. Do not replace the attested v0.11 package by hand. Product and
 install metadata are in `fm1.toml`; the Firmware Hub card text and sound provenance are in the root `fmhub.json`.
 

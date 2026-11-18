@@ -5,7 +5,8 @@ Add an entry here whenever a new build is saved.
 
 ## 014
 - Startup music and splash shortened to 3 s: the final second (the stacked closing chord) is removed because it distorted badly on hardware.
-- Host tests pass (startup peak -14.4 dBFS); not yet tested on a physical FM-1.
+- Host tests pass (startup peak -14.4 dBFS).
+- Physical FM-1 test passed; user confirmed the startup no longer distorts.
 
 ## 013
 - Startup: cyan scanline-sweep animation over the splash (900 ms), splash held for the full 4 s music.
