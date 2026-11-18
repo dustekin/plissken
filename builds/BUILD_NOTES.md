@@ -3,6 +3,16 @@
 Each test build is saved as `plissken###.fwsc` with an increasing number. Newest first.
 Add an entry here whenever a new build is saved.
 
+## 014
+- Startup music and splash shortened to 3 s: the final second (the stacked closing chord) is removed because it distorted badly on hardware.
+- Host tests pass (startup peak -14.4 dBFS); not yet tested on a physical FM-1.
+
+## 013
+- Startup: cyan scanline-sweep animation over the splash (900 ms), splash held for the full 4 s music.
+- Startup music: Pro-1 keyboard phrase from escape_from_ny.mid (0:21-0:25) replaces the CS-50 chime.
+- Host tests pass (startup peak -13.8 dBFS); not yet tested on a physical FM-1.
+- Device image 482,552 B; package 614,938 B.
+
 ## 012
 - Hardware candidate: Escape From Firmware uses a sixteenth-step onset grid for CS-50 with baseline per-part event counts preserved (Juno/Piano/Pro-1/CS-50/drums = 204/76/35/242/393).
 - Selected CS-50 onset error improves to 0.00 average / 0.04 maximum sixteenth steps.

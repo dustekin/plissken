@@ -258,6 +258,10 @@ static uint8_t audio_escape_play;
 static uint32_t previous_buttons;
 static uint32_t previous_keys;
 static uint32_t startup_splash_until;
+#define SPLASH_SWEEP_MS 900u
+#define SPLASH_SWEEP_STEP_MS 40u
+static uint8_t splash_booted;
+static uint32_t splash_sweep_frame = 0xFFFFu;
 static int8_t live_key_voice[NKEYS];
 static uint8_t live_key_instrument[NKEYS];
 static uint8_t live_key_chord_voice[NKEYS];
@@ -396,12 +400,32 @@ static const char *const drum_sample_labels[ROSSFLM1_SAMPLE_COUNT] = {
 static uint8_t save_failed;
 static volatile uint32_t solo_mask = 0x7Fu;
 static volatile uint8_t startup_requested;
+typedef struct {
+    uint32_t offset;
+    uint32_t duration;
+    uint8_t note;
+    uint8_t velocity;
+    uint8_t pro;
+} startup_event_t;
+
+/* Opening: four seconds of escape_from_ny.mid from 21.0 s on the Pro-1 (channel 4
+   chord pulse and melody plus the channel 2 pad, without its E2 so six voices
+   suffice). One beat is 33075 samples (80 BPM). */
+#define STARTUP_MS 3000u
+#define SP(t, dur_q, n, v) {(t), (dur_q), (n), (v), 1u}
+static const startup_event_t startup_events[] = {
+    SP(0u, 132300u, 64u, 29u), SP(0u, 132300u, 76u, 29u),
+    SP(0u, 17912u, 40u, 84u), SP(0u, 17912u, 52u, 84u), SP(0u, 115400u, 59u, 84u),
+    SP(33075u, 22050u, 40u, 84u), SP(33075u, 22050u, 52u, 84u),
+    SP(66150u, 9648u, 40u, 84u), SP(66150u, 9648u, 52u, 84u),
+    SP(82688u, 40307u, 40u, 84u), SP(82688u, 40307u, 52u, 84u),
+    SP(115763u, 7925u, 62u, 84u), SP(124031u, 7925u, 64u, 84u)
+};
+#define STARTUP_EVENTS (sizeof(startup_events) / sizeof(startup_events[0]))
+static const uint32_t startup_end = 132300u;
 static uint8_t startup_active;
 static uint8_t startup_event;
 static uint32_t startup_sample;
-static const uint32_t startup_offsets[6] = {0u, 8269u, 16538u, 24806u, 33075u, 41344u};
-static const uint32_t startup_durations[6] = {4134u, 4134u, 4134u, 5167u, 4134u, 4823u};
-static const uint8_t startup_notes[6] = {52u, 59u, 64u, 64u, 71u, 76u};
 static const char *const track_names[TRACKS] = {
     "JUNO", "PIANO", "PRO-1", "GUITAR", "BASS", "LM-1", "CS-50/CS-80"
 };
@@ -2226,7 +2250,8 @@ void app_init(void)
 void app_boot(void)
 {
     startup_requested = 1u;
-    startup_splash_until = plat_ms() + 1500u;
+    startup_splash_until = plat_ms() + STARTUP_MS;
+    splash_booted = 1u;
 }
 
 void app_render(int32_t *lr, uint32_t n, uint32_t master_q12)
@@ -2319,12 +2344,18 @@ void app_render(int32_t *lr, uint32_t n, uint32_t master_q12)
         if (sequence_playing || sequence_stop_requested)
             sequence_audio_advance();
         if (startup_active) {
-            while (startup_event < 6u && startup_sample >= startup_offsets[startup_event]) {
-                trigger_pooled(cs50, CS50_VOICES, startup_notes[startup_event],
-                               startup_durations[startup_event]);
+            while (startup_event < STARTUP_EVENTS
+                   && startup_sample >= startup_events[startup_event].offset) {
+                const startup_event_t *e = &startup_events[startup_event];
+                if (e->pro) {
+                    uint32_t index = trigger_pooled(pro_one, PRO_ONE_VOICES, e->note, e->duration);
+                    pro_one[index].velocity_gain = velocity_gain(e->velocity);
+                } else {
+                    trigger_pooled(cs50, CS50_VOICES, e->note, e->duration);
+                }
                 startup_event++;
             }
-            if (startup_event == 6u && startup_sample >= startup_offsets[5] + startup_durations[5])
+            if (startup_event == STARTUP_EVENTS && startup_sample >= startup_end)
                 startup_active = 0u;
             startup_sample++;
         }
@@ -2592,7 +2623,7 @@ void app_ui_init(void)
     sequence_scan_slots();
 }
 
-void app_splash(void)
+static void splash_decode(void)
 {
     uint32_t i, out = 0u, run;
 
@@ -2602,9 +2633,62 @@ void app_splash(void)
         for (run = 0u; run < startup_splash_rle[i]; run++)
             cv_px[out++] = color;
     }
+}
+
+void app_splash(void)
+{
+    if (!splash_booted) {
+        /* the boot screen is drawn by the sweep in app_frame */
+        lcd_fill(0, 0, 240u, 240u, C_BLACK);
+        return;
+    }
+    splash_decode();
     cv_blit(0, 0);
     lcd_fill(0, STARTUP_SPLASH_HEIGHT, STARTUP_SPLASH_WIDTH,
              240u - STARTUP_SPLASH_HEIGHT, C_BLACK);
+}
+
+/* Scanline sweep: a cyan line reveals the logo top to bottom, with a few
+   glitched rows trailing it. Returns after drawing; the last frame is clean. */
+static void splash_sweep(uint32_t elapsed)
+{
+    uint32_t frame = elapsed >= SPLASH_SWEEP_MS ? 0xFFFEu : elapsed / SPLASH_SWEEP_STEP_MS;
+    uint32_t y, row, x;
+
+    if (frame == splash_sweep_frame)
+        return;
+    splash_sweep_frame = frame;
+    if (frame == 0xFFFEu) {
+        app_splash();
+        return;
+    }
+    splash_decode();
+    y = (STARTUP_SPLASH_HEIGHT * elapsed) / SPLASH_SWEEP_MS;
+    for (row = (y > 30u ? y - 30u : 0u); row < y; row++) {
+        uint32_t r = (row * 2654435761u) ^ (frame * 40503u);
+        uint16_t *p = &cv_px[row * STARTUP_SPLASH_WIDTH];
+        int32_t shift;
+
+        r ^= r >> 13;
+        if ((r & 7u) != 0u)
+            continue;
+        shift = (int32_t)((r >> 4) % 21u) - 10;
+        if (shift > 0) {
+            for (x = STARTUP_SPLASH_WIDTH - 1u; x >= (uint32_t)shift; x--)
+                p[x] = p[x - (uint32_t)shift];
+            for (x = 0u; x < (uint32_t)shift; x++)
+                p[x] = C_BLACK;
+        } else if (shift < 0) {
+            uint32_t s = (uint32_t)(-shift);
+            for (x = 0u; x + s < STARTUP_SPLASH_WIDTH; x++)
+                p[x] = p[x + s];
+            for (; x < STARTUP_SPLASH_WIDTH; x++)
+                p[x] = C_BLACK;
+        }
+    }
+    for (x = y * STARTUP_SPLASH_WIDTH; x < STARTUP_SPLASH_WIDTH * STARTUP_SPLASH_HEIGHT; x++)
+        cv_px[x] = (x < (y + 2u) * STARTUP_SPLASH_WIDTH) ? swap16(0x07FFu) : C_BLACK;
+    cv_blit(0, 0);
 }
 
 static uint32_t phrase_popcount(uint32_t bits)
@@ -4778,8 +4862,11 @@ void app_frame(void)
             app_splash();
     }
 #endif
-    if ((int32_t)(plat_ms() - startup_splash_until) < 0)
+    if ((int32_t)(plat_ms() - startup_splash_until) < 0) {
+        splash_sweep(STARTUP_MS - (uint32_t)(startup_splash_until - plat_ms()));
         return;
+    }
+    splash_sweep_frame = 0xFFFFu;
     if (sequence_screen != SCREEN_MAIN) {
         now = plat_ms();
         if (sequence_warning && (int32_t)(now - sequence_warning_until) >= 0) {

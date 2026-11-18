@@ -64,7 +64,7 @@ multi-tap delay rather than a physical room model.
 The screen lists the instruments in white, with the selected keyboard sound in cyan-blue. The small bars beside the
 names are activity meters only. In the sequencer, the editor grid displays tracks and note lengths. CHORD plays one
 chord per key; K1 sets the chord type and ALGO chooses the 1 KEY or SPLIT layout.
-At startup, the display shows the color skyline artwork from `assets/startup.png`, packed into a four-color RGB565 palette, for at least 1.5 seconds while the CS-50 voice plays the opening six-note phrase.
+At startup, the display shows the color skyline artwork from `assets/startup.png`, packed into a four-color RGB565 palette, for 3 seconds. A cyan scanline sweeps down the image while the Pro-1 voice plays a short keyboard phrase.
 
 ## Current limitations
 

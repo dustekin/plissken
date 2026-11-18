@@ -5,7 +5,7 @@ directory is the build system and platform submodule. The keyboard offers Juno, 
 drums, CS-50/CS-80 and CHORD sounds, along with a live phrase recorder and a visual five-track sequencer with
 saved-song playback.
 
-This checkout is the **v0.12 release candidate**. The published, signed v0.11 release does not include the visual
+This checkout is the **v0.13 release candidate**. The published, signed v0.11 release does not include the visual
 sequencer and saved-song playback features described below.
 
 It's a crappy little firmware, not meant to be serious, just wanted to prove I could do it with vibecoding.
@@ -31,12 +31,19 @@ SELECT, ALGO, or PRESET encoder colors it cyan; each subsequent detent advances 
 counts. K1–K4 do not affect the top-center portrait. The Juno, Pro One, bass, guitar, and
 CS-50 oscillator edges use polyBLEP band-limiting to reduce high-note aliasing without oversampling or additional
 audio buffers.
-At startup, a color skyline splash is shown for at least 1.5 seconds while the CS-50 voice plays its opening
-six-note phrase; the 240×144 image is packed into a four-color RGB565 palette for the FM-1 display.
+At startup, a cyan scanline sweep with a slight glitch reveals the color skyline splash, which stays up for 3
+seconds while the Pro-1 voice plays a short keyboard phrase taken from the authorized `escape_from_ny.mid`
+(0:21–0:24); the 240×144 image is packed into a four-color RGB565 palette for the FM-1 display.
 
-## v0.12 release candidate
+## v0.13 release candidate
 
-Build 012 has been physically tested on the FM-1 and confirmed working. This candidate adds:
+Builds 013 and 014 add the animated startup splash and the Pro-1 startup phrase. Build 014 drops the phrase's final
+second, whose stacked closing chord distorted on hardware. Build 014 has not yet been tested on the FM-1; build 012
+was the last build tested on hardware.
+
+## v0.12 features
+
+Build 012 was physically tested on the FM-1 and confirmed working. It added:
 
 - A saved-song Playback screen with 16 user slots plus the built-in **Escape From Firmware** track. REC deletes the
   selected song; pressing a piano key loads it into the sequencer for editing, and that opening key is not recorded.
@@ -69,7 +76,7 @@ python3 tests/check_drum_effects.py build/host
 python3 tests/check_drum_boost.py build/host
 ```
 
-The checked-in v0.12 candidate `dsp/escape_sequence.h` is derived from the authorized render MIDI via
+The checked-in `dsp/escape_sequence.h` is derived from the authorized render MIDI via
 `python3 tools/midi_to_song.py <file.mid>` and `python3 tools/song_to_sequence.py`. It uses a sixteenth-step
 onset grid for CS-50 while preserving baseline per-part event counts; the transcription remains within the
 sequencer's event and four-voice limits. Regenerate it with
@@ -120,8 +127,8 @@ An audio initialization failure is shown on the main screen as **AUDIO INIT FAIL
 
 ## GitHub releases
 
-The current published release, **v0.11**, remains signed and unchanged. This checkout is the **v0.12 release
-candidate**; build 012 was tested on hardware. Pushing a `v0.12` tag triggers the release workflow, which builds
+The current published release, **v0.11**, remains signed and unchanged. This checkout is the **v0.13 release
+candidate**; build 014 is not yet hardware-tested. Pushing a `v0.13` tag triggers the release workflow, which builds
 and attests the versioned package from that tag. Do not replace the attested v0.11 package by hand. Product and
 install metadata are in `fm1.toml`; the Firmware Hub card text and sound provenance are in the root `fmhub.json`.
 
