@@ -5,8 +5,9 @@ directory is the build system and platform submodule. The keyboard offers Juno, 
 drums, CS-50/CS-80 and CHORD sounds, along with a live phrase recorder and a visual five-track sequencer with
 saved-song playback.
 
-This checkout is the **v0.13 release candidate**. The published, signed v0.11 release does not include the visual
-sequencer and saved-song playback features described below.
+This checkout is the **v0.114** release candidate. It contains the released v0.13 work plus the Halloween
+preloaded track and sequencer mix improvements. The older published, signed v0.11 release does not include the
+visual sequencer and saved-song playback features described below.
 
 It's a crappy little firmware, not meant to be serious, just wanted to prove I could do it with vibecoding.
 
@@ -19,9 +20,10 @@ Please do what you like with the firmware, but give credit.
 
 The original seven-part backing arrangement and EDIT + PLAY song mode are disabled because their mix distorted
 (`BACKING_ENABLED` is 0 in `app.c`). A reduced, four-voice sequencer transcription of the authorized render-test
-MIDI is available as **Escape From Firmware**; if deleted, it is restored on the next boot. PLAY opens the saved-song
-selector, not the disabled backing arrangement. This remains a concurrency and resource-budget prototype, not a
-finished instrument. All 13 Rossf Linn LM-1 one-shots are packed
+MIDI is available as **Escape From Firmware**. **Halloween** is also preloaded as an editable 5/4, 120 BPM
+sequence; its synth stem uses the Juno-6-style voice. If either built-in track is deleted, it is restored on the next
+boot. PLAY opens the saved-song selector, not the disabled backing arrangement. This remains a concurrency and
+resource-budget prototype, not a finished instrument. All 13 Rossf Linn LM-1 one-shots are packed
 from the source WAVs at build time; the generated sample header is ignored and not checked in. Synthesis and
 effects are deliberately simple and need further listening and refinement on the FM-1. The instrument screen shows
 the user-provided portrait at the top center,
@@ -35,16 +37,25 @@ At startup, a cyan scanline sweep with a slight glitch reveals the color skyline
 seconds while the Pro-1 voice plays a short keyboard phrase taken from the authorized `escape_from_ny.mid`
 (0:21–0:24); the 240×144 image is packed into a four-color RGB565 palette for the FM-1 display.
 
-## v0.13 release candidate
+## v0.114 preloaded songs
+
+Build 017 adds Halloween and routes its lowered piano-stem line through chorused Juno, with saved-sequence drums
+mixed below the pitched parts. It was physically tested on the FM-1. The preloaded Escape From Firmware and
+Halloween songs remain active work: continue comparing renderer choices, voice allocation, mix balance, and
+hardware playback in future sessions.
+
+## v0.13 release
 
 Builds 013 and 014 add the animated startup splash and the Pro-1 startup phrase. Build 014 drops the phrase's final
-second, whose stacked closing chord distorted on hardware. Build 014 was physically tested on the FM-1 and the startup no longer distorts.
+second, whose stacked closing chord distorted on hardware. Build 014 was physically tested on the FM-1 and the startup
+no longer distorts.
 
 ## v0.12 features
 
 Build 012 was physically tested on the FM-1 and confirmed working. It added:
 
-- A saved-song Playback screen with 16 user slots plus the built-in **Escape From Firmware** track. REC deletes the
+- A saved-song Playback screen with 16 user slots plus the built-in **Escape From Firmware** and **Halloween**
+  tracks. REC deletes the
   selected song; pressing a piano key loads it into the sequencer for editing, and that opening key is not recorded.
   SAVE updates the selected song.
 - A visual five-track sequencer with four pitched lanes and an LM-1 drum lane, saved tempo, playback-follow, and
@@ -106,6 +117,28 @@ The chord-demo command writes one 44.1 kHz, 16-bit stereo F-major WAV per CS-80-
 The **Render Escape from New York MIDI** task is currently unavailable: it still expects `tests/song.txt`, which
 is in `tests/disabled/` while song playback is disabled.
 
+The Halloween reference stems are kept outside the repository. Convert them with:
+
+```sh
+python3 tools/midi_stems_to_song.py \
+  --juno /path/to/Halloween/Synth.mid \
+  --piano /path/to/Halloween/Piano.mid \
+  --bass /path/to/Halloween/Bass.mid \
+  --drums /path/to/Halloween/Drums.mid \
+  --drum-loop-ticks 384 build/halloween_song.h
+python3 tools/song_to_sequence.py \
+  --parts 0,1,4,5 --polyphonic-parts 0 --transpose 1=-12 \
+  --instrument 1=0 \
+  --priority 4,0,1,5 --strict-priority \
+  --quota 0=42 --quota 1=400 --quota 4=22 --quota 5=486 \
+  --meter 5/4 --symbol-prefix HALLOWEEN \
+  build/halloween_song.h build/gen/lm1_samples.h dsp/halloween_sequence.h
+```
+
+The generated sequence contains 950 events in 80 bars. The piano-stem notes are transposed down one octave and
+rendered with the chorused Juno voice rather than the tinny piano engine; bass and Juno take priority over that lane and closed-hat
+density. The reference MIDI files themselves must not be committed.
+
 The build automatically packs all 13 Rossf Linn LM-1 WAVs from `references/rossf-lm1-drum-set/` as 8-bit mono.
 The original audio files are preserved; converted firmware samples are generated at build time.
 `NoMoreBass.wav`, Bass808, BassPlunk1, BassPlunk3 and BassPlunk4, and the three GuitarRiff WAVs are the project owner's recordings packed as
@@ -126,9 +159,9 @@ An audio initialization failure is shown on the main screen as **AUDIO INIT FAIL
 
 ## GitHub releases
 
-The current published release, **v0.11**, remains signed and unchanged. This checkout is the **v0.13 release
-candidate**; build 014 was tested on hardware. Pushing a `v0.13` tag triggers the release workflow, which builds
-and attests the versioned package from that tag. Do not replace the attested v0.11 package by hand. Product and
+The current published release, **v0.13**, remains signed and unchanged. This checkout additionally contains the
+unreleased Halloween track; build 014 is the last tested v0.13 hardware build. A future version tag triggers the
+release workflow, which builds and attests the versioned package from that tag. Product and
 install metadata are in `fm1.toml`; the Firmware Hub card text and sound provenance are in the root `fmhub.json`.
 
 ## Controls
@@ -138,8 +171,8 @@ install metadata are in `fm1.toml`; the Firmware Hub card text and sound provena
   sequencer for editing; that first key only opens the editor. SAVE writes edits back to the selected song. HOME exits.
   **GLO** opens playback help; turn any knob to change pages, and press GLO, SEQ or HOME to return.
   The original MIDI/backing arrangement and EDIT + PLAY remain disabled because their mix distorted. The reduced
-  **Escape From Firmware** track is a separate sequencer transcription. Do not re-enable the original arrangement
-  by changing `BACKING_ENABLED` alone; first fix and verify the mix.
+  **Escape From Firmware** and **Halloween** tracks are separate sequencer transcriptions. Do not re-enable the
+  original arrangement by changing `BACKING_ENABLED` alone; first fix and verify the mix.
 - **SELECT encoder** chooses the sound played by the piano keys: Juno, piano, Pro-1, guitar, bass, LM-1 drums,
   CS-50/CS-80, or CHORD. The left-side instrument list highlights the current keyboard selection in cyan-blue;
   Bass is labeled BASS, CS-50/CS-80 shares one row, and CHORD appears below it.
@@ -168,7 +201,7 @@ install metadata are in `fm1.toml`; the Firmware Hub card text and sound provena
   selected sample and never adds one. Drum hits play their full samples; their bar length reflects sample duration
   and tempo. MASTER does not change it. LM-1 is excluded from the other tracks' sound choices; older
   saved songs retain their original drum lengths.
-  SAVE names and saves the sequence; up to 16 user songs plus **Escape From Firmware** can
+  SAVE names and saves the sequence; up to 16 user songs plus **Escape From Firmware** and **Halloween** can
   be stored, with about 950 events per song and up to 128 bars. Playback is limited to four simultaneous sound
   voices (chord sounds count as multiple voices); pitched samples are limited to their note length.
   Song tempo is saved with each song and does not change the main-screen tempo. Older saved songs without a tempo
@@ -260,6 +293,8 @@ Known issues and ideas for upcoming work:
 4. CHORD is still too loud.
 5. Getting the preloaded MIDI song/backing arrangement working again will probably require trimming instruments
    (e.g. dropping guitar); saved visual-sequencer playback is implemented separately.
+6. Continue refining the built-in Escape From Firmware and Halloween songs, including synth choices, note
+   allocation, drum balance, duration limits, and hardware listening tests.
 7. Splice sounds may be used with artist credits (see [CREDITS.md](CREDITS.md)).
 
 Planned work includes further improving sound quality within the FM-1's RAM and processor budget, expanding the

@@ -26,13 +26,13 @@ wait 100
 shot seq_save_name.png
 tap SAVE
 wait 200
-expect seq_saved 2
+expect seq_saved 3
 tap SAVE
 turn PRESET 1
 tap SAVE
-expect seq_saved 3
+expect seq_saved 4
 reboot
-expect seq_saved 3
+expect seq_saved 4
 tap PLAY
 expect playback_mode 1
 tapkey 0
@@ -43,7 +43,7 @@ tapkey 1
 expect seq_events 2
 tap SAVE
 tap SAVE
-expect seq_saved 3
+expect seq_saved 4
 tap HOME
 tap PLAY
 expect playback_mode 1
@@ -58,12 +58,12 @@ wait 500
 expect hits3 >0
 tap REC
 expect seq_playing 0
-expect seq_saved 2
+expect seq_saved 3
 tap PLAY
 expect seq_playing 1
 tap REC
 expect seq_playing 0
-expect seq_saved 1
+expect seq_saved 2
 tap HOME
 expect playback_mode 0
 tap SEQ

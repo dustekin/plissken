@@ -37,8 +37,8 @@ individual samples. Different drum samples can share a step; REC adds or removes
 New drum hits play the full sample, and their displayed length follows the sample duration and song tempo; MASTER
 does not change drum lengths. LM-1 is not offered in the other tracks' sound choices. Existing saved songs remain
 playable with their original drum lengths.
-Up to 16 songs can be saved, each with about 950 events
-and up to 128 bars. Playback allows at most four simultaneous sound voices; chord events count as multiple voices
+Up to 16 user songs can be saved, plus the built-in Escape From Firmware and Halloween tracks, each with about 950
+events and up to 128 bars. Playback allows at most four simultaneous sound voices; chord events count as multiple voices
 and pitched samples are cut off at their selected duration. Drum tails reserve voices conservatively at the fastest
 tempo so later tempo changes cannot exceed that limit.
 
@@ -47,7 +47,8 @@ K1 alone still adjusts the sound. SAVE stores the tempo with the song, and playb
 changing the main-screen tempo. Older songs saved without a tempo play at the current main-screen tempo. On the main
 screen, EDIT + K1 adjusts its separate tempo, and SAVE keeps that tempo across reboot.
 BPM counts quarter notes. The sequencer uses a fixed sixteenth-note grid, so one grid
-step lasts 15/BPM seconds. A 4/4 bar has 16 steps, an 8/4 bar has 32, and 8/8 and 16/16 bars have 16 each.
+step lasts 15/BPM seconds. A 4/4 bar has 16 steps, a 5/4 bar has 20, an 8/4 bar has 32, and 8/8 and 16/16 bars
+have 16 each.
 Changing the time signature changes the bar grouping, not the playback speed.
 
 Each pitched sound remembers its own octave until reboot. Held notes keep their pitch until released; new notes use
@@ -70,7 +71,8 @@ At startup, the display shows the color skyline artwork from `assets/startup.png
 
 The preloaded MIDI/backing arrangement is disabled in this build because it distorted; it may return after further
 work on gain staging and instrument count. PLAY instead selects and plays songs saved in the visual sequencer.
-Selecting and playing preloaded MIDI files is not implemented. Drum playback uses locally supplied WAV samples;
+Escape From Firmware and Halloween are the preloaded sequencer tracks; additional preloaded MIDI selection is not
+implemented. Drum playback uses locally supplied WAV samples;
 the generated sample data is not included in the repository. Confirm their license before distributing firmware.
 Guitar and bass modeling are intentionally simple. Bluetooth and per-track mute/level controls are not implemented.
 

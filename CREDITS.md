@@ -62,6 +62,11 @@ release.
 - **Escape from New York test MIDI:** user-provided local file `escape_from_ny.mid`; the project owner confirmed
   authorization to embed it in Plissken firmware. The generated `dsp/song.h` contains its playback data; original
   composer/arranger attribution was not included with the local file.
+- **Halloween sequence:** derived from project-owner-supplied local `Synth.mid`, `Piano.mid`, `Bass.mid`, and
+  `Drums.mid` reference stems. The MIDI files remain outside the repository and are not distributed with the
+  firmware; `dsp/halloween_sequence.h` contains the reduced, editable 5/4 sequencer transcription. The synth stem
+  uses Plissken's Juno-6-style renderer. Verify distribution permission for the source MIDI transcription before
+  publishing a release.
 
 ## Graphics
 

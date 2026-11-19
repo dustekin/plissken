@@ -140,6 +140,65 @@ static const int8_t rossflm1_hat_closed[] = {1};
             output_path.read_text(encoding="ascii"),
         )
 
+    def test_polyphonic_events_and_explicit_quotas_are_respected(self):
+        _, _, events, stats = song_to_sequence.analyze(
+            self.song_path,
+            self.samples_path,
+            included_parts=(0, 1),
+            polyphonic_parts=(0,),
+            priority_parts=(0, 1),
+        )
+
+        self.assertEqual(stats["group_counts"][0], 2)
+        self.assertEqual(sum(event["part"] == 0 for event in events), 2)
+
+        _, _, limited, limited_stats = song_to_sequence.analyze(
+            self.song_path,
+            self.samples_path,
+            part_quotas={0: 1, 1: 1},
+            included_parts=(0, 1),
+            priority_parts=(0, 1),
+        )
+        self.assertEqual(limited_stats["kept_counts"], {0: 1, 1: 1})
+        self.assertEqual(len(limited), 2)
+
+    def test_five_four_meter_changes_bar_count(self):
+        _, bars, _, stats = song_to_sequence.analyze(
+            self.song_path,
+            self.samples_path,
+            included_parts=(0,),
+            steps_per_bar=20,
+        )
+
+        self.assertEqual(bars, 1)
+        self.assertEqual(stats["steps_per_bar"], 20)
+
+    def test_source_part_transposition_and_strict_priority_are_recorded(self):
+        _, _, events, stats = song_to_sequence.analyze(
+            self.song_path,
+            self.samples_path,
+            included_parts=(0, 1),
+            priority_parts=(1, 0),
+            part_transposes={1: -12},
+            rotate_priority=False,
+        )
+
+        piano_notes = [event["note"] for event in events if event["part"] == 1]
+        self.assertTrue(piano_notes)
+        self.assertEqual(piano_notes, [36])
+        self.assertEqual(stats["part_transposes"], {1: -12})
+
+    def test_source_part_instrument_can_be_replaced(self):
+        _, _, events, stats = song_to_sequence.analyze(
+            self.song_path,
+            self.samples_path,
+            included_parts=(1,),
+            instrument_overrides={1: 6},
+        )
+
+        self.assertEqual([event["instrument"] for event in events], [6])
+        self.assertEqual(stats["instrument_overrides"], {1: 6})
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -8,6 +8,7 @@
 #include "jc_face.h"
 #include "knob_images.h"
 #include "dsp/escape_sequence.h"
+#include "dsp/halloween_sequence.h"
 
 #define SETTINGS_MAGIC 0x504C4953u
 #define SEQUENCE_MAGIC 0x53455131u
@@ -20,12 +21,12 @@
 #define SEQUENCE_TRACKS 5u
 #define SEQUENCE_VOICES 4u
 #define SEQUENCE_DRUM_NATURAL 7u
+#define SEQUENCE_DRUM_LEVEL 0.42f
 #define SEQUENCE_MAX_TEMPO 140u
 #define SEQUENCE_PLAY_RESET_MS 500u
 #define SEQUENCE_USER_SLOTS 16u
-#define SEQUENCE_BUILTIN_SLOT SEQUENCE_USER_SLOTS
-#define SEQUENCE_SLOTS (SEQUENCE_USER_SLOTS + 1u)
-#define SEQUENCE_BUILTIN_NAME "Escape From Firmware"
+#define SEQUENCE_BUILTIN_COUNT 2u
+#define SEQUENCE_SLOTS (SEQUENCE_USER_SLOTS + SEQUENCE_BUILTIN_COUNT)
 #define SEQUENCE_NAME_LENGTH 12u
 #define SEQUENCE_MAX_STEPS 4096u
 #define TRACKS 7
@@ -147,6 +148,8 @@ typedef char sequence_header_layout_check[
 #define SEQUENCE_EVENT_MAX ((PLAT_STORE_MAX - sizeof(sequence_header_t)) / sizeof(uint32_t))
 typedef char escape_sequence_fits[
     ESCAPE_SEQUENCE_EVENT_COUNT <= SEQUENCE_EVENT_MAX ? 1 : -1];
+typedef char halloween_sequence_fits[
+    HALLOWEEN_SEQUENCE_EVENT_COUNT <= SEQUENCE_EVENT_MAX ? 1 : -1];
 typedef struct {
     sequence_header_t header;
     uint32_t events[SEQUENCE_EVENT_MAX];
@@ -158,7 +161,31 @@ typedef struct {
 } sequence_slot_t;
 
 enum { SCREEN_MAIN, SCREEN_SEQUENCE, SCREEN_HELP, SCREEN_NAME, SCREEN_DELETE, SCREEN_PLAYBACK };
-enum { METER_4_4, METER_8_4, METER_8_8, METER_16_16, METER_COUNT };
+enum { METER_4_4, METER_8_4, METER_8_8, METER_16_16, METER_5_4, METER_COUNT };
+
+typedef struct {
+    const char *display_name;
+    const char *stored_name;
+    uint8_t meter;
+    uint8_t bars;
+    uint8_t tempo;
+    uint8_t instrument[SEQUENCE_MELODIC_TRACKS];
+    uint32_t count;
+    const uint32_t *events;
+} sequence_builtin_t;
+
+static const sequence_builtin_t sequence_builtins[SEQUENCE_BUILTIN_COUNT] = {
+    {
+        "Escape From Firmware", "escape from", METER_4_4,
+        ESCAPE_SEQUENCE_BARS, ESCAPE_SEQUENCE_BPM, {0u, 1u, 2u, 6u},
+        ESCAPE_SEQUENCE_EVENT_COUNT, escape_sequence_events
+    },
+    {
+        "Halloween", "halloween", HALLOWEEN_SEQUENCE_METER,
+        HALLOWEEN_SEQUENCE_BARS, HALLOWEEN_SEQUENCE_BPM, {0u, 0u, 4u, 0u},
+        HALLOWEEN_SEQUENCE_EVENT_COUNT, halloween_sequence_events
+    },
+};
 
 #if defined(__has_include)
 #if __has_include("dsp/song.h")
@@ -963,20 +990,23 @@ static void seq_clear(void)
         settings.seq_perc[i] = 0u;
 }
 
-static const uint8_t sequence_steps_per_bar[METER_COUNT] = {16u, 32u, 16u, 16u};
+static const uint8_t sequence_steps_per_bar[METER_COUNT] = {16u, 32u, 16u, 16u, 20u};
 static const uint8_t sequence_note_steps[7] = {1u, 2u, 4u, 8u, 16u, 32u, 64u};
 static const char *const sequence_note_names[7] = {"1/16", "1/8", "1/4", "1/2", "1", "2", "4"};
-static const char *const sequence_meter_names[METER_COUNT] = {"4/4", "8/4", "8/8", "16/16"};
+static const char *const sequence_meter_names[METER_COUNT] = {"4/4", "8/4", "8/8", "16/16", "5/4"};
 
 static uint32_t sequence_slot_object(uint32_t slot)
 {
-    return slot == SEQUENCE_BUILTIN_SLOT ? (uint32_t)OBJ_SEQ_BUILTIN
+    return slot >= SEQUENCE_USER_SLOTS
+        ? (uint32_t)OBJ_SEQ_BUILTIN + slot - SEQUENCE_USER_SLOTS
         : (uint32_t)OBJ_SEQ0 + slot;
 }
 
 static const char *sequence_slot_name(uint32_t slot)
 {
-    return slot == SEQUENCE_BUILTIN_SLOT ? SEQUENCE_BUILTIN_NAME : sequence_slots[slot].name;
+    return slot >= SEQUENCE_USER_SLOTS
+        ? sequence_builtins[slot - SEQUENCE_USER_SLOTS].display_name
+        : sequence_slots[slot].name;
 }
 
 static uint32_t sequence_event_step(uint32_t event)
@@ -1263,34 +1293,40 @@ static int sequence_store_slot(uint32_t slot)
     return plat_store_save(sequence_slot_object(slot), &sequence, bytes);
 }
 
-static void sequence_seed_builtin(void)
+static void sequence_seed_builtin(uint32_t index)
 {
     sequence_header_t header;
-    uint32_t object = sequence_slot_object(SEQUENCE_BUILTIN_SLOT);
+    const sequence_builtin_t *builtin = &sequence_builtins[index];
+    uint32_t slot = SEQUENCE_USER_SLOTS + index;
+    uint32_t object = sequence_slot_object(slot);
     int size = plat_store_size(object);
     int loaded = size >= (int)sizeof header && size <= (int)PLAT_STORE_MAX
         ? plat_store_head(object, &header, sizeof header) : -1;
-    static const char name[] = "escape from";
     if (loaded == (int)sizeof header && sequence_header_valid(&header, size))
         return;
 
     sequence_reset();
-    sequence.header.count = ESCAPE_SEQUENCE_EVENT_COUNT;
-    sequence.header.meter = METER_4_4;
-    sequence.header.bars = ESCAPE_SEQUENCE_BARS;
-    sequence.header.tempo = ESCAPE_SEQUENCE_BPM;
-    sequence.header.instrument[0] = 0u;
-    sequence.header.instrument[1] = 1u;
-    sequence.header.instrument[2] = 2u;
-    sequence.header.instrument[3] = 6u;
+    sequence.header.count = (uint16_t)builtin->count;
+    sequence.header.meter = builtin->meter;
+    sequence.header.bars = builtin->bars;
+    sequence.header.tempo = builtin->tempo;
+    for (uint32_t i = 0; i < SEQUENCE_MELODIC_TRACKS; i++)
+        sequence.header.instrument[i] = builtin->instrument[i];
     for (uint32_t i = 0; i < SEQUENCE_NAME_LENGTH; i++)
         sequence.header.name[i] = 0;
-    for (uint32_t i = 0; i < sizeof name; i++)
-        sequence.header.name[i] = name[i];
-    for (uint32_t i = 0; i < ESCAPE_SEQUENCE_EVENT_COUNT; i++)
-        sequence.events[i] = escape_sequence_events[i];
-    sequence_builtin_seed_failed = sequence_store_slot(SEQUENCE_BUILTIN_SLOT) != 0;
+    for (uint32_t i = 0; i < SEQUENCE_NAME_LENGTH - 1u && builtin->stored_name[i]; i++)
+        sequence.header.name[i] = builtin->stored_name[i];
+    for (uint32_t i = 0; i < builtin->count; i++)
+        sequence.events[i] = builtin->events[i];
+    if (sequence_store_slot(slot) != 0)
+        sequence_builtin_seed_failed = 1u;
     sequence_reset();
+}
+
+static void sequence_seed_builtins(void)
+{
+    for (uint32_t i = 0; i < SEQUENCE_BUILTIN_COUNT; i++)
+        sequence_seed_builtin(i);
 }
 
 /* Live record: a drum key pressed while the sequencer runs lands on the nearest 16th step. */
@@ -1588,6 +1624,7 @@ static void sequence_trigger_event(uint32_t event)
         break;
     case 5u:
         trigger_drum_sample(note);
+        drum_samples[note].gain = SEQUENCE_DRUM_LEVEL;
         if (duration_index != SEQUENCE_DRUM_NATURAL)
             drum_samples[note].max_samples = duration;
         break;
@@ -2618,7 +2655,7 @@ void app_ui_init(void)
     sequence_last_note = 60u;
     sequence_last_note_valid = 0u;
     sequence_reset();
-    sequence_seed_builtin();
+    sequence_seed_builtins();
     sequence_reset();
     sequence_scan_slots();
 }

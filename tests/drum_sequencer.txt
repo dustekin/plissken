@@ -79,7 +79,7 @@ tap SAVE
 spin PRESET 1
 tap SAVE
 reboot
-expect seq_saved 2
+expect seq_saved 3
 tap PLAY
 tap PLAY
 wait 200

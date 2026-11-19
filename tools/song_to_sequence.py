@@ -13,10 +13,18 @@ MAX_VOICES = 4
 MAX_PITCH_DURATION_STEPS = 4
 PITCH_GRID_STEPS = 2
 DRUM_GRID_STEPS = 1
-PITCH_PARTS = {0: (0, 0), 1: (1, 1), 2: (2, 2), 6: (3, 6)}
-PART_ORDER = (5, 0, 1, 2, 6)
-REPORT_PART_ORDER = (0, 1, 2, 6, 5)
-PART_NAMES = {0: "Juno", 1: "Piano", 2: "Pro-1", 5: "LM-1 drums", 6: "CS-50"}
+PITCH_PARTS = {0: (0, 0), 1: (1, 1), 2: (2, 2), 4: (2, 4), 6: (3, 6)}
+DEFAULT_PARTS = (0, 1, 2, 5, 6)
+PART_ORDER = (5, 0, 1, 2, 4, 6)
+REPORT_PART_ORDER = (0, 1, 2, 4, 6, 5)
+PART_NAMES = {
+    0: "Juno",
+    1: "Piano",
+    2: "Pro-1",
+    4: "Bass",
+    5: "LM-1 drums",
+    6: "CS-50",
+}
 DURATION_STEPS = (1, 2, 4, 8, 16, 32, 64)
 DRUM_SAMPLE_NAMES = {0: "kick", 1: "snare", 2: "hat_closed"}
 EVENT_PATTERN = re.compile(r"\{(\d+)u,\s*(\d+)u,\s*(\d+),\s*(\d+),\s*(\d+)\}")
@@ -79,6 +87,13 @@ def analyze(
     pitch_grid_overrides=None,
     part_quotas=None,
     baseline_events=None,
+    included_parts=DEFAULT_PARTS,
+    steps_per_bar=16,
+    polyphonic_parts=(),
+    priority_parts=None,
+    part_transposes=None,
+    rotate_priority=True,
+    instrument_overrides=None,
 ):
     text = song_path.read_text()
     ppq = macro_value(text, "SONG_PPQ")
@@ -87,10 +102,30 @@ def analyze(
     if not ppq or ppq % 4:
         raise ValueError("MIDI PPQ must divide evenly into sequencer sixteenth steps")
     pitch_grid_overrides = pitch_grid_overrides or {}
-    if any(part not in PITCH_PARTS for part in pitch_grid_overrides):
+    included_parts = tuple(included_parts)
+    polyphonic_parts = tuple(polyphonic_parts)
+    part_transposes = part_transposes or {}
+    instrument_overrides = instrument_overrides or {}
+    if not included_parts or any(part not in PITCH_PARTS and part != 5 for part in included_parts):
+        raise ValueError("Invalid source-part selection")
+    if any(part not in PITCH_PARTS or part not in included_parts for part in pitch_grid_overrides):
         raise ValueError("Pitch-grid overrides must use a supported pitched source part")
     if any(steps < 1 for steps in pitch_grid_overrides.values()):
         raise ValueError("Pitch-grid overrides must be at least one sixteenth step")
+    if any(part not in included_parts or part == 5 for part in polyphonic_parts):
+        raise ValueError("Polyphonic parts must be included pitched source parts")
+    part_order = tuple(
+        priority_parts or (part for part in PART_ORDER if part in included_parts)
+    )
+    if set(part_order) != set(included_parts):
+        raise ValueError("Priority must list each included source part exactly once")
+    if any(part not in included_parts or part == 5 for part in part_transposes):
+        raise ValueError("Transpose values must use included pitched source parts")
+    if any(
+        part not in included_parts or part == 5 or not 0 <= instrument <= 7
+        for part, instrument in instrument_overrides.items()
+    ):
+        raise ValueError("Instrument overrides must map included pitched parts to instruments 0-7")
 
     sample_lengths = drum_lengths(samples_path)
     groups = {}
@@ -100,11 +135,14 @@ def analyze(
     for tick, duration, part, note, velocity in (
         tuple(map(int, row)) for row in EVENT_PATTERN.findall(text)
     ):
-        if part in PITCH_PARTS:
+        if part in PITCH_PARTS and part in included_parts:
+            note += part_transposes.get(part, 0)
+            if not 0 <= note <= 127:
+                continue
             grid_steps = pitch_grid_overrides.get(part, PITCH_GRID_STEPS)
             step = quantize(tick, ticks_per_step, grid_steps)
-            key = (part, step)
-        elif part == 5 and note in DRUM_SAMPLE_NAMES:
+            key = (part, note, step) if part in polyphonic_parts else (part, step)
+        elif part == 5 and part in included_parts and note in DRUM_SAMPLE_NAMES:
             step = quantize(tick, ticks_per_step, DRUM_GRID_STEPS)
             key = (part, note, step)
         else:
@@ -152,6 +190,7 @@ def analyze(
             duration_index = DURATION_STEPS.index(note_steps)
             length = note_steps
             track, instrument = PITCH_PARTS[part]
+            instrument = instrument_overrides.get(part, instrument)
             variant = 0
         candidates.append(
             {
@@ -169,8 +208,8 @@ def analyze(
         )
 
     def priority(event):
-        rotation = event["step"] // 2
-        return (PART_ORDER.index(event["part"]) - rotation) % len(PART_ORDER)
+        rotation = 0 if not rotate_priority else event["step"] // 2
+        return (part_order.index(event["part"]) - rotation) % len(part_order)
 
     candidates.sort(key=lambda event: (event["step"], priority(event), -event["velocity"], event["note"]))
     accepted = []
@@ -186,7 +225,7 @@ def analyze(
 
     event_cap_drop_counts = Counter()
     if part_quotas is not None:
-        if any(part not in PART_ORDER for part in part_quotas):
+        if any(part not in part_order for part in part_quotas):
             raise ValueError("Part quotas must use supported source parts")
         if any(quota < 0 for quota in part_quotas.values()):
             raise ValueError("Part quotas cannot be negative")
@@ -207,7 +246,7 @@ def analyze(
                         selected_indices.add(index)
                         baseline_preserved_counts[part] += 1
                         break
-        for part in PART_ORDER:
+        for part in part_order:
             indices = [
                 index for index, event in enumerate(accepted) if event["part"] == part
             ]
@@ -252,7 +291,7 @@ def analyze(
         raise ValueError("No compatible sequencer events found")
 
     end_step = max(event["end"] for event in accepted)
-    bars = (end_step + 15) // 16
+    bars = (end_step + steps_per_bar - 1) // steps_per_bar
     if bars > 128:
         raise ValueError(f"Converted song exceeds the 128-bar sequencer limit: {bars} bars")
     if max(event["step"] for event in accepted) > 0xFFF:
@@ -290,6 +329,12 @@ def analyze(
         "pitch_grid_steps": {
             part: pitch_grid_overrides.get(part, PITCH_GRID_STEPS) for part in PITCH_PARTS
         },
+        "included_parts": included_parts,
+        "steps_per_bar": steps_per_bar,
+        "polyphonic_parts": polyphonic_parts,
+        "priority_parts": part_order,
+        "part_transposes": part_transposes,
+        "instrument_overrides": instrument_overrides,
     }
     return bpm, bars, accepted, stats
 
@@ -306,7 +351,7 @@ def print_diagnostics(song_path, bpm, bars, stats):
     )
     print(
         f"Limits: {MAX_VOICES} simultaneous voices, {MAX_EVENTS} events; "
-        f"pitched grid default {PITCH_GRID_STEPS} sixteenth steps, "
+        f"{stats['steps_per_bar']}/16 meter, pitched grid default {PITCH_GRID_STEPS} sixteenth steps, "
         f"drums every {DRUM_GRID_STEPS}, pitched note length cap "
         f"{MAX_PITCH_DURATION_STEPS} steps."
     )
@@ -316,6 +361,8 @@ def print_diagnostics(song_path, bpm, bars, stats):
     )
     print("              (sixteenth-step errors)")
     for part in REPORT_PART_ORDER:
+        if part not in stats["included_parts"]:
+            continue
         onset_count = stats["group_counts"][part]
         duration_count = stats["duration_error_count"][part]
         grid_steps = (
@@ -371,6 +418,7 @@ def print_diagnostics(song_path, bpm, bars, stats):
         f"{stats['kept_onset_error_sum'][part] / stats['kept_counts'][part]:.2f}/"
         f"{stats['kept_onset_error_max'][part]:.2f}"
         for part in REPORT_PART_ORDER
+        if part in stats["included_parts"]
         if stats["kept_counts"][part]
     )
     print(f"Selected onset error avg/max (sixteenth steps): {kept_onset_errors}")
@@ -390,12 +438,126 @@ def parse_part_grid(value):
     return part, steps
 
 
+def parse_parts(value):
+    try:
+        parts = tuple(int(part.strip()) for part in value.split(","))
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError("Expected comma-separated part numbers") from exc
+    if not parts or any(part not in PITCH_PARTS and part != 5 for part in parts):
+        raise argparse.ArgumentTypeError("Unsupported source part")
+    if len(set(parts)) != len(parts):
+        raise argparse.ArgumentTypeError("Source parts must be unique")
+    return parts
+
+
+def parse_quotas(values):
+    quotas = {}
+    for value in values:
+        try:
+            part_text, count_text = value.split("=", 1)
+            part, count = int(part_text), int(count_text)
+        except ValueError as exc:
+            raise argparse.ArgumentTypeError("Expected PART=COUNT, for example 0=15") from exc
+        if part in quotas or count < 0:
+            raise argparse.ArgumentTypeError("Quota parts must be unique and counts nonnegative")
+        quotas[part] = count
+    return quotas
+
+
+def parse_transposes(values):
+    transposes = {}
+    for value in values:
+        try:
+            part_text, semitones_text = value.split("=", 1)
+            part, semitones = int(part_text), int(semitones_text)
+        except ValueError as exc:
+            raise argparse.ArgumentTypeError(
+                "Expected PART=SEMITONES, for example 1=-12"
+            ) from exc
+        if part in transposes:
+            raise argparse.ArgumentTypeError("Transpose parts must be unique")
+        transposes[part] = semitones
+    return transposes
+
+
+def parse_instruments(values):
+    instruments = {}
+    for value in values:
+        try:
+            part_text, instrument_text = value.split("=", 1)
+            part, instrument = int(part_text), int(instrument_text)
+        except ValueError as exc:
+            raise argparse.ArgumentTypeError(
+                "Expected PART=INSTRUMENT, for example 1=6"
+            ) from exc
+        if part in instruments or not 0 <= instrument <= 7:
+            raise argparse.ArgumentTypeError(
+                "Instrument parts must be unique and instruments must be 0-7"
+            )
+        instruments[part] = instrument
+    return instruments
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--instrument",
+        action="append",
+        default=[],
+        metavar="PART=INSTRUMENT",
+        help="replace a source part's renderer instrument ID; repeat per part",
+    )
+    parser.add_argument(
+        "--strict-priority",
+        action="store_true",
+        help="do not rotate source-part priority when resolving voice collisions",
+    )
+    parser.add_argument(
+        "--transpose",
+        action="append",
+        default=[],
+        metavar="PART=SEMITONES",
+        help="transpose a retained pitched part; repeat per part",
+    )
     parser.add_argument(
         "--report",
         action="store_true",
         help="report conversion losses without writing the generated sequence header",
+    )
+    parser.add_argument(
+        "--parts",
+        type=parse_parts,
+        default=DEFAULT_PARTS,
+        help="comma-separated source parts to retain (default: 0,1,2,5,6)",
+    )
+    parser.add_argument(
+        "--meter",
+        choices=("4/4", "5/4", "8/4", "8/8", "16/16"),
+        default="4/4",
+        help="sequencer meter for generated bar boundaries",
+    )
+    parser.add_argument(
+        "--symbol-prefix",
+        default="ESCAPE",
+        help="generated macro and event-array prefix",
+    )
+    parser.add_argument(
+        "--polyphonic-parts",
+        type=parse_parts,
+        default=(),
+        help="comma-separated source parts whose simultaneous pitches must be retained",
+    )
+    parser.add_argument(
+        "--priority",
+        type=parse_parts,
+        help="part order used to resolve simultaneous-voice collisions",
+    )
+    parser.add_argument(
+        "--quota",
+        action="append",
+        default=[],
+        metavar="PART=COUNT",
+        help="exact retained event quota for a source part; repeat per part",
     )
     parser.add_argument(
         "--part-grid",
@@ -421,19 +583,54 @@ def main():
         parser.error("--preserve-part-counts requires --part-grid")
     if args.part_grid and not args.report and args.output_path is None:
         parser.error("part-grid generation requires an explicit output path")
+    if not args.symbol_prefix.replace("_", "").isalnum():
+        parser.error("--symbol-prefix must contain only letters, digits and underscores")
+    steps_per_bar = {"4/4": 16, "5/4": 20, "8/4": 32, "8/8": 16, "16/16": 16}[args.meter]
+    meter_index = {"4/4": 0, "8/4": 1, "8/8": 2, "16/16": 3, "5/4": 4}[args.meter]
+    if set(args.polyphonic_parts) - set(args.parts):
+        parser.error("--polyphonic-parts must be included by --parts")
+    priority_parts = args.priority or tuple(part for part in PART_ORDER if part in args.parts)
+    if set(priority_parts) != set(args.parts):
+        parser.error("--priority must list each --parts value exactly once")
+    quotas = parse_quotas(args.quota)
+    transposes = parse_transposes(args.transpose)
+    instruments = parse_instruments(args.instrument)
+    if quotas and set(quotas) != set(args.parts):
+        parser.error("--quota must specify every --parts value")
+    if set(transposes) - set(args.parts):
+        parser.error("--transpose must use parts included by --parts")
+    if set(instruments) - set(args.parts) or 5 in instruments:
+        parser.error("--instrument must use pitched parts included by --parts")
     part_quotas = None
     baseline_events = None
     if args.preserve_part_counts:
         _, _, baseline_events, baseline_stats = analyze(
-            args.song_path, args.samples_path
+            args.song_path,
+            args.samples_path,
+            included_parts=args.parts,
+            steps_per_bar=steps_per_bar,
+            polyphonic_parts=args.polyphonic_parts,
+            priority_parts=priority_parts,
+            part_transposes=transposes,
+            rotate_priority=not args.strict_priority,
+            instrument_overrides=instruments,
         )
         part_quotas = baseline_stats["kept_counts"]
+    elif quotas:
+        part_quotas = quotas
     bpm, bars, events, stats = analyze(
         args.song_path,
         args.samples_path,
         dict(args.part_grid or ()),
         part_quotas,
         baseline_events,
+        args.parts,
+        steps_per_bar,
+        args.polyphonic_parts,
+        priority_parts,
+        transposes,
+        not args.strict_priority,
+        instruments,
     )
     if args.report:
         print_diagnostics(args.song_path, bpm, bars, stats)
@@ -442,11 +639,14 @@ def main():
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with output_path.open("w", newline="\n") as output:
         output.write("/* Generated by tools/song_to_sequence.py; do not edit. */\n")
-        output.write(f"#define ESCAPE_SEQUENCE_BPM {bpm}u\n")
-        output.write(f"#define ESCAPE_SEQUENCE_BARS {bars}u\n")
-        output.write(f"#define ESCAPE_SEQUENCE_EVENT_COUNT {len(events)}u\n")
+        prefix = args.symbol_prefix.upper()
+        output.write(f"#define {prefix}_SEQUENCE_BPM {bpm}u\n")
+        output.write(f"#define {prefix}_SEQUENCE_BARS {bars}u\n")
+        output.write(f"#define {prefix}_SEQUENCE_METER {meter_index}u\n")
+        output.write(f"#define {prefix}_SEQUENCE_EVENT_COUNT {len(events)}u\n")
         output.write(
-            "static const uint32_t escape_sequence_events[ESCAPE_SEQUENCE_EVENT_COUNT] = {\n"
+            f"static const uint32_t {prefix.lower()}_sequence_events"
+            f"[{prefix}_SEQUENCE_EVENT_COUNT] = {{\n"
         )
         for offset in range(0, len(events), 4):
             packed = ", ".join(f"0x{encode_event(event):08X}u" for event in events[offset : offset + 4])

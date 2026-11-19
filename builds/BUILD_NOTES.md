@@ -3,6 +3,34 @@
 Each test build is saved as `plissken###.fwsc` with an increasing number. Newest first.
 Add an entry here whenever a new build is saved.
 
+## 017
+- Saved-sequence LM-1 events are mixed at 42% of live-drum level so the chorused Juno lane and bass remain dominant;
+  live keyboard drums are unchanged.
+- Halloween isolated levels: Juno peak -16.30 dBFS / RMS -37.41; percussion peak -24.08 / RMS -45.86.
+  Full preview peak -14.40 dBFS / RMS -34.23.
+- Device image 486,448 B; package 614,938 B; build ID `0F107337`; SHA-256
+  `F9FBEA962111B693C50C365416F72869D0C970102DC6A9B485CE89509FF1294C`.
+- Physical FM-1 test passed; pitched Juno/bass parts are now dominant over percussion.
+
+## 016
+- Halloween comparison build: the 400-event former piano lane is rendered by the chorused Juno engine rather than
+  CS-50 or piano, while remaining lowered one octave.
+- Host sequence and full 201.079 s render pass; peak -14.10 dBFS, RMS -33.12 dBFS.
+- Device image 486,440 B; package 614,938 B; build ID `8D0B222B`; SHA-256
+  `E7CE9A84F2B630BE12629FB89B4138D0BA843E9AA8B54AAF1B6A1EE532436277`.
+- Not hardware-tested.
+
+## 015
+- Added Halloween as a second protected, editable built-in track selected through PLAY/STOP; the sequence is 5/4 at
+  120 BPM, uses 80 bars, and assigns the synth stem to Juno, with piano, bass, and LM-1 drums.
+- Conversion retains 950 events (42 Juno, 400 piano, 22 bass, 486 drums) from separate local reference stems. The
+  piano-stem notes are transposed down one octave and rendered by the chorused Juno voice; bass/Juno win voice-budget collisions,
+  reducing the first preview's tinny piano/closed-hat balance. The source MIDI files remain outside the repository.
+- Host sequencer scenarios pass. CS-50 full 201.079 s stereo preview: peak -14.10 dBFS, RMS -32.15 dBFS.
+- Device image 486,440 B; package 614,938 B; build ID `53FA0EC8`; SHA-256
+  `896DD2BC6C18F1E0D6235692D849720BA6DA11EE91CAD0D3D5D20B23517BAED7`.
+- Not hardware-tested.
+
 ## 014
 - Startup music and splash shortened to 3 s: the final second (the stacked closing chord) is removed because it distorted badly on hardware.
 - Host tests pass (startup peak -14.4 dBFS).
