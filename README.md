@@ -5,7 +5,7 @@ directory is the build system and platform submodule. The keyboard offers Juno, 
 drums, CS-50/CS-80 and CHORD sounds, along with a live phrase recorder and a visual five-track sequencer with
 saved-song playback.
 
-This checkout is the **v0.114** release candidate. It contains the released v0.13 work plus the Halloween
+This checkout is the **v0.14** release candidate. It contains the released v0.13 work plus the Halloween
 preloaded track and sequencer mix improvements. The older published, signed v0.11 release does not include the
 visual sequencer and saved-song playback features described below.
 
@@ -37,7 +37,7 @@ At startup, a cyan scanline sweep with a slight glitch reveals the color skyline
 seconds while the Pro-1 voice plays a short keyboard phrase taken from the authorized `escape_from_ny.mid`
 (0:21–0:24); the 240×144 image is packed into a four-color RGB565 palette for the FM-1 display.
 
-## v0.114 preloaded songs
+## v0.14 preloaded songs
 
 Build 017 adds Halloween and routes its lowered piano-stem line through chorused Juno, with saved-sequence drums
 mixed below the pitched parts. It was physically tested on the FM-1. The preloaded Escape From Firmware and
