@@ -1,6 +1,6 @@
 {
   "what": "A seven-part FM-1 soundtrack sketch: play Juno-style synth, piano, Pro One-style synth, guitar, bass and LM-1 drums, with CS-50 and CS-80-inspired sounds, chord modes and phrase recording.",
   "kinds": ["synth"],
-  "image": "docs/img/screen-playing.png",
+  "image": "docs/card.png",
   "sounds": "licensed: Rossf's Linn LM-1 Drum Set pack 4919, Creative Commons Sampling+ 1.0; own bass recordings by the project owner"
 }
