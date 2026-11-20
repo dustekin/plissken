@@ -287,7 +287,7 @@ terms; see [CREDITS.md](CREDITS.md) and [base/LICENSING.md](base/LICENSING.md).
 
 Known issues and ideas for upcoming work:
 
-1. Guitar FX knobs K1–K3 (drive, chorus, modulation) do not audibly change the sound; K4 (delay) works well.
+1. Guitar FX knobs K1–K3 (drive, chorus, modulation) do not greatly change the sound; K4 (delay) works well.
 2. Juno is still quiet compared with the other instruments.
 3. Bass FX knobs K1–K3 have the same problem as the guitar's.
 4. CHORD is still too loud.
