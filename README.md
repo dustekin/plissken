@@ -295,7 +295,6 @@ Known issues and ideas for upcoming work:
    (e.g. dropping guitar); saved visual-sequencer playback is implemented separately.
 6. Continue refining the built-in Escape From Firmware and Halloween songs, including synth choices, note
    allocation, drum balance, duration limits, and hardware listening tests.
-7. Splice sounds may be used with artist credits (see [CREDITS.md](CREDITS.md)).
 
 Planned work includes further improving sound quality within the FM-1's RAM and processor budget, expanding the
 budget-conscious Orchid-inspired chord/phrase feature, auditioning and refining the selectable bass sounds, support
