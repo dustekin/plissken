@@ -36,17 +36,17 @@ release EDIT
 tap SAVE
 spin PRESET 1
 tap SAVE
-expect seq_saved 3
+expect seq_saved 4
 press EDIT
 spin K1 -30
 release EDIT
 tap SAVE
 spin PRESET 2
 tap SAVE
-expect seq_saved 4
+expect seq_saved 5
 reboot
 expect tempo 80
-expect seq_saved 4
+expect seq_saved 5
 tap PLAY
 tap PLAY
 expect seq_playback_tempo 120

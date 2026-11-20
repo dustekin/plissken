@@ -9,6 +9,7 @@
 #include "knob_images.h"
 #include "dsp/escape_sequence.h"
 #include "dsp/halloween_sequence.h"
+#include "dsp/fog_sequence.h"
 
 #define SETTINGS_MAGIC 0x504C4953u
 #define SEQUENCE_MAGIC 0x53455131u
@@ -25,7 +26,7 @@
 #define SEQUENCE_MAX_TEMPO 140u
 #define SEQUENCE_PLAY_RESET_MS 500u
 #define SEQUENCE_USER_SLOTS 16u
-#define SEQUENCE_BUILTIN_COUNT 2u
+#define SEQUENCE_BUILTIN_COUNT 3u
 #define SEQUENCE_SLOTS (SEQUENCE_USER_SLOTS + SEQUENCE_BUILTIN_COUNT)
 #define SEQUENCE_NAME_LENGTH 12u
 #define SEQUENCE_MAX_STEPS 4096u
@@ -150,6 +151,8 @@ typedef char escape_sequence_fits[
     ESCAPE_SEQUENCE_EVENT_COUNT <= SEQUENCE_EVENT_MAX ? 1 : -1];
 typedef char halloween_sequence_fits[
     HALLOWEEN_SEQUENCE_EVENT_COUNT <= SEQUENCE_EVENT_MAX ? 1 : -1];
+typedef char fog_sequence_fits[
+    FOG_SEQUENCE_EVENT_COUNT <= SEQUENCE_EVENT_MAX ? 1 : -1];
 typedef struct {
     sequence_header_t header;
     uint32_t events[SEQUENCE_EVENT_MAX];
@@ -184,6 +187,11 @@ static const sequence_builtin_t sequence_builtins[SEQUENCE_BUILTIN_COUNT] = {
         "Halloween", "halloween", HALLOWEEN_SEQUENCE_METER,
         HALLOWEEN_SEQUENCE_BARS, HALLOWEEN_SEQUENCE_BPM, {0u, 0u, 4u, 0u},
         HALLOWEEN_SEQUENCE_EVENT_COUNT, halloween_sequence_events
+    },
+    {
+        "The Fog", "the fog", METER_4_4,
+        FOG_SEQUENCE_BARS, FOG_SEQUENCE_BPM, {1u, 0u, 4u, 6u},
+        FOG_SEQUENCE_EVENT_COUNT, fog_sequence_events
     },
 };
 
@@ -287,6 +295,8 @@ static uint32_t previous_keys;
 static uint32_t startup_splash_until;
 #define SPLASH_SWEEP_MS 900u
 #define SPLASH_SWEEP_STEP_MS 40u
+#define STARTUP_SCREEN_HEIGHT 240u
+#define STARTUP_SPLASH_Y ((STARTUP_SCREEN_HEIGHT - STARTUP_SPLASH_HEIGHT) / 2u)
 static uint8_t splash_booted;
 static uint32_t splash_sweep_frame = 0xFFFFu;
 static int8_t live_key_voice[NKEYS];
@@ -2672,17 +2682,28 @@ static void splash_decode(void)
     }
 }
 
+static void splash_blit(void)
+{
+    cv_blit(0, STARTUP_SPLASH_Y);
+}
+
+static void splash_clear_margins(void)
+{
+    lcd_fill(0, 0, STARTUP_SPLASH_WIDTH, STARTUP_SPLASH_Y, C_BLACK);
+    lcd_fill(0, STARTUP_SPLASH_Y + STARTUP_SPLASH_HEIGHT, STARTUP_SPLASH_WIDTH,
+             STARTUP_SCREEN_HEIGHT - STARTUP_SPLASH_Y - STARTUP_SPLASH_HEIGHT, C_BLACK);
+}
+
 void app_splash(void)
 {
     if (!splash_booted) {
         /* the boot screen is drawn by the sweep in app_frame */
-        lcd_fill(0, 0, 240u, 240u, C_BLACK);
+        lcd_fill(0, 0, 240u, STARTUP_SCREEN_HEIGHT, C_BLACK);
         return;
     }
     splash_decode();
-    cv_blit(0, 0);
-    lcd_fill(0, STARTUP_SPLASH_HEIGHT, STARTUP_SPLASH_WIDTH,
-             240u - STARTUP_SPLASH_HEIGHT, C_BLACK);
+    splash_clear_margins();
+    splash_blit();
 }
 
 /* Scanline sweep: a cyan line reveals the logo top to bottom, with a few
@@ -2725,7 +2746,7 @@ static void splash_sweep(uint32_t elapsed)
     }
     for (x = y * STARTUP_SPLASH_WIDTH; x < STARTUP_SPLASH_WIDTH * STARTUP_SPLASH_HEIGHT; x++)
         cv_px[x] = (x < (y + 2u) * STARTUP_SPLASH_WIDTH) ? swap16(0x07FFu) : C_BLACK;
-    cv_blit(0, 0);
+    splash_blit();
 }
 
 static uint32_t phrase_popcount(uint32_t bits)

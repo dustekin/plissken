@@ -9,7 +9,7 @@ wait 50
 expect tempo 92
 tap SAVE
 wait 50
-expect store_writes 3
+expect store_writes 4
 reboot
 wait 500
 expect tempo 92

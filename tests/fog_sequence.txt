@@ -1,0 +1,40 @@
+# The built-in The Fog arrangement is selectable, editable, and restored on boot.
+wait 2000
+expect seq_saved 3
+tap PLAY
+expect playback_mode 1
+turn PRESET 2
+tapkey 0
+expect seq_screen 1
+expect seq_events 904
+expect seq_bars 45
+expect seq_tempo 123
+expect seq_meter 0
+tap HOME
+tap PLAY
+turn PRESET 2
+tap PLAY
+wait 25000
+expect seq_playing 1
+expect hits0 >0
+expect hits1 >0
+expect hits4 >0
+expect hits5 >0
+expect hits6 >0
+tap PLAY
+expect seq_playing 0
+tapkey 0
+expect seq_screen 1
+expect seq_events 904
+tap HOME
+tap PLAY
+turn PRESET 2
+tap REC
+expect seq_saved 2
+reboot
+expect seq_saved 3
+tap PLAY
+turn PRESET 2
+tapkey 0
+expect seq_events 904
+tap HOME

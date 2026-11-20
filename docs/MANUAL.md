@@ -37,9 +37,11 @@ individual samples. Different drum samples can share a step; REC adds or removes
 New drum hits play the full sample, and their displayed length follows the sample duration and song tempo; MASTER
 does not change drum lengths. LM-1 is not offered in the other tracks' sound choices. Existing saved songs remain
 playable with their original drum lengths.
-Up to 16 user songs can be saved, plus the built-in Escape From Firmware and Halloween tracks, each with about 950
-events and up to 128 bars. Playback allows at most four simultaneous sound voices; chord events count as multiple voices
-and pitched samples are cut off at their selected duration. Drum tails reserve voices conservatively at the fastest
+Up to 16 user songs can be saved, plus the built-in Escape From Firmware, Halloween, and The Fog tracks. To play
+The Fog, press PLAY, turn PRESET to select it, then press PLAY again. Press a piano key instead of PLAY to open it
+for editing; that first key is not recorded. Deleting a built-in song restores it on the next boot. Each track
+supports up to 950 events and 128 bars. Playback allows at most four simultaneous sound voices; chord events count
+as multiple voices, and pitched samples are cut off at their selected duration. Drum tails reserve voices conservatively at the fastest
 tempo so later tempo changes cannot exceed that limit.
 
 In the sequencer, EDIT + K1 adjusts the working song's tempo (70–140 BPM), shown beside the time signature;
@@ -65,15 +67,17 @@ multi-tap delay rather than a physical room model.
 The screen lists the instruments in white, with the selected keyboard sound in cyan-blue. The small bars beside the
 names are activity meters only. In the sequencer, the editor grid displays tracks and note lengths. CHORD plays one
 chord per key; K1 sets the chord type and ALGO chooses the 1 KEY or SPLIT layout.
-At startup, the display shows the color skyline artwork from `assets/startup.png`, packed into a four-color RGB565 palette, for 3 seconds. A cyan scanline sweeps down the image while the Pro-1 voice plays a short keyboard phrase.
+At startup, the display shows the color skyline artwork from `assets/startup.png`, centered vertically and packed into
+a four-color RGB565 palette, for 3 seconds. A cyan scanline sweeps down the image while the Pro-1 voice plays a short
+keyboard phrase.
 
 ## Current limitations
 
 The preloaded MIDI/backing arrangement is disabled in this build because it distorted; it may return after further
 work on gain staging and instrument count. PLAY instead selects and plays songs saved in the visual sequencer.
-Escape From Firmware and Halloween are the preloaded sequencer tracks; additional preloaded MIDI selection is not
-implemented. Drum playback uses locally supplied WAV samples;
-the generated sample data is not included in the repository. Confirm their license before distributing firmware.
+Escape From Firmware, Halloween, and The Fog are the preloaded sequencer tracks; additional preloaded MIDI selection
+is not implemented. Drum playback uses the 13 Rossf LM-1 samples packed at build time; see the project credits
+for their license and attribution.
 Guitar and bass modeling are intentionally simple. Bluetooth and per-track mute/level controls are not implemented.
 
 The prototype is intended to establish that all seven parts can run together and to provide a baseline for measuring

@@ -65,8 +65,10 @@ release.
 - **Halloween sequence:** derived from project-owner-supplied local `Synth.mid`, `Piano.mid`, `Bass.mid`, and
   `Drums.mid` reference stems. The MIDI files remain outside the repository and are not distributed with the
   firmware; `dsp/halloween_sequence.h` contains the reduced, editable 5/4 sequencer transcription. The synth stem
-  uses Plissken's Juno-6-style renderer. Verify distribution permission for the source MIDI transcription before
-  publishing a release.
+  uses Plissken's Juno-6-style renderer. The project owner confirmed authorization to distribute the transcription.
+- **The Fog sequence:** derived from the project-owner-supplied local cover MIDI `the fog main theme (cover).mid`.
+  The project owner confirmed authorization to reproduce and distribute the transcription in firmware. The MIDI
+  file remains outside the repository; `dsp/fog_sequence.h` contains the reduced, editable sequencer arrangement.
 
 ## Graphics
 

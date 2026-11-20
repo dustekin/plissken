@@ -3,6 +3,16 @@
 Each test build is saved as `plissken###.fwsc` with an increasing number. Newest first.
 Add an entry here whenever a new build is saved.
 
+## 018
+- Adds The Fog as an editable, restored-on-boot preloaded track: 904 events, 45 bars, 4/4 at 123 BPM, using
+  piano, Juno, bass, CS-50 and LM-1 drums. The cover MIDI remains a local reference and is not distributed.
+- Centers the 240x144 startup splash vertically on the 240x240 display. No piano sound changes are included;
+  piano research is recorded in the README for a later session.
+- Target build passed; host startup, screens, UI, Fog, and built-in sequence scenarios passed. Startup peak:
+  -14.4 dBFS. The project owner tested build 018 on an FM-1.
+- Device image 489,952 B; package 614,938 B; build ID `7BAB38E6`; SHA-256
+  `E6D499853F309F86C812B479B6C3ACA910200A3F1204E84C79A8F7A42E9B6C8E`.
+
 ## 017
 - Saved-sequence LM-1 events are mixed at 42% of live-drum level so the chorused Juno lane and bass remain dominant;
   live keyboard drums are unchanged.

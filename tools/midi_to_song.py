@@ -12,7 +12,7 @@ from pathlib import Path
 import mido
 
 JUNO, PIANO, PRO, GUITAR, BASS, DRUMS, CS50 = range(7)
-DRUM_MAP = {36: 0, 38: 1, 45: 0, 54: 2, 88: 2}
+DRUM_MAP = {35: 0, 36: 0, 38: 1, 42: 2, 45: 0, 49: 2, 52: 2, 54: 2, 85: 2, 88: 2}
 
 
 def assign(channel, note):

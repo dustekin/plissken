@@ -5,9 +5,8 @@ directory is the build system and platform submodule. The keyboard offers Juno, 
 drums, CS-50/CS-80 and CHORD sounds, along with a live phrase recorder and a visual five-track sequencer with
 saved-song playback.
 
-This checkout is the **v0.14** release candidate. It contains the released v0.13 work plus the Halloween
-preloaded track and sequencer mix improvements. The older published, signed v0.11 release does not include the
-visual sequencer and saved-song playback features described below.
+**v0.15** adds The Fog as a preloaded track and centers the startup animation vertically. The older published,
+signed v0.11 release does not include the visual sequencer and saved-song playback features described below.
 
 It's a crappy little firmware, not meant to be serious, just wanted to prove I could do it with vibecoding.
 
@@ -19,10 +18,10 @@ Contact: raggadus@gmail.com
 Please do what you like with the firmware, but give credit.
 
 The original seven-part backing arrangement and EDIT + PLAY song mode are disabled because their mix distorted
-(`BACKING_ENABLED` is 0 in `app.c`). A reduced, four-voice sequencer transcription of the authorized render-test
-MIDI is available as **Escape From Firmware**. **Halloween** is also preloaded as an editable 5/4, 120 BPM
-sequence; its synth stem uses the Juno-6-style voice. If either built-in track is deleted, it is restored on the next
-boot. PLAY opens the saved-song selector, not the disabled backing arrangement. This remains a concurrency and
+(`BACKING_ENABLED` is 0 in `app.c`). Reduced, four-voice sequencer transcriptions are available as **Escape From
+Firmware**, **Halloween**, and **The Fog**. Halloween is an editable 5/4, 120 BPM sequence whose synth stem uses
+the Juno-6-style voice; The Fog is an editable 4/4, 123 BPM sequence. If a built-in track is deleted, it is restored
+on the next boot. PLAY opens the saved-song selector, not the disabled backing arrangement. This remains a concurrency and
 resource-budget prototype, not a finished instrument. All 13 Rossf Linn LM-1 one-shots are packed
 from the source WAVs at build time; the generated sample header is ignored and not checked in. Synthesis and
 effects are deliberately simple and need further listening and refinement on the FM-1. The instrument screen shows
@@ -33,16 +32,18 @@ SELECT, ALGO, or PRESET encoder colors it cyan; each subsequent detent advances 
 counts. K1–K4 do not affect the top-center portrait. The Juno, Pro One, bass, guitar, and
 CS-50 oscillator edges use polyBLEP band-limiting to reduce high-note aliasing without oversampling or additional
 audio buffers.
-At startup, a cyan scanline sweep with a slight glitch reveals the color skyline splash, which stays up for 3
-seconds while the Pro-1 voice plays a short keyboard phrase taken from the authorized `escape_from_ny.mid`
-(0:21–0:24); the 240×144 image is packed into a four-color RGB565 palette for the FM-1 display.
+At startup, a cyan scanline sweep with a slight glitch reveals the color skyline splash centered vertically on the
+screen. It stays up for 3 seconds while the Pro-1 voice plays a short keyboard phrase taken from the authorized
+`escape_from_ny.mid` (0:21–0:24); the 240×144 image is packed into a four-color RGB565 palette for the FM-1 display.
 
-## v0.14 preloaded songs
+## Preloaded sequencer songs
 
 Build 017 adds Halloween and routes its lowered piano-stem line through chorused Juno, with saved-sequence drums
-mixed below the pitched parts. It was physically tested on the FM-1. The preloaded Escape From Firmware and
-Halloween songs remain active work: continue comparing renderer choices, voice allocation, mix balance, and
-hardware playback in future sessions.
+mixed below the pitched parts. It was physically tested on the FM-1. Build 018, including The Fog and the centered
+startup animation, was also tested on hardware. The preloaded Escape From Firmware, Halloween, and The Fog songs
+remain active work: continue comparing renderer choices, voice allocation, mix balance, and hardware playback in
+future sessions. The Fog is derived from the locally supplied cover MIDI `the fog main theme (cover).mid`; the file
+remains outside the repository.
 
 ## v0.13 release
 
@@ -54,8 +55,8 @@ no longer distorts.
 
 Build 012 was physically tested on the FM-1 and confirmed working. It added:
 
-- A saved-song Playback screen with 16 user slots plus the built-in **Escape From Firmware** and **Halloween**
-  tracks. REC deletes the
+- A saved-song Playback screen, introduced in v0.12, now has 16 user slots plus the built-in **Escape From
+  Firmware**, **Halloween**, and **The Fog** tracks. REC deletes the
   selected song; pressing a piano key loads it into the sequencer for editing, and that opening key is not recorded.
   SAVE updates the selected song.
 - A visual five-track sequencer with four pitched lanes and an LM-1 drum lane, saved tempo, playback-follow, and
@@ -117,7 +118,7 @@ The chord-demo command writes one 44.1 kHz, 16-bit stereo F-major WAV per CS-80-
 The **Render Escape from New York MIDI** task is currently unavailable: it still expects `tests/song.txt`, which
 is in `tests/disabled/` while song playback is disabled.
 
-The Halloween reference stems are kept outside the repository. Convert them with:
+The Halloween reference stems and The Fog cover MIDI are kept outside the repository. Convert Halloween with:
 
 ```sh
 python3 tools/midi_stems_to_song.py \
@@ -139,6 +140,22 @@ The generated sequence contains 950 events in 80 bars. The piano-stem notes are 
 rendered with the chorused Juno voice rather than the tinny piano engine; bass and Juno take priority over that lane and closed-hat
 density. The reference MIDI files themselves must not be committed.
 
+Convert The Fog with the first command in Windows Python (with `mido` installed), then run the sequence conversion
+in the WSL checkout:
+
+```sh
+python tools/midi_to_song.py "C:\path\to\the fog main theme (cover).mid" build/fog_song.h
+python3 tools/song_to_sequence.py \
+  --parts 0,1,4,5,6 --instrument 0=1 --instrument 1=0 \
+  --priority 1,6,4,0,5 --strict-priority \
+  --quota 0=155 --quota 1=149 --quota 4=14 --quota 5=450 --quota 6=136 \
+  --meter 4/4 --symbol-prefix FOG \
+  build/fog_song.h build/gen/lm1_samples.h dsp/fog_sequence.h
+```
+
+The generated The Fog sequence contains 904 events in 45 bars at 123 BPM. Its parts use piano, Juno, bass, CS-50,
+and LM-1 drums. Keep the cover MIDI out of Git.
+
 The build automatically packs all 13 Rossf Linn LM-1 WAVs from `references/rossf-lm1-drum-set/` as 8-bit mono.
 The original audio files are preserved; converted firmware samples are generated at build time.
 `NoMoreBass.wav`, Bass808, BassPlunk1, BassPlunk3 and BassPlunk4, and the three GuitarRiff WAVs are the project owner's recordings packed as
@@ -159,10 +176,9 @@ An audio initialization failure is shown on the main screen as **AUDIO INIT FAIL
 
 ## GitHub releases
 
-The current published release, **v0.13**, remains signed and unchanged. This checkout additionally contains the
-unreleased Halloween track; build 014 is the last tested v0.13 hardware build. A future version tag triggers the
-release workflow, which builds and attests the versioned package from that tag. Product and
-install metadata are in `fm1.toml`; the Firmware Hub card text and sound provenance are in the root `fmhub.json`.
+The v0.15 tag triggers the release workflow, which builds and attests the versioned package from that tag.
+Product and install metadata are in `fm1.toml`; the Firmware Hub card text and sound provenance are in the root
+`fmhub.json`.
 
 ## Controls
 
@@ -289,15 +305,52 @@ Known issues and ideas for upcoming work:
 
 1. Guitar FX knobs K1–K3 (drive, chorus, modulation) do not greatly change the sound; K4 (delay) works well.
 2. Juno is still quiet compared with the other instruments.
-3. Bass FX knobs K1–K3 have the same problem as the guitar's.
-4. CHORD is still too loud.
-5. Getting the preloaded MIDI song/backing arrangement working again will probably require trimming instruments
+3. Prioritize piano sound quality; evaluate a sample-based piano against improvements to the current engine.
+4. Bass FX knobs K1–K3 have the same problem as the guitar's.
+5. CHORD is still too loud.
+6. Getting the preloaded MIDI song/backing arrangement working again will probably require trimming instruments
    (e.g. dropping guitar); saved visual-sequencer playback is implemented separately.
-6. Continue refining the built-in Escape From Firmware and Halloween songs, including synth choices, note
+7. Continue refining the built-in Escape From Firmware and Halloween songs, including synth choices, note
    allocation, drum balance, duration limits, and hardware listening tests.
+8. Continue refining **The Fog** as a preloaded, editable track; keep its reference MIDI files out of Git.
+9. Improve the quality of all preloaded music tracks through renderer, arrangement, mix, and hardware testing.
+10. Add quality-of-life improvements, including further sequencer and saved-song workflow refinements.
+11. Continue improving the live and sequenced sound quality within the FM-1 resource limits.
+12. Optimize code for CPU, RAM, flash, and voice allocation before adding heavier features.
 
-Planned work includes further improving sound quality within the FM-1's RAM and processor budget, expanding the
-budget-conscious Orchid-inspired chord/phrase feature, auditioning and refining the selectable bass sounds, support
-for selecting additional preloaded MIDI files, and additional original graphics inspired by *Escape from New York*.
+### Piano research for the next session
+
+- Start by comparing the current six-voice additive piano with a compact, single-velocity-layer sampled piano.
+  Try four to six mono root-note zones, with velocity controlling level and brightness. Retain the existing piano
+  for an A/B comparison; do not assume the sampled version is better until listening across the keyboard.
+- [VESPER](https://github.com/fatcatstudios-hub/vesper-fm1/tree/vesper-2.0.2) demonstrates four piano zones;
+  [Sill](https://github.com/delirioux/sill/tree/c5cfe9e) and
+  [Manta](https://github.com/delirioux/manta/tree/v1.1) use six-zone banks and IMA ADPCM. Their processed,
+  short samples are tailored to their arrangements, so audition source samples with adequate sustain instead of
+  assuming those exact cuts suit Plissken. Their Versilian Community Sample Library sources are identified as CC0;
+  verify the specific files and license, and document attribution when incorporating them.
+- Plissken's sample path already supports 8-bit PCM and pitch interpolation. A piano would need its own polyphonic
+  voice allocation, zone selection, and smooth note-off; evaluate sustain length and click-free looping rather than
+  repeating entire samples. At 22.05 kHz, six mono samples of 0.65-1.15 seconds each would use roughly 86-152 KB
+  as 8-bit PCM, or 43-76 KB as 4-bit ADPCM, plus metadata. These are illustrative bounds, not a measured bank;
+  resample with appropriate anti-alias filtering. PCM is simpler; ADPCM saves flash but adds decoder CPU and state.
+- If a full sample bank is too costly, compare a short sampled hammer attack blended into the existing synthesized
+  sustain. Alternatively, experiment with note-dependent inharmonicity, hammer/velocity spectral shaping, and
+  separate attack and tail decay in the current engine. [Hawk Chua](https://github.com/Plieuw/hawk-chua/tree/v2.1.7)
+  provides ideas, but its larger partial count is not automatically affordable.
+  [Clair Piano](https://github.com/tokumine/fm1-claire-piano/tree/v1.0.1) uses a much richer modal model and its
+  two-core CPU figures do not establish headroom in Plissken. [Frodhes](https://github.com/leonardoMirabal/frodhes/tree/v0.9.11)
+  models a Rhodes electric piano rather than an acoustic grand.
+- The target build on 2026-11-20 used 489,952 bytes of app image and 61,676 of 98,304 bytes of `.data + .bss`;
+  this is a snapshot, not a flash-capacity or CPU-headroom guarantee. Profile the worst-case six-voice piano alongside
+  sequencer playback and effects on an FM-1, and check audio deadlines, flash/cache behavior, RAM, clipping,
+  note-off, velocity response, and low/high notes. Host timing does not measure device DSP load.
+- Several reference engines are GPL-3.0-only; VESPER has a GPL-3.0 SDK linking exception, while Clair is MPL-2.0.
+  Treat their code as references unless its particular license and compatibility have been reviewed. Record
+  third-party code or sample provenance and credits in the same change that incorporates it.
+
+Planned work includes expanding the budget-conscious Orchid-inspired chord/phrase feature, auditioning and refining
+the selectable bass sounds, supporting additional preloaded MIDI files, and adding original graphics inspired by
+*Escape from New York*.
 Three user-provided one-note bass recordings are currently switchable. Verify rights before distributing other
 MIDI, samples, or artwork.
