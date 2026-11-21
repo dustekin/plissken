@@ -193,6 +193,13 @@ terms; see [CREDITS.md](CREDITS.md) and [base/LICENSING.md](base/LICENSING.md).
 
 - Continue improving the preloaded songs, including renderer choices, voice allocation, mix balance, and FM-1
   listening tests.
+- In CHORD SPLIT mode, make the second octave of keys playable in a future release. Its current non-playing behavior
+  is intentional, not a bug.
+- Rename the preloaded **The Fog** song to **The FMog** in a future release; the current firmware still calls it
+  The Fog.
+- Rebuild future songs using the sampled piano and the new guitar and bass instruments. Reuse the startup fix's
+  anti-buzz approach by simplifying or revoicing stacked low notes instead of lowering the overall gain, then
+  verify the result on an FM-1.
 - Improve the live sound balance and quality of Juno, guitar, bass, and CHORD while staying within the FM-1's audio
   and voice limits.
 - Add quality-of-life improvements to the sequencer and saved-song workflow.
