@@ -1,6 +1,10 @@
 # Plissken
 
-Plissken is a live-performance instrument prototype for the M-VAVE FM-1. It is built on `fm1-base`; the `base/`
+**HUMAN CONTENT**
+
+WARNING - One user has reported bricking after installing Plissken. I have hardware tested Plissken multiple times, including here https://youtube.com/shorts/GOW90MxLPbM?feature=share. Please always use a bootloader!
+
+Plissken is a live-performance instrument and sequencer prototype for the M-VAVE FM-1. It is built on `fm1-base`; the `base/`
 directory is the build system and platform submodule. The keyboard offers Juno, piano, Pro-1, guitar, bass, LM-1
 drums, CS-50/CS-80 and CHORD sounds, along with a live phrase recorder and a visual five-track sequencer with
 saved-song playback.
@@ -17,340 +21,188 @@ Contact: raggadus@gmail.com
 
 Please do what you like with the firmware, but give credit.
 
-The original seven-part backing arrangement and EDIT + PLAY song mode are disabled because their mix distorted
-(`BACKING_ENABLED` is 0 in `app.c`). Reduced, four-voice sequencer transcriptions are available as **Escape From
-Firmware**, **Halloween**, and **The Fog**. Halloween is an editable 5/4, 120 BPM sequence whose synth stem uses
-the Juno-6-style voice; The Fog is an editable 4/4, 123 BPM sequence. If a built-in track is deleted, it is restored
-on the next boot. PLAY opens the saved-song selector, not the disabled backing arrangement. This remains a concurrency and
-resource-budget prototype, not a finished instrument. All 13 Rossf Linn LM-1 one-shots are packed
-from the source WAVs at build time; the generated sample header is ignored and not checked in. Synthesis and
-effects are deliberately simple and need further listening and refinement on the FM-1. The instrument screen shows
-the user-provided portrait at the top center,
-packed as a 33×48 four-color grayscale image with transparent background. The first turn of the MASTER control or
-SELECT, ALGO, or PRESET encoder colors it cyan; each subsequent detent advances through the on-screen knob colors
-(cyan, green, pink, yellow), regardless of EDIT state. MASTER is an analog pot, so it advances once per 32 position
-counts. K1–K4 do not affect the top-center portrait. The Juno, Pro One, bass, guitar, and
-CS-50 oscillator edges use polyBLEP band-limiting to reduce high-note aliasing without oversampling or additional
-audio buffers.
-At startup, a cyan scanline sweep with a slight glitch reveals the color skyline splash centered vertically on the
-screen. It stays up for 3 seconds while the Pro-1 voice plays a short keyboard phrase taken from the authorized
-`escape_from_ny.mid` (0:21–0:24); the 240×144 image is packed into a four-color RGB565 palette for the FM-1 display.
+Content below this line is human edited
 
-## Preloaded sequencer songs
+**HUMAN CONTENT END**
 
-Build 017 adds Halloween and routes its lowered piano-stem line through chorused Juno, with saved-sequence drums
-mixed below the pitched parts. It was physically tested on the FM-1. Build 018, including The Fog and the centered
-startup animation, was also tested on hardware. The preloaded Escape From Firmware, Halloween, and The Fog songs
-remain active work: continue comparing renderer choices, voice allocation, mix balance, and hardware playback in
-future sessions. The Fog is derived from the locally supplied cover MIDI `the fog main theme (cover).mid`; the file
-remains outside the repository.
+## Project overview
 
-## v0.13 release
+Plissken is a live-performance sound instrument and visual sequencer for the M-VAVE FM-1. The main screen is a
+playable keyboard with several synthesized and sampled instruments, live phrase recording, and a five-track
+sequencer. The saved-song screen plays and edits named sequences.
 
-Builds 013 and 014 add the animated startup splash and the Pro-1 startup phrase. Build 014 drops the phrase's final
-second, whose stacked closing chord distorted on hardware. Build 014 was physically tested on the FM-1 and the startup
-no longer distorts.
+The original seven-part backing arrangement is disabled because its mix distorted. **PLAY** opens the saved-song
+screen; it does not start that disabled arrangement. The preloaded **Escape From Firmware**, **Halloween**, and
+**The Fog** sequences are independent, editable tracks. Saved-song playback is limited to four simultaneous sound
+voices, so dense arrangements may omit events when that budget is reached.
 
-## v0.12 features
+## Instrument sounds
 
-Build 012 was physically tested on the FM-1 and confirmed working. It added:
+- **Piano:** the six-zone Kawai sample engine is the startup default. With PIANO selected, turn ALGO to switch
+  between the sampled and additive engines.
+- **Guitar:** the modeled instrument remains available alongside Electric, Nylon, and Acoustic samples. PRESET or
+  ALGO cycles Model Sustain/One-shot, Electric Sustain/One-shot, Nylon Sustain/One-shot, and Acoustic
+  Sustain/One-shot. SEL advances through the same cycle. Electric Sustain is the startup mode.
+- **Bass:** cycles Model, Electric, Acoustic, 808, and NoMore, each with Sustain and Note modes. Electric Sustain
+  is the startup mode. Sustain responds to key release; Note lets a sample play through its natural tail. The 808
+  level is boosted. The former BassPlunk samples are removed.
+- **Juno, Pro-1, CS-50/CS-80, and CHORD:** select these from the main instrument list. CS-80-inspired patches and
+  chord layouts are available through their on-screen controls.
+- **LM-1:** thirteen drum samples are played from the keys or sequencer. Samples are one-shots and do not transpose.
 
-- A saved-song Playback screen, introduced in v0.12, now has 16 user slots plus the built-in **Escape From
-  Firmware**, **Halloween**, and **The Fog** tracks. REC deletes the
-  selected song; pressing a piano key loads it into the sequencer for editing, and that opening key is not recorded.
-  SAVE updates the selected song.
-- A visual five-track sequencer with four pitched lanes and an LM-1 drum lane, saved tempo, playback-follow, and
-  note/sample editing.
-- Contextual GLO help on the main, Playback, and sequencer screens.
+Sample provenance, licenses, and processing details are in [CREDITS.md](CREDITS.md).
 
-The candidate is function-complete for its current feature scope. Further work may explore a higher voice budget,
-sound-quality improvements, and general quality-of-life refinements.
+## Release history
+
+Entries below summarize the available Git tags, README history, and build notes. They are intentionally limited to
+documented changes.
+
+| Version | Documented changes |
+| --- | --- |
+| **v0.20-rc1** | Release candidate: sampled piano is the default; guitar and bass gain the new sample timbres and sustain/one-shot modes; 808 is boosted; old guitar riffs and bass plunks are removed; the startup phrase's repeated low pulses are revoiced as E4. Local candidate package: build 023. |
+| **v0.15** | Adds The Fog as a preloaded sequence and vertically centers the startup animation. Build 018 was hardware-tested. |
+| **v0.14** | Adds Halloween as a preloaded sequence and balances its drum mix below the pitched parts. Build 017 was hardware-tested. |
+| **v0.13** | Adds the animated startup splash and Pro-1 startup phrase; build 014 shortens the phrase after its stacked ending distorted. Build 014 was hardware-tested and the startup no longer distorted. |
+| **v0.12** | Adds the visual five-track sequencer and saved-song Playback screen, including the Escape From Firmware track and 16 user slots. Build 012 was hardware-tested. |
+| **v0.11** | Signed firmware baseline; it predates the visual sequencer and saved-song playback. |
+| **v0.1** | Early tag. The tag history records the root MPL-2.0 license; no fuller release notes were found. |
+
+The **v0.20-rc1** tag builds and publishes a GitHub prerelease with its firmware package and build attestation. The
+final **v0.20** release tag has not been created.
+
+## Numbered internal builds
+
+There are 22 numbered packages in the current sequence, builds 002 through 023. Build 001 is not present in the
+builds folder. Hardware status is marked as **tested**, **not tested**, or **not recorded**; missing notes are not
+treated as evidence of a hardware test.
+
+| Build | Summary | FM-1 hardware status |
+| --- | --- | --- |
+| 023 | v0.20-rc1 release-format candidate package. | Not tested yet |
+| 022 | Restores startup gain and replaces repeated low E2/E3 pulses with a single E4 pulse. | Tested; user confirmed it works fine |
+| 021 | Lowered startup phrase gain to investigate the buzz. | Tested; buzz remained |
+| 020 | Adds Electric/Acoustic bass samples, Sustain/Note modes, and a louder 808; removes BassPlunk samples. | Tested; main sounds were good, startup phrase buzzed |
+| 019 | Package exists, but no build notes were found. | Not recorded |
+| 018 | Adds The Fog and centers the startup splash vertically. | Tested |
+| 017 | Rebalances Halloween's sequenced drums below its pitched parts. | Tested |
+| 016 | Tests rendering Halloween's lowered piano lane with Juno. | Not tested |
+| 015 | Adds Halloween as an editable preloaded sequence. | Not tested |
+| 014 | Shortens the startup phrase and removes its distorted closing chord. | Tested |
+| 013 | Adds the startup scanline animation and Pro-1 phrase. | Not tested |
+| 012 | Improves the Escape From Firmware sequence's CS-50 onset timing. | Tested |
+| 011 | Highlights GLO help labels on the main, playback, and sequencer screens. | Tested |
+| 010 | Adds Escape From Firmware and editing a saved song from Playback. | Not recorded |
+| 009 | Package exists, but no build notes were found. | Not recorded |
+| 008 | Adjusts instrument labels and levels; repositions the SEQ indicator. | Not recorded |
+| 007 | Disables the distorted backing arrangement and adds a basic empty-pattern drum beat. | Not recorded |
+| 006 | Reduces Juno level in the backing-song mix. | Not recorded |
+| 005 | Further reduces Juno level in the backing-song mix. | Not recorded |
+| 004 | Restores the built-in song data missing from builds 002 and 003. | Not recorded |
+| 003 | Moves sound-variant switching to the knobs and adds the CHORD layout control. | Not recorded |
+| 002 | Early guitar/bass samples, drum sequencer, and quick-layer controls. | Not recorded |
+
+For detailed measurements and package hashes, see [builds/BUILD_NOTES.md](builds/BUILD_NOTES.md). The firmware
+packages in `builds/` are local test artifacts and are not tracked by Git.
+
+## Using the FM-1
+
+### Main screen
+
+1. Turn **SELECT** to choose an instrument. Play the piano keys to hear it.
+2. Use **OCT- / OCT+** to shift a pitched instrument by one octave, within two octaves in either direction.
+3. Use **K1-K4** for the selected instrument's sound controls. For LM-1, K1-K3 set chorus, reverb, and compression;
+   K4 sets drum bass boost. Guitar and bass have independent drive, chorus, modulation, and delay controls.
+4. With **PIANO** selected, turn **ALGO** to switch between the sampled and additive engines. The sample engine
+   starts selected after reboot.
+5. With **GUITAR** selected, PRESET or ALGO cycles the eight Model/Electric/Nylon/Acoustic Sustain/One-shot modes;
+   SEL cycles them as well. With **BASS** selected, PRESET, ALGO, or SEL cycles the five bass timbres and their
+   Sustain/Note modes.
+6. **EDIT + K1** changes the main tempo from 70 to 140 BPM. **SAVE** keeps that tempo across reboot.
+7. **REC** records a live phrase; press it again to stop and loop, then again to stop the loop. **EDIT + REC** clears
+   the phrase. The phrase is held in RAM and is lost at reboot.
+8. **MASTER** controls output level. **ARP** toggles the arpeggiator. **GLO** opens on-screen help.
+9. Press **SEQ** to edit the working sequence or **PLAY** to open saved-song playback.
+
+### SEQ screen
+
+The editor has four pitched tracks and one LM-1 drum track.
+
+- Turn **PRESET** to choose a track; turn **ALGO** to move the step cursor.
+- Turn **SELECT** to choose the track's instrument or drum sample. The LM-1 sound is only available on the drum
+  track.
+- Press a piano key to play and insert or replace a note at the selected step. On the drum track, keys select and
+  insert individual samples; different drum samples can share a step.
+- Press **REC** to remove the selected note. On the drum track it removes only the selected drum sample; it does not
+  add a sample.
+- Press **SEL** to change the time signature. Turn **MASTER** to set the selected pitched note's length; drum-hit
+  length follows the sample and tempo.
+- Hold **EDIT** and turn **K1** to change the sequence tempo. This tempo is separate from the main-screen tempo.
+- Press **PLAY** to start or stop the working sequence. During playback the display follows the play position; moving
+  ALGO pauses that follow so you can edit another step.
+- Press **SAVE** to name and save the sequence. When editing a saved song, SAVE updates that song. There are up to
+  16 user songs plus the built-in Escape From Firmware, Halloween, and The Fog tracks.
+- Press **SEQ** or **HOME** to return to the main screen. **GLO** opens sequencer help.
+
+### PLAY screen
+
+1. Press **PLAY** on the main screen to open the saved-song selector.
+2. Turn **PRESET** to choose a song, then press **PLAY** to start or stop playback.
+3. Press **REC** to delete the selected song. Deleting a built-in track restores it on the next boot.
+4. Press any piano key to load the selected song into the SEQ editor. That first key only opens the editor and is not
+   recorded. Use **SAVE** in the editor to write changes back to the selected song.
+5. Press **HOME** or **SEQ** to leave Playback. **GLO** opens Playback help.
 
 ## Build and test
 
-From this directory, use the VS Code terminal opened in WSL (Ubuntu), not PowerShell. The build commands use Bash
-syntax and the WSL toolchain/SDK paths; PowerShell attempts have caused problems in this workflow.
+Build in the VS Code terminal opened in WSL (Ubuntu), with the JieLi toolchain and AC79 SDK configured as described
+by `fm1-base`. Run commands from the repository root.
 
 ```sh
+# Normal FM-1 development package
+python3 base/tools/build.py .
+
+# Versioned release-candidate package
+python3 base/tools/build.py . --release 0.20-rc1
+
+# Host simulator and scenario tests
 python3 base/tools/build.py . --host
 for test in tests/*.txt; do
   build/host/plissken_host "$test" build/host
 done
-python3 tests/test_song_to_sequence.py
-python3 tests/check_chord_render.py build/host/plissken_host
-python3 tests/check_keyboard_tones.py build/host/plissken_host
-python3 tests/check_cs80_render.py build/host/plissken_host
-python3 tools/render_cs80_chords.py build/host/plissken_host renders/cs80-chords
-python3 tests/check_voice_controls.py
-python3 tests/check_velocity.py build/host/plissken_host
-python3 tests/check_drum_effects.py build/host
-python3 tests/check_drum_boost.py build/host
 ```
 
-The checked-in `dsp/escape_sequence.h` is derived from the authorized render MIDI via
-`python3 tools/midi_to_song.py <file.mid>` and `python3 tools/song_to_sequence.py`. It uses a sixteenth-step
-onset grid for CS-50 while preserving baseline per-part event counts; the transcription remains within the
-sequencer's event and four-voice limits. Regenerate it with
-`python3 tools/song_to_sequence.py --part-grid 6=1 --preserve-part-counts dsp/song.h build/gen/lm1_samples.h dsp/escape_sequence.h`.
-Before changing the conversion settings, `python3 tools/song_to_sequence.py --report` prints per-part merge,
-polyphony, event-cap, onset-error and duration-error diagnostics without writing the generated header.
-Use `--report --part-grid 6=1 --preserve-part-counts` to test a CS-50 sixteenth-note onset grid while preserving
-the default conversion's per-part event counts. Matching baseline events are retained where they survive the
-voice limit, and remaining slots are sampled evenly within each part. This diagnostic still does not write the
-arrangement.
-To write a separate candidate header for a hardware experiment, omit `--report` and provide an explicit output
-path; for example:
+The release workflow runs on version tags, builds and attests the package, and attaches it to the GitHub release.
+Tags containing `-rc` are marked as prereleases.
+
+The browser emulator requires a separate compatibility build:
 
 ```sh
-python3 tools/song_to_sequence.py --part-grid 6=1 --preserve-part-counts \
-  dsp/song.h build/gen/lm1_samples.h build/escape_sequence.cs50.h
+python3 base/tools/build.py . --emulator-only
 ```
 
-The chord render check verifies that a held Pro One chord sustains all three notes, not just the last-triggered
-voice, and that each note has its octave-sub component. The keyboard tone check verifies Juno, piano and Pro One
-fundamentals across the playable range, velocity response and headroom, and all eight Juno voices sounding
-together. The CS-80 render check exercises all ten independently designed patches, their output levels, and the
-four continuous tone controls. Drum boost checks compare low-frequency energy for both live and saved-sequence
-drums.
+It outputs `build/emulator-only/dont-install-on-your-fm1-plissken-emulator-only.fwsc`. **Never install this package
+on an FM-1.** It is a real firmware package with emulator-specific clock handling; its warning label is not an
+installation lockout. Use the normal hardware-target build for the device.
 
-The chord-demo command writes one 44.1 kHz, 16-bit stereo F-major WAV per CS-80-inspired patch to
-`renders/cs80-chords/`. The matching VS Code task, **Render CS-80 chord demos**, rebuilds the host renderer first.
-The **Render Escape from New York MIDI** task is currently unavailable: it still expects `tests/song.txt`, which
-is in `tests/disabled/` while song playback is disabled.
-
-The Halloween reference stems and The Fog cover MIDI are kept outside the repository. Convert Halloween with:
-
-```sh
-python3 tools/midi_stems_to_song.py \
-  --juno /path/to/Halloween/Synth.mid \
-  --piano /path/to/Halloween/Piano.mid \
-  --bass /path/to/Halloween/Bass.mid \
-  --drums /path/to/Halloween/Drums.mid \
-  --drum-loop-ticks 384 build/halloween_song.h
-python3 tools/song_to_sequence.py \
-  --parts 0,1,4,5 --polyphonic-parts 0 --transpose 1=-12 \
-  --instrument 1=0 \
-  --priority 4,0,1,5 --strict-priority \
-  --quota 0=42 --quota 1=400 --quota 4=22 --quota 5=486 \
-  --meter 5/4 --symbol-prefix HALLOWEEN \
-  build/halloween_song.h build/gen/lm1_samples.h dsp/halloween_sequence.h
-```
-
-The generated sequence contains 950 events in 80 bars. The piano-stem notes are transposed down one octave and
-rendered with the chorused Juno voice rather than the tinny piano engine; bass and Juno take priority over that lane and closed-hat
-density. The reference MIDI files themselves must not be committed.
-
-Convert The Fog with the first command in Windows Python (with `mido` installed), then run the sequence conversion
-in the WSL checkout:
-
-```sh
-python tools/midi_to_song.py "C:\path\to\the fog main theme (cover).mid" build/fog_song.h
-python3 tools/song_to_sequence.py \
-  --parts 0,1,4,5,6 --instrument 0=1 --instrument 1=0 \
-  --priority 1,6,4,0,5 --strict-priority \
-  --quota 0=155 --quota 1=149 --quota 4=14 --quota 5=450 --quota 6=136 \
-  --meter 4/4 --symbol-prefix FOG \
-  build/fog_song.h build/gen/lm1_samples.h dsp/fog_sequence.h
-```
-
-The generated The Fog sequence contains 904 events in 45 bars at 123 BPM. Its parts use piano, Juno, bass, CS-50,
-and LM-1 drums. Keep the cover MIDI out of Git.
-
-The build automatically packs all 13 Rossf Linn LM-1 WAVs from `references/rossf-lm1-drum-set/` as 8-bit mono.
-The original audio files are preserved; converted firmware samples are generated at build time.
-`NoMoreBass.wav`, Bass808, BassPlunk1, BassPlunk3 and BassPlunk4, and the three GuitarRiff WAVs are the project owner's recordings packed as
-8-bit mono. See [CREDITS.md](CREDITS.md)
-for sample details.
-
-Build two distinct firmware packages: for device firmware, use `python3 base/tools/build.py .` with the JieLi
-toolchain and AC79 SDK configured as described in the `fm1-base` documentation; for the browser emulator, use the
-separate emulator-only command below. Do not use the emulator-only package on an FM-1.
-
-For the Joakim Eriksson CPU-level browser emulator, build a separate compatibility package with
-`python3 base/tools/build.py . --emulator-only`. Its output is
-`build/emulator-only/dont-install-on-your-fm1-plissken-emulator-only.fwsc`,
-and its screen says **EMU ONLY**. This build accepts two zero audio PLL registers to accommodate the emulator.
-**Never install it on an FM-1**: the file is a firmware package and the warning is not an installation barrier.
-The normal `build/plissken.fwsc` retains the stock hardware clock check and is not overwritten by this command.
-An audio initialization failure is shown on the main screen as **AUDIO INIT FAILED**.
-
-## GitHub releases
-
-The v0.15 tag triggers the release workflow, which builds and attests the versioned package from that tag.
-Product and install metadata are in `fm1.toml`; the Firmware Hub card text and sound provenance are in the root
-`fmhub.json`.
-
-## Controls
-
-- **PLAY** opens the saved-song selector. Choose a song with PRESET and press PLAY to start or stop it; REC deletes
-  the selected song (stopping playback first if needed). Press any piano key to load the selected song into the
-  sequencer for editing; that first key only opens the editor. SAVE writes edits back to the selected song. HOME exits.
-  **GLO** opens playback help; turn any knob to change pages, and press GLO, SEQ or HOME to return.
-  The original MIDI/backing arrangement and EDIT + PLAY remain disabled because their mix distorted. The reduced
-  **Escape From Firmware** and **Halloween** tracks are separate sequencer transcriptions. Do not re-enable the
-  original arrangement by changing `BACKING_ENABLED` alone; first fix and verify the mix.
-- **SELECT encoder** chooses the sound played by the piano keys: Juno, piano, Pro-1, guitar, bass, LM-1 drums,
-  CS-50/CS-80, or CHORD. The left-side instrument list highlights the current keyboard selection in cyan-blue;
-  Bass is labeled BASS, CS-50/CS-80 shares one row, and CHORD appears below it.
-- **OCT− / OCT+** shift the selected pitched keyboard sound by one octave, from −2 to +2. Each sound remembers its
-  setting until reboot; held notes keep their pitch. LM-1 drum samples are not transposed.
-- **FX** cycles the K2 effect setting (0–3) of the selected sound; **SEL** steps to the next variant (guitar riff, bass sample,
-  CS-80 preset, or chord voice).
-- **ENV / LFO** mute backing chords / bass (lit while muted). They have no audible effect while backing playback
-  is disabled; Pro-1 is unaffected.
-- **GLO** opens main-screen help; turn any knob to change pages, and press GLO, SEQ or HOME to return. In playback
-  and the sequencer, GLO opens help for that screen.
-- **ARP** arpeggiates held keys at 16th-note rate (lit while on). **HOME** stops playback and releases all notes.
-- **Visual sequencer:** **SEQ** opens the editor with four pitched-sound tracks and a fifth LM-1 drum track;
-  press SEQ or HOME to exit. PRESET moves between tracks,
-  ALGO moves the step cursor, SELECT chooses that track's sound, SEL cycles the time signature, MASTER sets
-  the selected note's length, and EDIT + K1 adjusts the song's BPM (70–140). Piano keys play and insert or replace a
-  note at the cursor, including while the sequence plays. REC deletes the selected note and does nothing when the
-  cursor is on an empty cell. OCT− / OCT+ change the octave of pitched sounds. Note, octave and K1–K4 effect
-  changes briefly appear as text. PLAY starts or stops the working sequence; a quick double-press stops it and
-  returns the cursor to the beginning. Grid lines are emphasized after every four steps. GLO opens the larger-text
-  help; turn any knob to change pages. To edit a saved song, select it in the playback screen and press any piano
-  key; the opening key is not recorded, and SAVE updates that song.
-  During playback the display and cursor follow the music. Moving ALGO pauses follow so you can edit another
-  position; stop and restart playback to resume following. On the LM-1 track, SELECT chooses a drum sound and
-  piano keys choose and insert individual samples; different samples can share a step. REC removes only the
-  selected sample and never adds one. Drum hits play their full samples; their bar length reflects sample duration
-  and tempo. MASTER does not change it. LM-1 is excluded from the other tracks' sound choices; older
-  saved songs retain their original drum lengths.
-  SAVE names and saves the sequence; up to 16 user songs plus **Escape From Firmware** and **Halloween** can
-  be stored, with about 950 events per song and up to 128 bars. Playback is limited to four simultaneous sound
-  voices (chord sounds count as multiple voices); pitched samples are limited to their note length.
-  Song tempo is saved with each song and does not change the main-screen tempo. Older saved songs without a tempo
-  play at the current main-screen tempo.
-- **Quick layers** (after Felucca): holding FX, GLO, SEQ or LFO for 0.4 s, or touching a key, knob or PLAY meanwhile,
-  gives a layer instead of the tap action above. The keys are silent while FX, GLO or SEQ is held; the numbers count
-  from the lowest key.
-  - **FX held:** keys 1–4 set the effect to 0–3 for as long as the key is down.
-  - **GLO held:** keys 1–3 mute chords / bass / drums, key 4 unmutes all, and key 5 taps the tempo.
-  - **SEQ held:** key 1 clears the recorded phrase, key 2 reverses it, key 3 clears the legacy drum pattern.
-  - **LFO held:** the keys still play; any knob turns are undone when LFO is let go.
-- **Battery:** the JC portrait at the top dims as the battery bars drop (100%, 70%, 45%, 25% for 3 to 0 bars). It is
-  full brightness on USB power.
-- **EDIT + K1** changes tempo from 70 to 140 BPM.
-- **K1–K3**, when LM-1 is selected, choose chorus, reverb, and compression presets respectively: 0 is off and 1–3
-  select progressively different settings. These apply to live drums and reset on reboot. Reverb is a
-  lightweight multi-tap delay, not a physical room model.
-- **K4**, when LM-1 is selected, adjusts drum bass boost from 0 (off) to 8. It affects live and sequencer drums.
-  The setting resets on reboot.
-- **LM-1 keys:** key indices 0–12 trigger Rossf samples in this order: kick, snare, closed hat, open hat, high tom,
-  low tom, clap, cowbell, tambourine, cabasa, clave, high conga, low conga. The mapping repeats every 13 keys;
-  drums are one-shots and do not transpose. When song playback is enabled, MIDI drum event notes map by note number
-  modulo 13. The sample name flashes on the lower screen line for about 0.8 seconds whenever a drum is triggered.
-- **K1–K4**, when guitar or bass is selected: drive, chorus, modulation and delay for live notes. Each is 0 (off) to 3;
-  modulation 1–2 are flangers and 3 is a phaser. Settings are independent per instrument and reset on reboot.
-- **Bass sound:** while BASS is selected, turn PRESET (or ALGO) to select the built-in synth or one of five
-  samples (NoMore, 808, Plunk 1, 3 or 4). K4 adjusts bass delay. All sampled bass sounds play two octaves below the
-  key's normal pitch by default; octave controls still transpose them.
-  Plunk 2 is no longer packed; previously saved sequencer songs containing it cannot play and show a load error.
-- **Guitar sound:** while GUITAR is selected, turn PRESET (or ALGO) to select the built-in synth or one of three riff
-  samples (Riff 1–3); SEL also steps through them. Key 1 plays a riff at its recorded pitch and other keys transpose it.
-  K4 adjusts guitar delay.
-- **CHORD:** select CHORD, then play one key per chord. Turn PRESET to switch among CHORD PIANO,
-  CHORD JUNO, CHORD CS-50, CHORD PRO-1, and CHORD GUITAR. The selected sound uses that instrument's existing
-  K1–K4 sound settings; change those settings by selecting the instrument outside CHORD. K1 selects the chord
-  type (0 major, 1 minor, 2 sus2, 3 sus4, 4 dominant 7, 5 major 7, 6 minor 7, 7 diminished); K2 selects voicing,
-  K3 inversion, and K4 spread. Turn ALGO to choose the layout: **1 KEY** (every key plays a chord
-  using the K1 type) or **SPLIT** (the lowest 12 keys, F3–E4, are chromatic roots; the next eight keys pick
-  the chord type 0–7 and play nothing; the top keys are silent). Chords are live keyboard performance
-  only, not a new backing track or looper. The layout resets on reboot.
-- **Guitar tone:** a Karplus-Strong plucked-string model (noise burst in a damped delay loop) through a single-coil
-  pickup comb, a mildly overdriven valve-style amp stage and a speaker low-pass, for a Fender-into-amp character.
-- **Synth bass tone:** the SYNTH bass is tuned to the dark, soft-attack bass of the reference track: a four-pole
-  low-pass at about 250 Hz, harmonics 1-4 roughly even, steep roll-off above. Measured numerically only; audition by ear.
-- **Phrase recorder:** press **REC** to start recording live key playing (any keyboard instrument, including
-  CHORD), press REC again to stop and loop it immediately, press REC again to stop the loop, and REC once more
-  to replay it. **EDIT+REC** clears the phrase so a new one can be recorded. One phrase of up to 16 s / 128 key
-  events is kept in RAM (lost on reboot); each note replays on the instrument and octave it was played with,
-  and keys you hold yourself take priority over the loop. It runs independently of the drum sequencer tempo. The REC
-  light is on while recording or looping, and the screen shows REC, LOOP or PHR (stored).
-- **K1–K4**, piano: tone, decay, chorus and reverb. For Juno, Pro-1 and CS-50: filter cutoff, resonance,
-  filter envelope and modulation. Each setting is 0 (unchanged) to 3 and resets on reboot; the Juno's existing
-  chorus remains part of its base sound. Controls apply to live notes; backing playback is disabled.
-- **CS-80-inspired sounds:** while CS-50 is selected, turn PRESET (or ALGO) to cycle between the original
-  CS-50 sound and ten independently designed CS-80-inspired patches. K1–K4 control Brilliance, Resonance, Mix,
-  and Volume on these patches, with 0–127 values and fine steps per encoder detent. When backing playback is
-  enabled, these patches replace the CS-50 backing part while selected; CHORD CS-50 retains the original renderer.
-  This compact renderer is an inspiration, not a full CS-80 emulation. Verify timing and sound on an FM-1 before
-  relying on its CPU headroom; host timing does not measure device DSP load.
-- **SAVE** stores the tempo for the next boot on the main screen; in the sequencer editor it saves the named song.
-- **MASTER** controls output level.
-- **Piano keys** play the selected sound; LM-1 keys cycle through all 13 drum samples.
-- Live key velocity and MIDI-note velocity affect the level of Juno, Pro-1, guitar, bass, and CS-50 voices;
-  piano already uses velocity for level and brightness.
-
-The screen shows the selected keyboard sound and its color-coded K1–K4 settings on the right. Instrument names are
-white, the selected one cyan-blue; the small bars beside them are activity meters only. The backing track is
-currently disabled. Custom LM-1 sample loading is not implemented; the shipped samples are packed into the build.
-After a knob is turned, its matching color-tinted snake portrait appears below K4. The displayed image follows
-the setting: 0 uses `snake sma4.png`, 1 uses `snake sma2.png`, 2 uses `snake sma3.png`, and 3 uses `snake sma.png`.
-On CS-50/CS-80 patches, each knob turn instead advances through `sma`, `sma1`, `sma2`, and `sma3`, then repeats
-from `sma1`, even when that knob is already at its minimum or maximum. The supplied `snake-sma4.png` artwork is
-used for the `sma1` slot because no `snake-sma1.png` asset is present.
-The image and most recently used knob's color remain visible until another knob is turned. The portrait is
-hidden at startup until the first knob turn.
-
-## License
+## License and credits
 
 Plissken's application code is licensed under [MPL-2.0](LICENSE). Third-party code and assets may have different
 terms; see [CREDITS.md](CREDITS.md) and [base/LICENSING.md](base/LICENSING.md).
 
-## Future direction
+## Future development
 
-Known issues and ideas for upcoming work:
+- Continue improving the preloaded songs, including renderer choices, voice allocation, mix balance, and FM-1
+  listening tests.
+- Improve the live sound balance and quality of Juno, guitar, bass, and CHORD while staying within the FM-1's audio
+  and voice limits.
+- Add quality-of-life improvements to the sequencer and saved-song workflow.
+- Optimize CPU, RAM, flash use, and voice allocation before adding more demanding features.
+- Consider additional preloaded songs and original graphics. Keep local reference MIDI files out of the repository
+  and verify permissions for any new samples, music, or artwork.
 
-1. Guitar FX knobs K1–K3 (drive, chorus, modulation) do not greatly change the sound; K4 (delay) works well.
-2. Juno is still quiet compared with the other instruments.
-3. Prioritize piano sound quality; evaluate a sample-based piano against improvements to the current engine.
-4. Bass FX knobs K1–K3 have the same problem as the guitar's.
-5. CHORD is still too loud.
-6. Getting the preloaded MIDI song/backing arrangement working again will probably require trimming instruments
-   (e.g. dropping guitar); saved visual-sequencer playback is implemented separately.
-7. Continue refining the built-in Escape From Firmware and Halloween songs, including synth choices, note
-   allocation, drum balance, duration limits, and hardware listening tests.
-8. Continue refining **The Fog** as a preloaded, editable track; keep its reference MIDI files out of Git.
-9. Improve the quality of all preloaded music tracks through renderer, arrangement, mix, and hardware testing.
-10. Add quality-of-life improvements, including further sequencer and saved-song workflow refinements.
-11. Continue improving the live and sequenced sound quality within the FM-1 resource limits.
-12. Optimize code for CPU, RAM, flash, and voice allocation before adding heavier features.
+## Important firmware-installation warning
 
-### Piano research for the next session
-
-- Start by comparing the current six-voice additive piano with a compact, single-velocity-layer sampled piano.
-  Try four to six mono root-note zones, with velocity controlling level and brightness. Retain the existing piano
-  for an A/B comparison; do not assume the sampled version is better until listening across the keyboard.
-- [VESPER](https://github.com/fatcatstudios-hub/vesper-fm1/tree/vesper-2.0.2) demonstrates four piano zones;
-  [Sill](https://github.com/delirioux/sill/tree/c5cfe9e) and
-  [Manta](https://github.com/delirioux/manta/tree/v1.1) use six-zone banks and IMA ADPCM. Their processed,
-  short samples are tailored to their arrangements, so audition source samples with adequate sustain instead of
-  assuming those exact cuts suit Plissken. Their Versilian Community Sample Library sources are identified as CC0;
-  verify the specific files and license, and document attribution when incorporating them.
-- Plissken's sample path already supports 8-bit PCM and pitch interpolation. A piano would need its own polyphonic
-  voice allocation, zone selection, and smooth note-off; evaluate sustain length and click-free looping rather than
-  repeating entire samples. At 22.05 kHz, six mono samples of 0.65-1.15 seconds each would use roughly 86-152 KB
-  as 8-bit PCM, or 43-76 KB as 4-bit ADPCM, plus metadata. These are illustrative bounds, not a measured bank;
-  resample with appropriate anti-alias filtering. PCM is simpler; ADPCM saves flash but adds decoder CPU and state.
-- If a full sample bank is too costly, compare a short sampled hammer attack blended into the existing synthesized
-  sustain. Alternatively, experiment with note-dependent inharmonicity, hammer/velocity spectral shaping, and
-  separate attack and tail decay in the current engine. [Hawk Chua](https://github.com/Plieuw/hawk-chua/tree/v2.1.7)
-  provides ideas, but its larger partial count is not automatically affordable.
-  [Clair Piano](https://github.com/tokumine/fm1-claire-piano/tree/v1.0.1) uses a much richer modal model and its
-  two-core CPU figures do not establish headroom in Plissken. [Frodhes](https://github.com/leonardoMirabal/frodhes/tree/v0.9.11)
-  models a Rhodes electric piano rather than an acoustic grand.
-- The target build on 2026-11-20 used 489,952 bytes of app image and 61,676 of 98,304 bytes of `.data + .bss`;
-  this is a snapshot, not a flash-capacity or CPU-headroom guarantee. Profile the worst-case six-voice piano alongside
-  sequencer playback and effects on an FM-1, and check audio deadlines, flash/cache behavior, RAM, clipping,
-  note-off, velocity response, and low/high notes. Host timing does not measure device DSP load.
-- Several reference engines are GPL-3.0-only; VESPER has a GPL-3.0 SDK linking exception, while Clair is MPL-2.0.
-  Treat their code as references unless its particular license and compatibility have been reviewed. Record
-  third-party code or sample provenance and credits in the same change that incorporates it.
-
-Planned work includes expanding the budget-conscious Orchid-inspired chord/phrase feature, auditioning and refining
-the selectable bass sounds, supporting additional preloaded MIDI files, and adding original graphics inspired by
-*Escape from New York*.
-Three user-provided one-note bass recordings are currently switchable. Verify rights before distributing other
-MIDI, samples, or artwork.
+**For a real FM-1, follow the [Firmware Hub installation procedure](https://thefirmwarehub.com/kb/) and use the
+M-Flasher Bootloader Installer. Confirm the package is intended for your exact FM-1 variant; never install the
+emulator-only package. Do not interrupt power during flashing. The 47-key model requires the documented conversion:
+an incorrect installation can permanently damage its calibration or brick the device.**

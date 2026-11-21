@@ -1,21 +1,39 @@
-# Guitar riff samples: EDIT+K4 selects a riff on the guitar; each plays audibly.
+# Guitar ALGO/PRESET and SEL cycle modeled and sampled sustain/one-shot modes.
 wait 2000
 turn SELECT 2
 expect instrument 3
-expect guitar_sound 0
-turn PRESET 1
 expect guitar_sound 1
-wav guitar_riff1.wav
-key 3 down 100
-wait 600
-key 3 up
-wait 200
-wavstop
-expect peak_db_min -35
+expect guitar_mode 2
+expect guitar_one_shot 0
 tap SEL
-wait 100
+expect guitar_mode 3
+expect guitar_sound 1
+expect guitar_one_shot 1
+turn PRESET 1
+expect guitar_mode 4
 expect guitar_sound 2
-turn PRESET 20
+expect guitar_one_shot 0
+turn ALGO 1
+expect guitar_mode 5
+expect guitar_sound 2
+expect guitar_one_shot 1
+turn PRESET 1
+expect guitar_mode 6
 expect guitar_sound 3
-turn PRESET -20
+expect guitar_one_shot 0
+turn ALGO 1
+expect guitar_mode 7
+expect guitar_sound 3
+expect guitar_one_shot 1
+turn PRESET 1
+expect guitar_mode 0
 expect guitar_sound 0
+expect guitar_one_shot 0
+turn ALGO 1
+expect guitar_mode 1
+expect guitar_sound 0
+expect guitar_one_shot 1
+turn PRESET 1
+expect guitar_mode 2
+expect guitar_sound 1
+expect guitar_one_shot 0

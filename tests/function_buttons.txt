@@ -16,10 +16,12 @@ turn SELECT 3
 expect instrument 4
 tap SEL
 wait 200
-expect bass_sound 1
+expect bass_mode 3
+expect bass_sound 7
 tap SEL
 wait 200
-expect bass_sound 2
+expect bass_mode 4
+expect bass_sound 8
 expect fx2 0
 tap FX
 wait 200

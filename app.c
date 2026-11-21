@@ -4,6 +4,7 @@
 #include "bass_samples.h"
 #include "guitar_samples.h"
 #include "lm1_samples.h"
+#include "piano_samples.h"
 #include "startup_splash.h"
 #include "jc_face.h"
 #include "knob_images.h"
@@ -33,8 +34,11 @@
 #define TRACKS 7
 #define INSTRUMENTS (TRACKS + 1u)
 #define SEQUENCE_NAME_ALPHABET "abcdefghijklmnopqrstuvwxyz0123456789 "
-#define SEQUENCE_SOUND_COUNT 42
-#define BASS_REMOVED_VARIANT 4u
+#define SEQUENCE_SOUND_COUNT 41
+#define BASS_ELECTRIC_VARIANT 7u
+#define BASS_ACOUSTIC_VARIANT 8u
+#define BASS_TIMBRE_COUNT 5u
+#define BASS_MODE_COUNT 10u
 #define SAMPLE_RATE 44100.0f
 #define PIANO_TABLE 1024u
 #define PIANO_PARTIALS 4u
@@ -48,10 +52,25 @@ typedef struct {
     float punch;
     float thump;
     float level;
+    const uint8_t *sample_data;
+    uint32_t sample_length;
+    uint32_t sample_code_position;
+    uint32_t sample_cache_index;
+    float sample_position;
+    float sample_rate;
+    float sample_filter;
+    float sample_brightness;
+    float sample_envelope;
+    float sample_decay;
+    int32_t sample_predictor;
+    int16_t sample_a;
+    int16_t sample_b;
     uint32_t age;
     uint32_t duration;
+    int8_t sample_step_index;
     uint8_t active;
     uint8_t key;
+    uint8_t sampled;
 } piano_t;
 
 static uint32_t trigger_piano(int32_t note, uint32_t duration, uint32_t velocity);
@@ -111,12 +130,19 @@ typedef struct {
 
 typedef struct {
     const int8_t *data;
+    const uint8_t *adpcm_data;
     uint32_t length;
     uint32_t age;
     uint32_t max_samples;
+    uint32_t adpcm_code_position;
+    uint32_t adpcm_cache_index;
+    int32_t adpcm_predictor;
+    int16_t adpcm_a;
+    int16_t adpcm_b;
     float position;
     float rate;
     float gain;
+    int8_t adpcm_step_index;
     uint8_t loops;   /* extra passes over the data, each quieter than the last */
 } sample_voice_t;
 
@@ -303,6 +329,7 @@ static int8_t live_key_voice[NKEYS];
 static uint8_t live_key_instrument[NKEYS];
 static uint8_t live_key_chord_voice[NKEYS];
 static uint8_t selected_instrument;
+static volatile uint8_t piano_sampled = 1u;
 static uint8_t chord_voice;
 static volatile uint8_t chord_layout;
 static uint8_t ui_chord_layout;
@@ -326,7 +353,7 @@ static uint8_t phrase_count, phrase_state, phrase_next, ui_phrase_state;
 static uint16_t phrase_length;
 static uint32_t phrase_start, phrase_down, phrase_held;
 static volatile uint8_t drum_bass_boost;
-static volatile uint8_t bass_sound, guitar_sound;
+static volatile uint8_t bass_sound, bass_one_shot, guitar_sound, guitar_one_shot;
 static volatile uint8_t drum_chorus, drum_reverb, drum_compression;
 static float drum_bass_low, drum_bass_gain;
 static PLAT_POOL float drum_chorus_buffer[1024], drum_reverb_buffer[8192];
@@ -360,7 +387,7 @@ static uint8_t ui_chord_voice;
 static int8_t ui_octave;
 static uint32_t ui_hits[TRACKS];
 static uint8_t ui_seq, ui_playing, ui_escape_play, ui_save_failed, ui_drawn, ui_drum_bass_boost;
-static uint8_t ui_bass_sound, ui_guitar_sound;
+static uint8_t ui_bass_mode, ui_guitar_mode;
 static uint8_t knob_image_visible, knob_image_frame, knob_image_color;
 static uint8_t ui_knob_image_visible, ui_knob_image_frame, ui_knob_image_color;
 static uint8_t portrait_color, portrait_color_visible;
@@ -445,17 +472,17 @@ typedef struct {
     uint8_t pro;
 } startup_event_t;
 
-/* Opening: four seconds of escape_from_ny.mid from 21.0 s on the Pro-1 (channel 4
-   chord pulse and melody plus the channel 2 pad, without its E2 so six voices
-   suffice). One beat is 33075 samples (80 BPM). */
+/* Opening: four seconds of escape_from_ny.mid from 21.0 s on the Pro-1. The repeated
+   low E2/E3 pulse is represented by E4 to keep the startup clear on the FM-1.
+   One beat is 33075 samples (80 BPM). */
 #define STARTUP_MS 3000u
 #define SP(t, dur_q, n, v) {(t), (dur_q), (n), (v), 1u}
 static const startup_event_t startup_events[] = {
-    SP(0u, 132300u, 64u, 29u), SP(0u, 132300u, 76u, 29u),
-    SP(0u, 17912u, 40u, 84u), SP(0u, 17912u, 52u, 84u), SP(0u, 115400u, 59u, 84u),
-    SP(33075u, 22050u, 40u, 84u), SP(33075u, 22050u, 52u, 84u),
-    SP(66150u, 9648u, 40u, 84u), SP(66150u, 9648u, 52u, 84u),
-    SP(82688u, 40307u, 40u, 84u), SP(82688u, 40307u, 52u, 84u),
+    SP(0u, 132300u, 76u, 29u),
+    SP(0u, 17912u, 64u, 127u), SP(0u, 115400u, 59u, 84u),
+    SP(33075u, 22050u, 64u, 127u),
+    SP(66150u, 9648u, 64u, 127u),
+    SP(82688u, 40307u, 64u, 127u),
     SP(115763u, 7925u, 62u, 84u), SP(124031u, 7925u, 64u, 84u)
 };
 #define STARTUP_EVENTS (sizeof(startup_events) / sizeof(startup_events[0]))
@@ -662,6 +689,7 @@ static float ladder_tick(voice_t *voice, float x, float k)
 static void trigger_sample(sample_voice_t *voice, const int8_t *data, uint32_t length)
 {
     voice->data = data;
+    voice->adpcm_data = 0;
     voice->length = length;
     voice->age = 0u;
     voice->max_samples = 0u;
@@ -679,16 +707,78 @@ static void trigger_drum_sample(uint32_t sample)
     drum_sample_event++;
 }
 
+static const int16_t ima_step_table[89] = {
+    7, 8, 9, 10, 11, 12, 13, 14, 16, 17, 19, 21, 23, 25, 28, 31,
+    34, 37, 41, 45, 50, 55, 60, 66, 73, 80, 88, 97, 107, 118, 130, 143,
+    157, 173, 190, 209, 230, 253, 279, 307, 337, 371, 408, 449, 494, 544, 598, 658,
+    724, 796, 876, 963, 1060, 1166, 1282, 1411, 1552, 1707, 1878, 2066, 2272, 2499, 2749, 3024,
+    3327, 3660, 4026, 4428, 4871, 5358, 5894, 6484, 7132, 7845, 8630, 9493, 10442, 11487, 12635, 13899,
+    15289, 16818, 18500, 20350, 22385, 24623, 27086, 29794, 32767
+};
+static const int8_t ima_index_table[16] = {
+    -1, -1, -1, -1, 2, 4, 6, 8, -1, -1, -1, -1, 2, 4, 6, 8
+};
+
+static int16_t ima_adpcm_decode_next(const uint8_t *data, uint32_t *code_position,
+                                     int32_t *predictor, int8_t *step_index)
+{
+    uint32_t nibble = (*code_position)++;
+    uint8_t packed = data[2u + nibble / 2u];
+    uint8_t code = (uint8_t)((packed >> ((nibble & 1u) * 4u)) & 0x0Fu);
+    int32_t step = ima_step_table[(uint8_t)*step_index];
+    int32_t delta = step >> 3;
+    if (code & 1u)
+        delta += step >> 2;
+    if (code & 2u)
+        delta += step >> 1;
+    if (code & 4u)
+        delta += step;
+    *predictor += code & 8u ? -delta : delta;
+    if (*predictor > 32767)
+        *predictor = 32767;
+    else if (*predictor < -32768)
+        *predictor = -32768;
+    *step_index += ima_index_table[code];
+    if (*step_index < 0)
+        *step_index = 0;
+    else if (*step_index > 88)
+        *step_index = 88;
+    return (int16_t)*predictor;
+}
+
+static void trigger_adpcm_sample(sample_voice_t *voice, const uint8_t *data, uint32_t length)
+{
+    voice->data = 0;
+    voice->adpcm_data = data;
+    voice->length = length;
+    voice->age = 0u;
+    voice->max_samples = 0u;
+    voice->adpcm_code_position = 0u;
+    voice->adpcm_cache_index = 0u;
+    voice->adpcm_predictor = (int16_t)(data[0] | ((uint16_t)data[1] << 8));
+    voice->adpcm_step_index = 0;
+    voice->adpcm_a = (int16_t)voice->adpcm_predictor;
+    voice->adpcm_b = length > 1u
+        ? ima_adpcm_decode_next(data, &voice->adpcm_code_position,
+                                &voice->adpcm_predictor, &voice->adpcm_step_index)
+        : voice->adpcm_a;
+    voice->position = 0.0f;
+    voice->loops = 0u;
+}
+
 static float sample_voice(sample_voice_t *voice, float level)
 {
     uint32_t position;
-    float sample;
-    if (!voice->data)
+    float sample, envelope = 1.0f;
+    if (!voice->data && !voice->adpcm_data)
         return 0.0f;
     if (voice->max_samples && voice->age >= voice->max_samples) {
         voice->data = 0;
+        voice->adpcm_data = 0;
         return 0.0f;
     }
+    if (voice->max_samples && voice->max_samples - voice->age < 2205u)
+        envelope = (float)(voice->max_samples - voice->age) * (1.0f / 2205.0f);
     if (voice->position >= voice->length) {
         if (voice->loops) {
             voice->loops--;
@@ -696,39 +786,69 @@ static float sample_voice(sample_voice_t *voice, float level)
             voice->gain *= 0.6f;
         } else {
             voice->data = 0;
+            voice->adpcm_data = 0;
             return 0.0f;
         }
     }
     position = (uint32_t)voice->position;
-    sample = (float)voice->data[position];
-    if (voice->rate != 1.0f && position + 1u < voice->length) {
-        float fraction = voice->position - (float)position;
-        sample += ((float)voice->data[position + 1u] - sample) * fraction;
+    if (voice->adpcm_data) {
+        while (voice->adpcm_cache_index < position) {
+            voice->adpcm_a = voice->adpcm_b;
+            voice->adpcm_cache_index++;
+            if (voice->adpcm_cache_index + 1u < voice->length)
+                voice->adpcm_b = ima_adpcm_decode_next(voice->adpcm_data,
+                    &voice->adpcm_code_position, &voice->adpcm_predictor, &voice->adpcm_step_index);
+            else
+                voice->adpcm_b = voice->adpcm_a;
+        }
+        sample = (float)voice->adpcm_a * (1.0f / 256.0f);
+        if (voice->rate != 1.0f && position + 1u < voice->length) {
+            float fraction = voice->position - (float)position;
+            sample += (float)(voice->adpcm_b - voice->adpcm_a) * (fraction / 256.0f);
+        }
+    } else {
+        sample = (float)voice->data[position];
+        if (voice->rate != 1.0f && position + 1u < voice->length) {
+            float fraction = voice->position - (float)position;
+            sample += ((float)voice->data[position + 1u] - sample) * fraction;
+        }
     }
     voice->position += voice->rate;
     voice->age++;
-    return sample * (level * voice->gain / 128.0f);
+    return sample * (level * voice->gain * envelope / 128.0f);
+}
+
+static int16_t piano_sample_decode_next(piano_t *voice)
+{
+    return ima_adpcm_decode_next(voice->sample_data, &voice->sample_code_position,
+                                 &voice->sample_predictor, &voice->sample_step_index);
 }
 
 static uint32_t trigger_bass_sample_variant(int32_t note, uint32_t velocity, uint8_t variant)
 {
     static const int32_t sample_octave_offset = -24;
-    /* Keep variant IDs stable for saved songs; variant 4 is no longer selectable. */
-    static const int8_t *const data[] = {bass_nomore, bass_808, bass_plunk1, 0, bass_plunk3, bass_plunk4};
-    static const uint32_t lengths[] = {
-        BASS_NOMORE_LENGTH, BASS_808_LENGTH, BASS_PLUNK1_LENGTH, 0u,
-        BASS_PLUNK3_LENGTH, BASS_PLUNK4_LENGTH
+    static const int8_t *const pcm_data[9] = {
+        0, bass_nomore, bass_808, 0, 0, 0, 0, 0, 0
+    };
+    static const uint8_t *const adpcm_data[9] = {
+        0, 0, 0, 0, 0, 0, 0, bass_electric_a_sharp3, bass_acoustic_c2
+    };
+    static const uint32_t lengths[9] = {
+        0u, BASS_NOMORE_LENGTH, BASS_808_LENGTH, 0u, 0u, 0u, 0u,
+        BASS_ELECTRIC_LENGTH, BASS_ACOUSTIC_LENGTH
     };
     uint32_t index = bass_sample_next++ % MONO_VOICES;
     sample_voice_t *voice = &bass_sample_voices[index];
-    uint32_t sample = (uint32_t)variant - 1u;
-    voice->data = data[sample];
-    voice->length = lengths[sample];
-    voice->age = 0u;
-    voice->max_samples = 0u;
-    voice->position = 0.0f;
-    voice->rate = fm_exp2f((float)(note - 36 + sample_octave_offset) * (1.0f / 12.0f));
-    voice->gain = velocity_gain(velocity);
+    if (adpcm_data[variant]) {
+        int8_t root = variant == BASS_ELECTRIC_VARIANT ? bass_cc0_roots[0] : bass_cc0_roots[1];
+        trigger_adpcm_sample(voice, adpcm_data[variant], lengths[variant]);
+        voice->rate = 0.5f * fm_exp2f(
+            (float)(note + sample_octave_offset - root) * (1.0f / 12.0f));
+    } else {
+        trigger_sample(voice, pcm_data[variant], lengths[variant]);
+        voice->rate = fm_exp2f((float)(note - 36 + sample_octave_offset) * (1.0f / 12.0f));
+    }
+    voice->gain = velocity_gain(velocity) * (variant == 2u ? 2.0f : 1.0f);
     return index;
 }
 
@@ -739,24 +859,18 @@ static uint32_t trigger_bass_sample(int32_t note, uint32_t velocity)
 
 static uint32_t trigger_guitar_sample_variant(int32_t note, uint32_t velocity, uint8_t variant)
 {
-    static const int8_t *const data[] = {
-        guitar_riff1, guitar_riff2, guitar_riff3
+    static const uint8_t *const data[] = {
+        guitar_electric_g2, guitar_nylon_g3, guitar_acoustic_e2
     };
     static const uint32_t lengths[] = {
-        GUITAR_RIFF1_LENGTH, GUITAR_RIFF2_LENGTH,         GUITAR_RIFF3_LENGTH
+        GUITAR_ELECTRIC_G2_LENGTH, GUITAR_NYLON_G3_LENGTH, GUITAR_ACOUSTIC_E2_LENGTH
     };
     uint32_t index = guitar_sample_next++ % GUITAR_VOICES;
     sample_voice_t *voice = &guitar_sample_voices[index];
     uint32_t sample = (uint32_t)variant - 1u;
-    voice->data = data[sample];
-    voice->length = lengths[sample];
-    voice->age = 0u;
-    voice->max_samples = 0u;
-    voice->position = 0.0f;
-    /* Key 0 at octave 0 plays the recording at its original pitch. */
-    voice->rate = fm_exp2f((float)(note - 53) * (1.0f / 12.0f));
+    trigger_adpcm_sample(voice, data[sample], lengths[sample]);
+    voice->rate = 0.5f * fm_exp2f((float)(note - guitar_sample_roots[sample]) * (1.0f / 12.0f));
     voice->gain = velocity_gain(velocity);
-    voice->loops = 2u;   /* three passes: triple the playback length, no extra data */
     return index;
 }
 
@@ -1095,7 +1209,8 @@ static int sequence_variant_valid(uint8_t instrument, uint8_t variant)
     if (instrument == 3u)
         return variant < 4u;
     if (instrument == 4u)
-        return variant < 7u;
+        return variant == 0u || variant == 1u || variant == 2u
+            || variant == BASS_ELECTRIC_VARIANT || variant == BASS_ACOUSTIC_VARIANT;
     if (instrument == 5u)
         return variant < ROSSFLM1_SAMPLE_COUNT;
     if (instrument == 6u)
@@ -1168,7 +1283,6 @@ static int sequence_contents_valid(const sequence_t *data)
             || instrument >= INSTRUMENTS || !sequence_variant_valid(instrument, variant)
             || (data->header.version < SEQUENCE_DRUM_TRACK_VERSION && (event & 0x80000000u))
             || (sequence_event_track(event) == SEQUENCE_DRUM_TRACK && instrument != 5u)
-            || (instrument == 4u && variant == BASS_REMOVED_VARIANT)
             || (instrument == 5u && (sequence_event_note(event) >= ROSSFLM1_SAMPLE_COUNT
                 || (sequence_event_track(event) == SEQUENCE_DRUM_TRACK
                     && sequence_event_note(event) != variant))))
@@ -1472,6 +1586,7 @@ static float string_effects(uint32_t part, float input, const uint8_t controls[4
 static uint32_t trigger_piano(int32_t note, uint32_t duration, uint32_t velocity)
 {
     static const float hammer[PIANO_PARTIALS] = {1.0f, 0.95f, 0.8f, 0.55f};
+    static const float sample_decay[4] = {0.999992f, 0.999994f, 0.999996f, 0.999998f};
     piano_t *voice = &piano[0];
     uint32_t i, k;
     float base = note_increment(note);
@@ -1487,6 +1602,48 @@ static uint32_t trigger_piano(int32_t note, uint32_t duration, uint32_t velocity
         }
         if (piano[i].age > voice->age)
             voice = &piano[i];
+    }
+    voice->sampled = piano_sampled;
+    voice->sample_data = 0;
+    voice->sample_length = 0u;
+    voice->sample_position = 0.0f;
+    voice->sample_rate = 0.0f;
+    voice->sample_filter = 0.0f;
+    voice->sample_envelope = 1.0f;
+    voice->age = 0u;
+    voice->duration = duration;
+    voice->active = 1u;
+    voice->key = 0u;
+    if (voice->sampled) {
+        uint32_t zone = 0u;
+        int32_t nearest = note - piano_sample_roots[0];
+        if (nearest < 0)
+            nearest = -nearest;
+        for (i = 1u; i < PIANO_SAMPLE_COUNT; i++) {
+            int32_t distance = note - piano_sample_roots[i];
+            if (distance < 0)
+                distance = -distance;
+            if (distance < nearest) {
+                zone = i;
+                nearest = distance;
+            }
+        }
+        voice->sample_data = piano_sample_data[zone];
+        voice->sample_length = piano_sample_lengths[zone];
+        voice->sample_predictor = (int16_t)((uint16_t)voice->sample_data[0]
+            | ((uint16_t)voice->sample_data[1] << 8));
+        voice->sample_step_index = 0;
+        voice->sample_code_position = 0u;
+        voice->sample_cache_index = 0u;
+        voice->sample_a = (int16_t)voice->sample_predictor;
+        voice->sample_b = piano_sample_decode_next(voice);
+        voice->sample_rate = 0.5f * fm_exp2f(
+            (float)(note - piano_sample_roots[zone]) * (1.0f / 12.0f));
+        voice->sample_brightness = 0.38f + 0.52f * v;
+        voice->sample_decay = sample_decay[voice_controls[1][1]];
+        voice->level = 0.35f + 0.65f * v;
+        voice->inc[0] = base;
+        return (uint32_t)(voice - piano);
     }
     for (k = 0; k < PIANO_PARTIALS; k++) {
         float n = (float)(k + 1u);
@@ -1507,10 +1664,6 @@ static uint32_t trigger_piano(int32_t note, uint32_t duration, uint32_t velocity
     voice->punch = 1.0f;
     voice->thump = 0.0f;
     voice->level = (0.35f + 0.65f * v);
-    voice->age = 0u;
-    voice->duration = duration;
-    voice->active = 1u;
-    voice->key = 0u;
     return (uint32_t)(voice - piano);
 }
 
@@ -1618,17 +1771,19 @@ static void sequence_trigger_event(uint32_t event)
     case 3u:
         if (variant) {
             index = trigger_guitar_sample_variant(note, 100u, variant);
-            guitar_sample_voices[index].max_samples = duration;
+            if (!guitar_one_shot)
+                guitar_sample_voices[index].max_samples = duration;
         }
         else {
-            index = trigger_pooled(guitar, GUITAR_VOICES, note, duration);
+            index = trigger_pooled(guitar, GUITAR_VOICES, note, guitar_one_shot ? 132300u : duration);
             guitar[index].velocity_gain = velocity_gain(100u);
         }
         break;
     case 4u:
         if (variant) {
             index = trigger_bass_sample_variant(note, 100u, variant);
-            bass_sample_voices[index].max_samples = duration;
+            if (!bass_one_shot)
+                bass_sample_voices[index].max_samples = duration;
         } else
             trigger_bass_note(note, duration, 100u);
         break;
@@ -1730,6 +1885,26 @@ static void release_live_key(uint32_t key)
     uint32_t instrument = live_key_instrument[key];
     int32_t index = live_key_voice[key];
     voice_t *voice = 0;
+    if (instrument == 3u && live_key_bass_sample[key]) {
+        if (index >= 0 && (uint32_t)index < GUITAR_VOICES) {
+            sample_voice_t *sample_voice = &guitar_sample_voices[index];
+            if (!guitar_one_shot && sample_voice->adpcm_data)
+                sample_voice->max_samples = sample_voice->age + 2205u;
+        }
+        live_key_bass_sample[key] = 0u;
+        live_key_voice[key] = -1;
+        return;
+    }
+    if (instrument == 4u && live_key_bass_sample[key]) {
+        if (!bass_one_shot && index >= 0 && (uint32_t)index < MONO_VOICES) {
+            sample_voice_t *sample_voice = &bass_sample_voices[index];
+            if (sample_voice->data || sample_voice->adpcm_data)
+                sample_voice->max_samples = sample_voice->age + 2205u;
+        }
+        live_key_bass_sample[key] = 0u;
+        live_key_voice[key] = -1;
+        return;
+    }
     if (index < 0)
         return;
     switch (instrument) {
@@ -1746,16 +1921,20 @@ static void release_live_key(uint32_t key)
         break;
     case 2u: voice = &pro_one[index]; break;
     case 3u:
-        if (live_key_bass_sample[key])
-            live_key_bass_sample[key] = 0u;
+        if (guitar_one_shot) {
+            if (guitar[index].key == (uint8_t)(key + 1u))
+                guitar[index].key = 0u;
+        }
         else
             voice = &guitar[index];
         break;
     case 4u:
-        if (live_key_bass_sample[key])
-            live_key_bass_sample[key] = 0u;
-        else
+        if (bass_one_shot) {
+            if (bass[index].key == (uint8_t)(key + 1u))
+                bass[index].key = 0u;
+        } else {
             voice = &bass[index];
+        }
         break;
     case 6u:
         if (live_key_cs80[key]) {
@@ -1805,9 +1984,9 @@ static void trigger_live_key(uint32_t key, uint32_t velocity)
         break;
     case 3u:
         if (guitar_sound) {
-            trigger_guitar_sample(note, velocity);
+            index = trigger_guitar_sample(note, velocity);
             live_key_bass_sample[key] = 1u;
-            live_key_voice[key] = -1;
+            live_key_voice[key] = (int8_t)index;
 #ifdef PLAT_HOST
             last_live_increment = 0.0f;
 #endif
@@ -1887,10 +2066,45 @@ static void trigger_live_key(uint32_t key, uint32_t velocity)
 static float piano_voice(piano_t *voice, float level, const uint8_t controls[4])
 {
     static const float decay_scales[4] = {1.0f, 1.0f / 1.4f, 1.0f / 1.8f, 1.0f / 2.2f};
-    float sum = 0.0f, thump, remaining;
+    float sample, coefficient, remaining, release;
+    float sum = 0.0f, thump;
     float decay_scale = decay_scales[controls[1]];
     float brightness = 1.0f + 0.18f * (float)controls[0];
     uint32_t k;
+    if (voice->sampled) {
+        uint32_t position;
+        if (voice->age >= voice->duration || !voice->sample_data
+            || voice->sample_position >= (float)voice->sample_length) {
+            voice->active = 0u;
+            voice->key = 0u;
+            voice->sample_data = 0;
+            return 0.0f;
+        }
+        voice->age++;
+        position = (uint32_t)voice->sample_position;
+        while (position > voice->sample_cache_index) {
+            voice->sample_a = voice->sample_b;
+            voice->sample_cache_index++;
+            if (voice->sample_cache_index + 1u < voice->sample_length)
+                voice->sample_b = piano_sample_decode_next(voice);
+            else
+                voice->sample_b = voice->sample_a;
+        }
+        sample = (float)voice->sample_a;
+        sample += ((float)voice->sample_b - sample)
+            * (voice->sample_position - (float)voice->sample_cache_index);
+        voice->sample_position += voice->sample_rate;
+        coefficient = voice->sample_brightness + 0.025f * (float)controls[0];
+        if (coefficient > 0.98f)
+            coefficient = 0.98f;
+        voice->sample_filter += coefficient * (sample * (1.0f / 32768.0f) - voice->sample_filter);
+        voice->sample_envelope *= voice->sample_decay;
+        remaining = (float)(voice->duration - voice->age);
+        release = 1.0f;
+        if (remaining < 3000.0f)
+            release = remaining * (1.0f / 3000.0f);
+        return voice->sample_filter * voice->sample_envelope * release * voice->level * level * 2.6f;
+    }
     if (voice->age >= voice->duration) {
         voice->active = 0u;
         voice->key = 0u;
@@ -2054,10 +2268,10 @@ static int audio_voices_active(void)
         if (cs80[i].active)
             return 1;
     for (i = 0; i < MONO_VOICES; i++)
-        if (bass_sample_voices[i].data)
+        if (bass_sample_voices[i].data || bass_sample_voices[i].adpcm_data)
             return 1;
     for (i = 0; i < GUITAR_VOICES; i++)
-        if (guitar_sample_voices[i].data)
+        if (guitar_sample_voices[i].data || guitar_sample_voices[i].adpcm_data)
             return 1;
     for (uint32_t i = 0; i < ROSSFLM1_SAMPLE_COUNT; i++)
         if (drum_samples[i].data)
@@ -2077,10 +2291,12 @@ static void stop_audio_voices(void)
     for (i = 0; i < MONO_VOICES; i++) {
         bass[i].active = 0u;
         bass_sample_voices[i].data = 0;
+        bass_sample_voices[i].adpcm_data = 0;
     }
     for (i = 0; i < GUITAR_VOICES; i++) {
         guitar[i].active = 0u;
         guitar_sample_voices[i].data = 0;
+        guitar_sample_voices[i].adpcm_data = 0;
     }
     for (i = 0; i < CS50_VOICES; i++)
         cs50[i].active = 0u;
@@ -2456,17 +2672,17 @@ void app_render(int32_t *lr, uint32_t n, uint32_t master_q12)
             if (guitar[j].active)
                 guitar_mix += guitar_voice(&guitar[j], 0.34f);
             voices_active |= guitar[j].active;
-            if (guitar_sample_voices[j].data)
+            if (guitar_sample_voices[j].data || guitar_sample_voices[j].adpcm_data)
                 guitar_mix += sample_voice(&guitar_sample_voices[j], 0.7f);
-            voices_active |= guitar_sample_voices[j].data != 0;
+            voices_active |= guitar_sample_voices[j].data != 0 || guitar_sample_voices[j].adpcm_data != 0;
         }
         for (j = 0; j < MONO_VOICES; j++) {
             if (bass[j].active)
                 bass_mix += bass_voice(&bass[j], 0.7f);
             voices_active |= bass[j].active;
-            if (bass_sample_voices[j].data)
+            if (bass_sample_voices[j].data || bass_sample_voices[j].adpcm_data)
                 bass_mix += sample_voice(&bass_sample_voices[j], 0.7f);
-            voices_active |= bass_sample_voices[j].data != 0;
+            voices_active |= bass_sample_voices[j].data != 0 || bass_sample_voices[j].adpcm_data != 0;
         }
         if (solo_mask & 8u) {
             mix += string_effects(0u, guitar_mix, strings[0], 0);
@@ -2568,10 +2784,12 @@ void app_panic(void)
     for (i = 0; i < MONO_VOICES; i++) {
         bass[i].active = 0u;
         bass_sample_voices[i].data = 0;
+        bass_sample_voices[i].adpcm_data = 0;
     }
     for (i = 0; i < GUITAR_VOICES; i++) {
         guitar[i].active = 0u;
         guitar_sample_voices[i].data = 0;
+        guitar_sample_voices[i].adpcm_data = 0;
     }
     for (i = 0; i < CS50_VOICES; i++)
         cs50[i].active = 0u;
@@ -2623,8 +2841,10 @@ void app_ui_init(void)
     for (i = 0; i < 4u; i++)
         cs80_controls[i] = ui_cs80_controls[i] = 0u;
     drum_bass_boost = 0u;
-    bass_sound = 0u;
-    guitar_sound = 0u;
+    bass_sound = BASS_ELECTRIC_VARIANT;
+    bass_one_shot = 0u;
+    guitar_sound = 1u;
+    guitar_one_shot = 0u;
     drum_chorus = drum_reverb = drum_compression = 0u;
     for (i = 0; i < 2u; i++)
         for (uint32_t k = 0; k < 4u; k++)
@@ -2986,15 +3206,57 @@ static void cycle_effect(void)
     record_knob_turn(1u, 1);
 }
 
+static uint8_t guitar_mode_index(void)
+{
+    return (uint8_t)(guitar_sound * 2u + (guitar_one_shot ? 1u : 0u));
+}
+
+static const uint8_t bass_mode_sounds[BASS_TIMBRE_COUNT] = {
+    0u, BASS_ELECTRIC_VARIANT, BASS_ACOUSTIC_VARIANT, 2u, 1u
+};
+
+static uint8_t bass_mode_index(void)
+{
+    for (uint32_t i = 0u; i < BASS_TIMBRE_COUNT; i++)
+        if (bass_sound == bass_mode_sounds[i])
+            return (uint8_t)(i * 2u + (bass_one_shot ? 1u : 0u));
+    return 0u;
+}
+
+static void set_bass_mode(int32_t mode)
+{
+    mode %= (int32_t)BASS_MODE_COUNT;
+    if (mode < 0)
+        mode += (int32_t)BASS_MODE_COUNT;
+    bass_sound = bass_mode_sounds[(uint32_t)mode / 2u];
+    bass_one_shot = (uint8_t)(mode & 1);
+}
+
+static void step_bass_mode(int32_t delta)
+{
+    set_bass_mode((int32_t)bass_mode_index() + delta);
+}
+
+static void set_guitar_mode(int32_t mode)
+{
+    mode %= 8;
+    if (mode < 0)
+        mode += 8;
+    guitar_sound = (uint8_t)(mode / 2);
+    guitar_one_shot = (uint8_t)(mode & 1);
+}
+
+static void step_guitar_mode(int32_t delta)
+{
+    set_guitar_mode((int32_t)guitar_mode_index() + delta);
+}
+
 static void cycle_variant(void)
 {
     if (selected_instrument == 3u)
-        guitar_sound = (uint8_t)((guitar_sound + 1u) % 4u);
-    else if (selected_instrument == 4u) {
-        bass_sound = (uint8_t)((bass_sound + 1u) % 7u);
-        if (bass_sound == BASS_REMOVED_VARIANT)
-            bass_sound++;
-    }
+        step_guitar_mode(1);
+    else if (selected_instrument == 4u)
+        step_bass_mode(1);
     else if (selected_instrument == 6u)
         set_cs80_preset((int32_t)cs80_preset + 1);
     else if (selected_instrument == 7u)
@@ -3007,11 +3269,11 @@ static uint8_t sequence_sound_instrument(uint8_t sound)
         return sound;
     if (sound < 7u)
         return 3u;
-    if (sound < 13u)
+    if (sound < 12u)
         return 4u;
-    if (sound < 26u)
+    if (sound < 25u)
         return 5u;
-    if (sound < 37u)
+    if (sound < 36u)
         return 6u;
     return 7u;
 }
@@ -3022,31 +3284,33 @@ static uint8_t sequence_sound_variant(uint8_t sound)
         return 0u;
     if (sound < 7u)
         return (uint8_t)(sound - 3u);
-    if (sound < 13u) {
-        uint8_t variant = (uint8_t)(sound - 7u);
-        return (uint8_t)(variant >= BASS_REMOVED_VARIANT ? variant + 1u : variant);
-    }
-    if (sound < 26u)
-        return (uint8_t)(sound - 13u);
-    if (sound < 37u)
-        return (uint8_t)(sound - 26u);
-    return (uint8_t)(sound - 37u);
+    if (sound < 12u)
+        return bass_mode_sounds[sound - 7u];
+    if (sound < 25u)
+        return (uint8_t)(sound - 12u);
+    if (sound < 36u)
+        return (uint8_t)(sound - 25u);
+    return (uint8_t)(sound - 36u);
 }
 
 static uint8_t sequence_sound_index(uint8_t instrument, uint8_t variant)
 {
+    uint32_t i;
     if (instrument < 3u)
         return instrument;
     if (instrument == 3u)
         return (uint8_t)(3u + (variant < 4u ? variant : 0u));
-    if (instrument == 4u)
-        return (uint8_t)(7u + (variant > BASS_REMOVED_VARIANT && variant < 7u
-                                ? variant - 1u : variant < BASS_REMOVED_VARIANT ? variant : 0u));
+    if (instrument == 4u) {
+        for (i = 0u; i < BASS_TIMBRE_COUNT; i++)
+            if (variant == bass_mode_sounds[i])
+                return (uint8_t)(7u + i);
+        return 7u;
+    }
     if (instrument == 5u)
-        return (uint8_t)(13u + (variant < ROSSFLM1_SAMPLE_COUNT ? variant : 0u));
+        return (uint8_t)(12u + (variant < ROSSFLM1_SAMPLE_COUNT ? variant : 0u));
     if (instrument == 6u)
-        return (uint8_t)(26u + (variant <= CS80_PATCHES ? variant : 0u));
-    return (uint8_t)(37u + (variant < 5u ? variant : 0u));
+        return (uint8_t)(25u + (variant <= CS80_PATCHES ? variant : 0u));
+    return (uint8_t)(36u + (variant < 5u ? variant : 0u));
 }
 
 static void sequence_apply_sound(uint8_t sound)
@@ -3096,7 +3360,7 @@ static void sequence_load_cursor_sound(void)
 {
     int32_t event_index;
     if (sequence_cursor_track == SEQUENCE_DRUM_TRACK)
-        sequence_apply_sound((uint8_t)(13u + sequence.header.drum_variant));
+        sequence_apply_sound((uint8_t)(12u + sequence.header.drum_variant));
     event_index = sequence_find_event(sequence_cursor_track, sequence_cursor_step);
     if (event_index >= 0) {
         uint32_t event = sequence.events[event_index];
@@ -3140,23 +3404,23 @@ static void sequence_change_sound(int32_t delta)
             % (int32_t)ROSSFLM1_SAMPLE_COUNT;
         if (sound_delta < 0)
             sound_delta += (int32_t)ROSSFLM1_SAMPLE_COUNT;
-        sequence_apply_sound((uint8_t)(13 + sound_delta));
+        sequence_apply_sound((uint8_t)(12 + sound_delta));
         sequence_store_track_sound();
         ui_drawn = 0u;
         return;
     }
-    if (sequence_selected_sound >= 13u && sequence_selected_sound < 26u)
-        sound_delta = delta > 0 ? 13 : 12;
+    if (sequence_selected_sound >= 12u && sequence_selected_sound < 25u)
+        sound_delta = delta > 0 ? 12 : 11;
     else
-        sound_delta = sequence_selected_sound < 13u
+        sound_delta = sequence_selected_sound < 12u
             ? sequence_selected_sound : sequence_selected_sound - 13;
-    if (sequence_selected_sound >= 13u && sequence_selected_sound < 26u)
+    if (sequence_selected_sound >= 12u && sequence_selected_sound < 25u)
         delta += delta > 0 ? -1 : 1;
     sound_delta = (sound_delta + delta % (SEQUENCE_SOUND_COUNT - (int32_t)ROSSFLM1_SAMPLE_COUNT))
         % (SEQUENCE_SOUND_COUNT - (int32_t)ROSSFLM1_SAMPLE_COUNT);
     if (sound_delta < 0)
         sound_delta += SEQUENCE_SOUND_COUNT - (int32_t)ROSSFLM1_SAMPLE_COUNT;
-    if (sound_delta >= 13)
+    if (sound_delta >= 12)
         sound_delta += (int32_t)ROSSFLM1_SAMPLE_COUNT;
     event_index = sequence_find_event(sequence_cursor_track, sequence_cursor_step);
     if (event_index >= 0
@@ -3955,7 +4219,7 @@ static void sequence_input(uint32_t buttons, uint32_t pressed, uint32_t keys,
             if (screen == SCREEN_SEQUENCE) {
                 if ((keys & bit) && !(previous_keys & bit)) {
                     if (sequence_cursor_track == SEQUENCE_DRUM_TRACK) {
-                        sequence_apply_sound((uint8_t)(13u + key % ROSSFLM1_SAMPLE_COUNT));
+                        sequence_apply_sound((uint8_t)(12u + key % ROSSFLM1_SAMPLE_COUNT));
                         sequence_store_track_sound();
                     }
                     if (selected_instrument == 5u) {
@@ -4245,16 +4509,18 @@ void app_input_only(void)
         if (boost_delta)
             drum_bass_boost = (uint8_t)clamp((int32_t)drum_bass_boost + boost_delta, 0, 8);
     }
-    /* PRESET or ALGO picks the sound variant of guitar, bass, CS-50/CS-80 and CHORD (ALGO: chord layout). */
+    /* PRESET or ALGO selects variants; ALGO toggles piano engine and selects CHORD layout. */
     if (preset_delta || algorithm_delta) {
         int32_t d = preset_delta + (selected_instrument == 7u ? 0 : algorithm_delta);
-        if (selected_instrument == 4u) {
-            int32_t ordinal = (int32_t)bass_sound - (bass_sound > BASS_REMOVED_VARIANT ? 1 : 0);
-            ordinal = clamp(ordinal + d, 0, 5);
-            bass_sound = (uint8_t)(ordinal >= (int32_t)BASS_REMOVED_VARIANT ? ordinal + 1 : ordinal);
-        }
+        if (selected_instrument == 1u) {
+            if (algorithm_delta % 2) {
+                piano_sampled ^= 1u;
+                ui_drawn = 0u;
+            }
+        } else if (selected_instrument == 4u)
+            step_bass_mode(d);
         else if (selected_instrument == 3u)
-            guitar_sound = (uint8_t)clamp((int32_t)guitar_sound + d, 0, 3);
+            step_guitar_mode(d);
         else if (selected_instrument == 6u && d)
             set_cs80_preset((int32_t)cs80_preset + d);
         else if (selected_instrument == 7u) {
@@ -4495,21 +4761,36 @@ static void draw_knob_settings(void)
     }
 }
 
-static const char *const bass_sound_labels[7] = {
-    "PRESET: SYNTH", "PRESET: NOMORE", "PRESET: 808", "PRESET: PLUNK 1",
-    "PRESET: REMOVED", "PRESET: PLUNK 3", "PRESET: PLUNK 4"
+static const char *const bass_sound_names[9] = {
+    "MODEL", "NOMORE", "808", "REMOVED", "REMOVED", "REMOVED", "REMOVED",
+    "ELECTRIC", "ACOUSTIC"
 };
 
-static const char *const guitar_sound_labels[4] = {
-    "PRESET: SYNTH", "PRESET: RIFF 1", "PRESET: RIFF 2", "PRESET: RIFF 3"
+static const char *const bass_mode_labels[BASS_MODE_COUNT] = {
+    "BASS: MODEL SUSTAIN", "BASS: MODEL NOTE",
+    "BASS: ELECTRIC SUSTAIN", "BASS: ELECTRIC NOTE",
+    "BASS: ACOUSTIC SUSTAIN", "BASS: ACOUSTIC NOTE",
+    "BASS: 808 SUSTAIN", "BASS: 808 NOTE",
+    "BASS: NOMORE SUSTAIN", "BASS: NOMORE NOTE"
+};
+
+static const char *const guitar_sound_names[4] = {
+    "MODEL", "ELECTRIC", "NYLON", "ACOUSTIC"
+};
+
+static const char *const guitar_mode_labels[8] = {
+    "GTR: MODEL SUSTAIN", "GTR: MODEL 1-SHOT",
+    "GTR: ELECTRIC SUSTAIN", "GTR: ELECTRIC 1-SHOT",
+    "GTR: NYLON SUSTAIN", "GTR: NYLON 1-SHOT",
+    "GTR: ACOUSTIC SUSTAIN", "GTR: ACOUSTIC 1-SHOT"
 };
 
 static const char *sequence_sound_name(uint8_t instrument, uint8_t variant)
 {
     if (instrument == 3u)
-        return guitar_sound_labels[variant < 4u ? variant : 0u] + 8;
+        return guitar_sound_names[variant < 4u ? variant : 0u];
     if (instrument == 4u)
-        return bass_sound_labels[variant < 7u ? variant : 0u] + 8;
+        return bass_sound_names[variant < 9u ? variant : 0u];
     if (instrument == 5u)
         return drum_sample_labels[variant < ROSSFLM1_SAMPLE_COUNT ? variant : 0u];
     if (instrument == 6u)
@@ -4996,7 +5277,8 @@ void app_frame(void)
                 || chord_layout != ui_chord_layout || cs80_preset != ui_cs80_preset
                 || (uint8_t)(phrase_state | (phrase_count ? 4u : 0u)) != ui_phrase_state
         || instrument_octave[selected_instrument] != ui_octave
-        || drum_bass_boost != ui_drum_bass_boost || bass_sound != ui_bass_sound || guitar_sound != ui_guitar_sound
+        || drum_bass_boost != ui_drum_bass_boost || bass_mode_index() != ui_bass_mode
+        || guitar_mode_index() != ui_guitar_mode
         || drum_chorus != ui_drum_chorus
         || drum_reverb != ui_drum_reverb || drum_compression != ui_drum_compression;
     for (i = 0; i < TRACKS; i++) {
@@ -5063,7 +5345,9 @@ void app_frame(void)
         draw_text(48, 63, selected_instrument == 7u
                   ? chord_instrument_names[chord_voice]
                   : selected_instrument == 6u && cs80_preset
-                    ? cs80_patches[cs80_preset - 1u].name : instrument_names[selected_instrument], C_HI);
+                    ? cs80_patches[cs80_preset - 1u].name
+                    : selected_instrument == 1u && piano_sampled
+                      ? "PIANO SAMPLE" : instrument_names[selected_instrument], C_HI);
         if (selected_instrument != 5u && selected_instrument != 7u) {
             int32_t octave = instrument_octave[selected_instrument];
             octave_text[4] = octave < 0 ? '-' : '+';
@@ -5073,8 +5357,10 @@ void app_frame(void)
         draw_text(12, 78, plat_audio_status() ? "AUDIO INIT FAILED" :
                   ui_drum_sample_visible ? drum_sample_labels[ui_drum_sample] :
                   save_failed ? "SAVE FAILED" :
-                  selected_instrument == 3u ? guitar_sound_labels[guitar_sound] :
-                  selected_instrument == 4u ? bass_sound_labels[bass_sound] :
+                  selected_instrument == 1u
+                    ? (piano_sampled ? "PIANO: SAMPLE" : "PIANO: SYNTH") :
+                  selected_instrument == 3u ? guitar_mode_labels[guitar_mode_index()] :
+                  selected_instrument == 4u ? bass_mode_labels[bass_mode_index()] :
                   selected_instrument == 6u ? "PRESET: PATCH" :
                   selected_instrument == 7u ? (chord_layout ? "ALGO: SPLIT" : "ALGO: 1 KEY") : "EDIT+K1: BPM  SAVE: STORE",
                   plat_audio_status() || save_failed ? C_HI : C_GRAY);
@@ -5093,8 +5379,8 @@ void app_frame(void)
         ui_cs80_preset = cs80_preset;
         ui_octave = instrument_octave[selected_instrument];
         ui_drum_bass_boost = drum_bass_boost;
-        ui_bass_sound = bass_sound;
-        ui_guitar_sound = guitar_sound;
+        ui_bass_mode = bass_mode_index();
+        ui_guitar_mode = guitar_mode_index();
         ui_drum_chorus = drum_chorus;
         ui_drum_reverb = drum_reverb;
         ui_drum_compression = drum_compression;
@@ -5327,8 +5613,12 @@ int app_expect(const char *what, int *got)
         *got = bass_sound;
         return 1;
     }
+    if (text_is(what, "bass_mode")) { *got = bass_mode_index(); return 1; }
+    if (text_is(what, "bass_one_shot")) { *got = bass_one_shot; return 1; }
     if (text_is(what, "jc_brightness")) { *got = battery_brightness(); return 1; }
     if (text_is(what, "guitar_sound")) { *got = guitar_sound; return 1; }
+    if (text_is(what, "guitar_mode")) { *got = guitar_mode_index(); return 1; }
+    if (text_is(what, "guitar_one_shot")) { *got = guitar_one_shot; return 1; }
     if (text_is(what, "backing_mute")) { *got = backing_mute; return 1; }
     if (text_is(what, "arp_on")) { *got = arp_on; return 1; }
     if (text_is(what, "drum_chorus")) { *got = drum_chorus; return 1; }

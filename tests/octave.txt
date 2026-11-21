@@ -54,6 +54,8 @@ key 7 up
 wait 50
 turn SELECT 1
 expect instrument 3
+turn PRESET 6
+expect guitar_mode 0
 tap OCT-
 key 7 down 100
 wait 50
@@ -62,6 +64,8 @@ key 7 up
 wait 50
 turn SELECT 1
 expect instrument 4
+turn PRESET -2
+expect bass_mode 0
 tap OCT-
 key 7 down 100
 wait 50

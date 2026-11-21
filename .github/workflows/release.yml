@@ -35,4 +35,8 @@ jobs:
           TAG: ${{ github.ref_name }}
         run: |
           version=${TAG#v}
-          gh release edit "$TAG" --title "Plissken $version Release"
+          if [[ "$version" == *-rc* ]]; then
+            gh release edit "$TAG" --title "Plissken $version Release Candidate" --prerelease
+          else
+            gh release edit "$TAG" --title "Plissken $version Release"
+          fi

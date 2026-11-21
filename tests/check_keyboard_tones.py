@@ -18,10 +18,14 @@ def render(host, directory, instrument, key, velocity):
     select_delta = instrument - 1
     name = f"voice_{instrument}_{key}_{velocity}"
     scenario = directory / f"{name}.txt"
-    scenario.write_text(
+    script = (
         "wait 2000\n"
         f"turn SELECT {select_delta}\n"
         f"expect instrument {instrument}\n"
+    )
+    if instrument == 1:
+        script += "turn ALGO 1\n"
+    script += (
         f"wav {name}.wav\n"
         f"key {key} down {velocity} 0\n"
         "wait 400\n"
@@ -29,6 +33,7 @@ def render(host, directory, instrument, key, velocity):
         "wait 100\n"
         "wavstop\n"
     )
+    scenario.write_text(script)
     subprocess.run([str(host), str(scenario), str(directory)], check=True, stdout=subprocess.DEVNULL)
     with wave.open(str(directory / f"{name}.wav"), "rb") as wav:
         if (wav.getframerate(), wav.getnchannels(), wav.getsampwidth()) != (RATE, 2, 2):

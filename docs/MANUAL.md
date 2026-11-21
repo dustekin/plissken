@@ -10,9 +10,9 @@ simple guitar power chords, electric bass, and 13 LM-1 drum samples.
 | --- | --- |
 | PLAY | Open the saved-song selector; start or stop the selected song |
 | SELECT encoder | Choose the sound played by the piano keys: Juno, piano, Pro-1, guitar, bass, LM-1 drums, CS-50/CS-80 or CHORD |
-| PRESET / ALGO knobs | Switch the sound of the selected instrument: bass (synth or five samples), guitar (synth or three riffs), CS-50/CS-80 patches, CHORD voice (PRESET) and layout (ALGO) |
+| PRESET / ALGO knobs | Switch instrument variants: bass, guitar modes, CS-50/CS-80 patches, piano engine (ALGO), and CHORD voice/layout |
 | SEQ | Open the visual sequencer editor |
-| FX / SEL | FX cycles the selected sound's effect setting; SEL steps to the next variant |
+| FX / SEL | FX cycles the selected sound's effect setting; SEL steps through guitar modes, bass, CS-80 and CHORD variants |
 | REC | Record, loop and replay a live phrase; EDIT + REC clears it |
 | OCT− / OCT+ | Shift the selected pitched keyboard sound down or up an octave, within −2 to +2 |
 | EDIT + K1 | Set tempo from 70 to 140 BPM |
@@ -63,6 +63,20 @@ The effects apply to live notes and the backing part and reset on reboot.
 Piano and synth controls also affect live and backing notes, reset on reboot, and use 0 for the unmodified base
 sound. The existing Juno chorus remains enabled as part of that base sound. Piano reverb uses a lightweight
 multi-tap delay rather than a physical room model.
+
+With **PIANO** selected, turn **ALGO** to switch between the additive engine and the sampled piano.
+The sampled mode is selected by default after reboot. It has been tested on the FM-1 and runs fine; turn ALGO again
+to select the additive piano.
+
+With **GUITAR** selected, PRESET or ALGO cycles these eight modes: modeled sustain, modeled one-shot, Electric sustain,
+Electric one-shot, Nylon sustain, Nylon one-shot, Acoustic sustain, and Acoustic one-shot. SEL advances through the
+same sequence. Electric sustain is selected at startup. Sustain modes respond to key release; one-shot modes let the
+plucked sound finish its natural tail. The guitar timbre choices are also available to sequencer tracks.
+
+With **BASS** selected, PRESET, ALGO or SEL cycles modeled sustain/note, Electric sustain/note, Acoustic sustain/note,
+808 sustain/note, and NoMore sustain/note. Electric sustain is selected at startup. Sustain responds to key release;
+Note lets the sample finish its natural tail. The 808 sample has an increased level. The old Plunk samples and their
+sequencer variants have been removed.
 
 The screen lists the instruments in white, with the selected keyboard sound in cyan-blue. The small bars beside the
 names are activity meters only. In the sequencer, the editor grid displays tracks and note lengths. CHORD plays one

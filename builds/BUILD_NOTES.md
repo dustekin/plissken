@@ -3,6 +3,36 @@
 Each test build is saved as `plissken###.fwsc` with an increasing number. Newest first.
 Add an entry here whenever a new build is saved.
 
+## 023
+- Versioned `v0.20-rc1` release-candidate package, including the sampled piano, guitar, and bass updates and the
+  corrected startup phrase.
+- All host scenarios and focused audio checks pass; the normal FM-1 target build passed. Not hardware-tested.
+- Device image 481,092 B; package 614,938 B; identity `FM-1_1981002000`; build ID `37FC50C0`; SHA-256
+  `79773DB1D6BA473045F763AC363A518840721081D930CE54786E88F9EDF83385`.
+
+## 022
+- Restores the original startup gain and voices the repeated low E2/E3 pulse as a single E4 pulse, matching the
+  clear ending pitch while reducing the stacked startup notes.
+- Host startup test passes at -16.6 dBFS peak (between the -18 and -13 dBFS bounds); bass sample audio passes.
+- Normal FM-1 target build passed; hardware-tested, and the user reports it works fine. Device image 481,084 B;
+  package 614,938 B; build ID `06D94827`; SHA-256 `77F08107DD3222A0C7CFE517F5C56A38C642F6F1B1745502E2A63D13AD29F8FD`.
+
+## 021
+- Reduces only the automatic Pro-1 startup phrase to one-eighth gain; main-screen instrument levels are unchanged.
+- Host startup test passes at -29.0 dBFS peak with a -27 dBFS ceiling. Normal FM-1 target build passed. On hardware,
+  the first note started buzzy and repeated; reducing gain did not fix it. Build 022 changes the repeated notes instead.
+  Device image 481,140 B; package 614,938 B; build ID `CCC64AA3`; SHA-256
+  `B66019547ACCB163A8BE15563739F4E105575B5BD394ED0C688893A0E0962C60`.
+
+## 020
+- Adds Electric and Acoustic bass samples, Sustain/Note modes for all bass timbres, and Electric Sustain startup;
+  boosts 808 and removes the four BassPlunk recordings.
+- Bass host audio/mode, UI, and sequencer tests pass; guitar and piano sample regressions pass. The broader keyboard
+  tone check still fails its Juno velocity-response assertion (1.47x RMS ratio).
+- Normal FM-1 target build passed. On hardware, main-screen sounds were good, but the startup phrase buzzed; build
+  021 tested a lower phrase level without resolving the buzz. Device image 481,144 B; package 614,938 B; build ID
+  `C5B84EE5`; SHA-256 `800A10EE531E01950E9458C29F7EB39324F7ED4ABBE102DC2DA1CED8B5A69706`.
+
 ## 018
 - Adds The Fog as an editable, restored-on-boot preloaded track: 904 events, 45 bars, 4/4 at 123 BPM, using
   piano, Juno, bass, CS-50 and LM-1 drums. The cover MIDI remains a local reference and is not distributed.

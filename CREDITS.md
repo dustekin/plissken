@@ -40,15 +40,35 @@ release.
 
 ## Samples
 
-- **Original bass recordings:** [`assets/NoMoreBass.wav`](assets/NoMoreBass.wav),
-  [`assets/Bass808.wav`](assets/Bass808.wav) and `assets/BassPlunk1.wav` through `assets/BassPlunk4.wav` are the
-  project owner's own recordings; the owner holds the rights, confirmed they may be used freely, and no credit is
-  required. The samples used by the firmware (excluding BassPlunk2) are converted (and resampled from 48 kHz where
-  needed) to 8-bit mono at build time. BassPlunk2 remains as a source recording but is not packed.
-  The earlier BuzzBassBuzz sample was removed.
-- **Guitar riffs:** `assets/GuitarRiff1.wav` through `assets/GuitarRiff3.wav` were supplied by the project owner from
-  their own riff folder (`r1.wav`, `r11.wav`, `r13.wav`) as free-to-use material for this project; no credit is required.
-  They are converted (resampled from 48 kHz) to 8-bit mono at build time.
+- **Sampled piano prototype:** six Kawai Grand Piano sustain recordings by Simon Dalzell (Ivy Audio), from the
+  [Versilian Community Sample Library](https://github.com/sgossner/VCSL/tree/c1ea7bcc3c7309650ab0da9d15c9cd1fbc4a4c7e/Chordophones/Zithers/Grand%20Piano%2C%20Kawai/Sustains),
+  licensed under [CC0 1.0](https://github.com/sgossner/VCSL/blob/c1ea7bcc3c7309650ab0da9d15c9cd1fbc4a4c7e/LICENSE).
+  The C2, F#2, C3, F#3, C4 and F#4 v4/round-robin-1 recordings are downmixed to mono, trimmed to 1.0 second
+  from just before the attack, resampled from 44.1 kHz to 22.05 kHz, peak-normalized, and given a 100 ms fade.
+  The processed 16-bit WAVs are in [`assets/piano-cc0/`](assets/piano-cc0/); firmware builds encode them as 4-bit
+  IMA ADPCM. Credit is retained although CC0 does not require it.
+- **Original bass recordings:** [`assets/NoMoreBass.wav`](assets/NoMoreBass.wav) and
+  [`assets/Bass808.wav`](assets/Bass808.wav) are the project owner's recordings; the owner holds the rights and
+  confirmed they may be used freely. They are packed as 8-bit mono. The four BassPlunk recordings were removed
+  from the repository and firmware at the owner's request.
+- **Sampled bass timbres:** Electric uses “Bass-guitar Pluck 01” by
+  [TheEndOfACycle](https://freesound.org/people/TheEndOfACycle/sounds/660532/), and Acoustic uses the C2 pizzicato
+  note from “Double bass” by [elzozo](https://freesound.org/people/elzozo/sounds/390140/). Both are marked
+  [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/). The original WAV downloads require FreeSound
+  authentication, so the processed samples use the public MP3 previews. The Electric A#3 excerpt is trimmed to
+  0.35 seconds; the Acoustic C2 excerpt is trimmed from 0.46 to 0.86 seconds. Both are downmixed to mono, resampled
+  to 22.05 kHz, peak-normalized, and given a short tail fade. The processed WAVs in [`assets/bass-cc0/`](assets/bass-cc0/)
+  are packed as 4-bit IMA ADPCM.
+- **Sampled guitar timbres:** the Electric recording, “Pacifica low E string -G.wav,” is by
+  [tribaldarkness](https://freesound.org/people/tribaldarkness/sounds/136598/) from the [Pacifica Electric guitar
+  pack](https://freesound.org/people/tribaldarkness/packs/8526/); the Nylon recording, “Clean_G_str_pick.wav,” is
+  by [SpeedY](https://freesound.org/people/SpeedY/sounds/8402/) from the [Nylon Guitar Single notes pack
+  469](https://freesound.org/people/SpeedY/packs/469/); and the Acoustic low-E recording, “E String 02.wav,” is
+  by [johnnypanic](https://freesound.org/people/johnnypanic/sounds/248177/) from the [E strings
+  pack](https://freesound.org/people/johnnypanic/packs/15283/). All three recordings are marked
+  [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/). The processed mono 22.05 kHz samples use 1.2-second
+  excerpts from the public previews, normalized with a short tail fade, and are packed as 4-bit IMA ADPCM at build time.
+  The earlier project-owner-provided guitar riffs have been removed; the modeled guitar remains available.
 - **Splice (permission noted, none used yet):** Splice has told the project owner that Splice sounds may be used in
   the firmware with artist credits. When any Splice sound is added, list its name, artist and pack here at that time.
 - All 13 samples packed into Plissken builds are from **Rossf's**

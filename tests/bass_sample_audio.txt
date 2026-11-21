@@ -1,16 +1,28 @@
-# All included bass samples must produce audible output from live keys.
-wait 2000
+# Retained and new bass samples must produce audible output.
+wait 3200
 turn SELECT 3
-turn PRESET 1
-expect bass_sound 1
-wav bass_nomore.wav
+expect instrument 4
+expect bass_mode 2
+expect bass_sound 7
+wav bass_electric.wav
 key 3 down 250
 wait 500
 key 3 up
 wait 100
 wavstop
 expect peak_db_min -30
-turn PRESET 1
+turn PRESET 2
+expect bass_mode 4
+expect bass_sound 8
+wav bass_acoustic.wav
+key 3 down 250
+wait 500
+key 3 up
+wait 100
+wavstop
+expect peak_db_min -30
+turn PRESET 2
+expect bass_mode 6
 expect bass_sound 2
 wav bass_808.wav
 key 3 down 250
@@ -19,27 +31,10 @@ key 3 up
 wait 100
 wavstop
 expect peak_db_min -30
-turn PRESET 1
-expect bass_sound 3
-wav bass_plunk1.wav
-key 3 down 250
-wait 500
-key 3 up
-wait 100
-wavstop
-expect peak_db_min -30
-turn PRESET 1
-expect bass_sound 5
-wav bass_plunk3.wav
-key 3 down 250
-wait 500
-key 3 up
-wait 100
-wavstop
-expect peak_db_min -30
-turn PRESET 1
-expect bass_sound 6
-wav bass_plunk4.wav
+turn PRESET 2
+expect bass_mode 8
+expect bass_sound 1
+wav bass_nomore.wav
 key 3 down 250
 wait 500
 key 3 up
