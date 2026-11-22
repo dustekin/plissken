@@ -93,7 +93,7 @@ documented changes.
 
 | Version | Documented changes |
 | --- | --- |
-| **v0.30** (prepared, not published) | Five-voice sequencer and bass-free Escape Playback with voice stealing; prioritized stealing for untouched factory songs; revised piano and bass arrangements; CHORD SPLIT and version help improvements. The user reports the local v0.30 package passed hardware testing. |
+| **v0.30** | Five-voice sequencer and bass-free Escape Playback with voice stealing; prioritized stealing for untouched factory songs; revised piano and bass arrangements; CHORD SPLIT and version help improvements. The user reports the local v0.30 package passed hardware testing. |
 | **v0.20-rc1** | Release candidate: sampled piano is the default; guitar and bass gain the new sample timbres and sustain/one-shot modes; 808 is boosted; old guitar riffs and bass plunks are removed; the startup phrase's repeated low pulses are revoiced as E4. Local candidate package: build 023. |
 | **v0.15** | Adds The Fog as a preloaded sequence and vertically centers the startup animation. Build 018 was hardware-tested. |
 | **v0.14** | Adds Halloween as a preloaded sequence and balances its drum mix below the pitched parts. Build 017 was hardware-tested. |
@@ -103,8 +103,8 @@ documented changes.
 | **v0.1** | Early tag. The tag history records the root MPL-2.0 license; no fuller release notes were found. |
 
 The **v0.20-rc1** tag builds and publishes a GitHub prerelease with its firmware package and build attestation. The
-final **v0.20** release tag has not been created. The **v0.30** package is prepared locally; its tag and GitHub
-release have not been created.
+final **v0.20** release tag has not been created. The **v0.30** release workflow builds and attests a package
+when its tag is pushed.
 
 ## Numbered internal builds
 

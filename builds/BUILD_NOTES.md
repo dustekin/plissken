@@ -11,9 +11,8 @@ Add an entry here whenever a new build is saved.
 - Device image 467,940 B; RAM .data+.bss 62,340 / 98,304 B; pool 216,676 / 344,064 B; package 614,938 B;
   build ID `423E273E`; SHA-256
   `55659DADF3E28977936DFDAAA19921A7E82533DDAA7BBEB0CDFEF79FA78F0D82`.
-- The package was built locally from uncommitted work; no v0.30 tag, GitHub release or attestation exists yet.
-  Five-voice songs cannot be loaded by older four-voice firmware. The reported two-key CHORD PIANO distortion
-  remains uninvestigated.
+- The package was built locally before the work was committed. Five-voice songs cannot be loaded by older
+  four-voice firmware. The reported two-key CHORD PIANO distortion remains uninvestigated.
 
 ## 033
 - Local `0.20-test033` rebuilds untouched factory Escape's Playback without the MIDI bass part, retaining five-voice
