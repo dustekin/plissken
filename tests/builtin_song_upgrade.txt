@@ -1,0 +1,61 @@
+# Upgrade untouched legacy built-ins, but keep a user-edited legacy song.
+wait 4000
+expect store_writes 3
+expect test_legacy_builtins 3
+tap PLAY
+turn PRESET 1
+tapkey 0
+expect seq_events 950
+spin PRESET 1
+spin ALGO 8
+expect seq_note 73
+master 0
+tapkey 0
+expect seq_events 950
+expect seq_note 53
+tap SAVE
+tap SAVE
+expect store_writes 7
+tap HOME
+reboot
+expect store_writes 9
+tap PLAY
+tapkey 0
+spin PRESET 3
+expect seq_track 3
+expect seq_instrument 1
+tap HOME
+tap PLAY
+turn PRESET 1
+tapkey 0
+expect seq_events 950
+spin PRESET 1
+spin ALGO 8
+expect seq_note 53
+expect seq_instrument 0
+tap HOME
+tap PLAY
+turn PRESET 2
+tapkey 0
+expect seq_screen 1
+expect seq_events 904
+spin PRESET 3
+expect seq_track 3
+expect seq_instrument 1
+wait 100
+turn PRESET 4
+expect seq_track 2
+expect seq_instrument 4
+expect bass_sound 7
+spin ALGO 16
+expect seq_note 69
+tap HOME
+reboot
+expect store_writes 9
+tap PLAY
+turn PRESET 1
+tapkey 0
+expect seq_events 950
+spin PRESET 1
+spin ALGO 8
+expect seq_note 53

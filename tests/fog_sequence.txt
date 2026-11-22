@@ -1,9 +1,11 @@
-# The built-in The Fog arrangement is selectable, editable, and restored on boot.
+# The built-in The FMog arrangement is selectable, editable, and restored on boot.
 wait 2000
 expect seq_saved 3
 tap PLAY
 expect playback_mode 1
 turn PRESET 2
+wait 1500
+shot fmog_playback.png
 tapkey 0
 expect seq_screen 1
 expect seq_events 904
@@ -20,7 +22,7 @@ expect hits0 >0
 expect hits1 >0
 expect hits4 >0
 expect hits5 >0
-expect hits6 >0
+expect hits6 0
 tap PLAY
 expect seq_playing 0
 tapkey 0

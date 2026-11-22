@@ -1,0 +1,23 @@
+# Only rebuilt Escape has the experimental five-voice playback budget.
+wait 4000
+tap PLAY
+tap PLAY
+expect seq_stealing 1
+expect seq_steal_limit 5
+wait 196000
+expect seq_playing 0
+expect seq_steals >0
+expect seq_steal_drops >0
+expect seq_steal_peak 5
+expect seq_mix_peak_milli >0
+expect seq_mix_peak_milli <1250
+expect seq_mix_over_one <250
+expect hits3 >0
+expect hits4 0
+turn PRESET 1
+tap PLAY
+expect seq_stealing 1
+expect seq_steal_limit 4
+wait 201000
+expect seq_playing 0
+expect seq_steal_peak 4

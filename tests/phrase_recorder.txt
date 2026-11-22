@@ -33,6 +33,27 @@ tap REC
 release EDIT
 expect phrase_state 0
 expect phrase_count 0
+# Upper SPLIT keys record and replay as chords.
+turn SELECT 6
+turn ALGO 1
+tap REC
+key 19 down 100
+wait 300
+key 19 up
+wait 300
+tap REC
+expect phrase_state 2
+expect phrase_count 2
+wait 100
+expect phrase_held 524288
+expect chord_piano_keys 524288
+wait 300
+expect phrase_held 0
+expect chord_piano_keys 0
+tap REC
+press EDIT
+tap REC
+release EDIT
 # A too-short or empty take is discarded.
 tap REC
 wait 100

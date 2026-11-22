@@ -11,6 +11,8 @@
 #include "dsp/escape_sequence.h"
 #include "dsp/halloween_sequence.h"
 #include "dsp/fog_sequence.h"
+#include "dsp/builtin_steal_sequences.h"
+#include "dsp/escape_rebuild_sequence.h"
 
 #define SETTINGS_MAGIC 0x504C4953u
 #define SEQUENCE_MAGIC 0x53455131u
@@ -21,7 +23,9 @@
 #define SEQUENCE_MELODIC_TRACKS 4u
 #define SEQUENCE_DRUM_TRACK 4u
 #define SEQUENCE_TRACKS 5u
-#define SEQUENCE_VOICES 4u
+#define SEQUENCE_VOICES 5u
+#define BUILTIN_STEAL_VOICES 4u
+#define ESCAPE_EXPERIMENT_VOICES 5u
 #define SEQUENCE_DRUM_NATURAL 7u
 #define SEQUENCE_DRUM_LEVEL 0.42f
 #define SEQUENCE_MAX_TEMPO 140u
@@ -179,6 +183,9 @@ typedef char halloween_sequence_fits[
     HALLOWEEN_SEQUENCE_EVENT_COUNT <= SEQUENCE_EVENT_MAX ? 1 : -1];
 typedef char fog_sequence_fits[
     FOG_SEQUENCE_EVENT_COUNT <= SEQUENCE_EVENT_MAX ? 1 : -1];
+typedef char builtin_steal_sequences_fit[
+    HALLOWEEN_STEAL_EVENT_COUNT <= SEQUENCE_EVENT_MAX
+        && FOG_STEAL_EVENT_COUNT <= SEQUENCE_EVENT_MAX ? 1 : -1];
 typedef struct {
     sequence_header_t header;
     uint32_t events[SEQUENCE_EVENT_MAX];
@@ -201,27 +208,34 @@ typedef struct {
     uint8_t instrument[SEQUENCE_MELODIC_TRACKS];
     uint32_t count;
     const uint32_t *events;
+    uint32_t steal_count;
+    const uint32_t *steal_events;
 } sequence_builtin_t;
 
 static const sequence_builtin_t sequence_builtins[SEQUENCE_BUILTIN_COUNT] = {
     {
         "Escape From Firmware", "escape from", METER_4_4,
         ESCAPE_SEQUENCE_BARS, ESCAPE_SEQUENCE_BPM, {0u, 1u, 2u, 6u},
-        ESCAPE_SEQUENCE_EVENT_COUNT, escape_sequence_events
+        ESCAPE_SEQUENCE_EVENT_COUNT, escape_sequence_events,
+        ESCAPE_REBUILD_EVENT_COUNT, escape_rebuild_events
     },
     {
         "Halloween", "halloween", HALLOWEEN_SEQUENCE_METER,
         HALLOWEEN_SEQUENCE_BARS, HALLOWEEN_SEQUENCE_BPM, {0u, 0u, 4u, 0u},
-        HALLOWEEN_SEQUENCE_EVENT_COUNT, halloween_sequence_events
+        HALLOWEEN_SEQUENCE_EVENT_COUNT, halloween_sequence_events,
+        HALLOWEEN_STEAL_EVENT_COUNT, halloween_steal_events
     },
     {
-        "The Fog", "the fog", METER_4_4,
+        "The FMog", "the fmog", METER_4_4,
         FOG_SEQUENCE_BARS, FOG_SEQUENCE_BPM, {1u, 0u, 4u, 6u},
-        FOG_SEQUENCE_EVENT_COUNT, fog_sequence_events
+        FOG_SEQUENCE_EVENT_COUNT, fog_sequence_events,
+        FOG_STEAL_EVENT_COUNT, fog_steal_events
     },
 };
 
-#if defined(__has_include)
+/* Song mode and the PLAY backing loop are switched off until their mix is fixed (distortion). */
+#define BACKING_ENABLED 0
+#if BACKING_ENABLED && defined(__has_include)
 #if __has_include("dsp/song.h")
 #include "dsp/song.h"
 #define HAVE_SONG 1
@@ -230,7 +244,7 @@ static const sequence_builtin_t sequence_builtins[SEQUENCE_BUILTIN_COUNT] = {
 #ifdef HAVE_SONG
 #define DEFAULT_TEMPO SONG_BPM
 #else
-#define DEFAULT_TEMPO 108u
+#define DEFAULT_TEMPO 80u
 #endif
 
 #define JUNO_VOICES 8u
@@ -252,8 +266,6 @@ typedef struct {
 
 static settings_t settings;
 static volatile int32_t requested_tempo = DEFAULT_TEMPO;
-/* Song mode and the PLAY backing loop are switched off until their mix is fixed (distortion). */
-#define BACKING_ENABLED 0
 static volatile uint8_t requested_play;
 static volatile uint8_t requested_escape_play;
 static volatile uint8_t all_notes_off_requested;
@@ -283,6 +295,17 @@ static volatile uint32_t sequence_audio_length;
 static float sequence_audio_samples;
 static uint8_t sequence_audio_started;
 static uint8_t sequence_audio_from_saved;
+static uint8_t sequence_audio_stealing;
+static uint8_t sequence_audio_steal_limit;
+static const uint32_t *sequence_audio_events;
+static uint32_t sequence_audio_event_count, sequence_audio_event_index;
+static uint32_t sequence_escape_cpu_peak, sequence_escape_xruns_start;
+#ifdef PLAT_HOST
+static uint32_t sequence_steals, sequence_steal_drops, sequence_steal_peak;
+static float sequence_mix_peak;
+static uint32_t sequence_mix_over_one;
+static uint32_t sequence_mix_peak_step;
+#endif
 static uint8_t sequence_name_cursor;
 static uint8_t sequence_name_value;
 static uint8_t sequence_name_length;
@@ -1417,6 +1440,101 @@ static int sequence_store_slot(uint32_t slot)
     return plat_store_save(sequence_slot_object(slot), &sequence, bytes);
 }
 
+static int sequence_builtin_legacy_header_matches(uint32_t index, const sequence_header_t *header)
+{
+    const sequence_builtin_t *builtin = &sequence_builtins[index];
+    const char *name = index == 2u ? "the fog" : builtin->stored_name;
+    uint32_t i = 0u;
+    if (header->version != SEQUENCE_VERSION || header->count != builtin->count
+        || header->meter != builtin->meter || header->bars != builtin->bars
+        || header->tempo != builtin->tempo || header->drum_variant != 0u)
+        return 0;
+    for (i = 0u; i < SEQUENCE_MELODIC_TRACKS; i++)
+        if (header->instrument[i] != builtin->instrument[i] || header->variant[i] != 0u)
+            return 0;
+    for (i = 0u; i < SEQUENCE_NAME_LENGTH && name[i]; i++)
+        if (header->name[i] != name[i])
+            return 0;
+    for (; i < SEQUENCE_NAME_LENGTH; i++)
+        if (header->name[i] != 0)
+            return 0;
+    return 1;
+}
+
+static uint32_t sequence_arrange_builtin_event(uint32_t index, uint32_t event)
+{
+    uint8_t piano_track = index == 1u ? 1u : 3u;
+    uint8_t track = sequence_event_track(event);
+    uint8_t instrument = sequence_event_instrument(event);
+    uint8_t note = sequence_event_note(event);
+    uint8_t variant = sequence_event_variant(event);
+    if (track == piano_track && instrument == (index == 1u ? 0u : 6u))
+        instrument = 1u;
+    else if (index != 0u && track == 2u && instrument == 4u && variant == 0u) {
+        note += 24u;
+        variant = BASS_ELECTRIC_VARIANT;
+    }
+    return sequence_event_make(sequence_event_step(event), note, sequence_event_duration(event),
+                               track, instrument, variant);
+}
+
+static void sequence_arrange_builtin(uint32_t index)
+{
+    uint8_t piano_track = index == 1u ? 1u : 3u;
+    sequence.header.instrument[piano_track] = 1u;
+    if (index != 0u)
+        sequence.header.variant[2] = BASS_ELECTRIC_VARIANT;
+    for (uint32_t i = 0u; i < sequence.header.count; i++)
+        sequence.events[i] = sequence_arrange_builtin_event(index, sequence.events[i]);
+}
+
+static int sequence_builtin_factory_matches(uint32_t index, const sequence_t *data)
+{
+    const sequence_builtin_t *builtin = &sequence_builtins[index];
+    const sequence_header_t *header = &data->header;
+    uint8_t piano_track = index == 1u ? 1u : 3u;
+    uint32_t i;
+    if (header->version != SEQUENCE_VERSION || header->count != builtin->count
+        || header->meter != builtin->meter || header->bars != builtin->bars
+        || header->tempo != builtin->tempo || header->drum_variant != 0u)
+        return 0;
+    for (i = 0u; i < SEQUENCE_MELODIC_TRACKS; i++) {
+        uint8_t instrument = i == piano_track ? 1u : builtin->instrument[i];
+        uint8_t variant = index != 0u && i == 2u ? BASS_ELECTRIC_VARIANT : 0u;
+        if (header->instrument[i] != instrument || header->variant[i] != variant)
+            return 0;
+    }
+    for (i = 0u; i < SEQUENCE_NAME_LENGTH && builtin->stored_name[i]; i++)
+        if (header->name[i] != builtin->stored_name[i])
+            return 0;
+    for (; i < SEQUENCE_NAME_LENGTH; i++)
+        if (header->name[i] != 0)
+            return 0;
+    for (i = 0u; i < builtin->count; i++)
+        if (data->events[i] != sequence_arrange_builtin_event(index, builtin->events[i]))
+            return 0;
+    return 1;
+}
+
+static void sequence_prepare_builtin(uint32_t index, int legacy)
+{
+    const sequence_builtin_t *builtin = &sequence_builtins[index];
+    const char *name = legacy && index == 2u ? "the fog" : builtin->stored_name;
+    sequence_reset();
+    sequence.header.count = (uint16_t)builtin->count;
+    sequence.header.meter = builtin->meter;
+    sequence.header.bars = builtin->bars;
+    sequence.header.tempo = builtin->tempo;
+    for (uint32_t i = 0; i < SEQUENCE_MELODIC_TRACKS; i++)
+        sequence.header.instrument[i] = builtin->instrument[i];
+    for (uint32_t i = 0; i < SEQUENCE_NAME_LENGTH - 1u && name[i]; i++)
+        sequence.header.name[i] = name[i];
+    for (uint32_t i = 0; i < builtin->count; i++)
+        sequence.events[i] = builtin->events[i];
+    if (!legacy)
+        sequence_arrange_builtin(index);
+}
+
 static void sequence_seed_builtin(uint32_t index)
 {
     sequence_header_t header;
@@ -1426,22 +1544,25 @@ static void sequence_seed_builtin(uint32_t index)
     int size = plat_store_size(object);
     int loaded = size >= (int)sizeof header && size <= (int)PLAT_STORE_MAX
         ? plat_store_head(object, &header, sizeof header) : -1;
-    if (loaded == (int)sizeof header && sequence_header_valid(&header, size))
+    if (loaded == (int)sizeof header && sequence_header_valid(&header, size)) {
+        if (!sequence_builtin_legacy_header_matches(index, &header))
+            return;
+        if (plat_store_load(object, &sequence, sizeof sequence) != size) {
+            sequence_builtin_seed_failed = 1u;
+            return;
+        }
+        for (uint32_t i = 0u; i < builtin->count; i++)
+            if (sequence.events[i] != builtin->events[i]) {
+                sequence_reset();
+                return;
+            }
+    } else if (size >= (int)sizeof header && size <= (int)PLAT_STORE_MAX
+               && loaded != (int)sizeof header) {
+        sequence_builtin_seed_failed = 1u;
         return;
+    }
 
-    sequence_reset();
-    sequence.header.count = (uint16_t)builtin->count;
-    sequence.header.meter = builtin->meter;
-    sequence.header.bars = builtin->bars;
-    sequence.header.tempo = builtin->tempo;
-    for (uint32_t i = 0; i < SEQUENCE_MELODIC_TRACKS; i++)
-        sequence.header.instrument[i] = builtin->instrument[i];
-    for (uint32_t i = 0; i < SEQUENCE_NAME_LENGTH; i++)
-        sequence.header.name[i] = 0;
-    for (uint32_t i = 0; i < SEQUENCE_NAME_LENGTH - 1u && builtin->stored_name[i]; i++)
-        sequence.header.name[i] = builtin->stored_name[i];
-    for (uint32_t i = 0; i < builtin->count; i++)
-        sequence.events[i] = builtin->events[i];
+    sequence_prepare_builtin(index, 0);
     if (sequence_store_slot(slot) != 0)
         sequence_builtin_seed_failed = 1u;
     sequence_reset();
@@ -1759,14 +1880,15 @@ static void sequence_trigger_event(uint32_t event)
     switch (instrument) {
     case 0u:
         index = trigger_pooled(juno, JUNO_VOICES, note, duration);
-        juno[index].velocity_gain = velocity_gain(100u);
+        juno[index].velocity_gain = velocity_gain(sequence_audio_events ? 65u : 100u);
         break;
     case 1u:
-        trigger_piano(note, duration, 100u);
+        trigger_piano(note, duration, sequence_audio_events
+                      ? (sequence_event_track(event) == 3u ? 40u : 70u) : 100u);
         break;
     case 2u:
         index = trigger_mono(pro_one, PRO_ONE_VOICES, note, duration, 600u);
-        pro_one[index].velocity_gain = velocity_gain(100u);
+        pro_one[index].velocity_gain = velocity_gain(sequence_audio_events ? 55u : 100u);
         break;
     case 3u:
         if (variant) {
@@ -1809,6 +1931,100 @@ static void sequence_trigger_event(uint32_t event)
     }
 }
 
+typedef struct {
+    uint8_t *active;
+    sample_voice_t *sample;
+    uint32_t age;
+    uint32_t count;
+    uint8_t priority;
+} sequence_steal_candidate_t;
+
+static void sequence_consider_steal_voice(sequence_steal_candidate_t *candidate,
+                                           uint8_t *active, sample_voice_t *sample,
+                                           uint32_t age, uint8_t priority)
+{
+    if (active ? !*active : !sample->data && !sample->adpcm_data)
+        return;
+    candidate->count++;
+    if (priority < candidate->priority || (priority == candidate->priority && age > candidate->age)) {
+        candidate->active = active;
+        candidate->sample = sample;
+        candidate->age = age;
+        candidate->priority = priority;
+    }
+}
+
+static void sequence_trigger_stealing(uint32_t event)
+{
+    uint8_t instrument = sequence_event_instrument(event);
+    uint8_t note = sequence_event_note(event);
+    uint8_t priority = instrument == 5u ? 3u : instrument == 0u ? 1u : 2u;
+    sequence_steal_candidate_t candidate = {0, 0, 0u, 0u, 4u};
+    for (uint32_t i = 0u; i < JUNO_VOICES; i++)
+        sequence_consider_steal_voice(&candidate, &juno[i].active, 0, juno[i].age, 1u);
+    for (uint32_t i = 0u; i < PIANO_VOICES; i++)
+        sequence_consider_steal_voice(&candidate, &piano[i].active, 0, piano[i].age, 2u);
+    for (uint32_t i = 0u; i < PRO_ONE_VOICES; i++)
+        sequence_consider_steal_voice(&candidate, &pro_one[i].active, 0, pro_one[i].age, 2u);
+    for (uint32_t i = 0u; i < GUITAR_VOICES; i++) {
+        sequence_consider_steal_voice(&candidate, &guitar[i].active, 0, guitar[i].age, 2u);
+        if (instrument != 3u || i != guitar_sample_next % GUITAR_VOICES)
+            sequence_consider_steal_voice(&candidate, 0, &guitar_sample_voices[i],
+                                           guitar_sample_voices[i].age, 2u);
+    }
+    for (uint32_t i = 0u; i < MONO_VOICES; i++) {
+        sequence_consider_steal_voice(&candidate, &bass[i].active, 0, bass[i].age, 2u);
+        if (instrument != 4u || i != bass_sample_next % MONO_VOICES)
+            sequence_consider_steal_voice(&candidate, 0, &bass_sample_voices[i],
+                                           bass_sample_voices[i].age, 2u);
+    }
+    for (uint32_t i = 0u; i < ROSSFLM1_SAMPLE_COUNT; i++)
+        if (instrument != 5u || note != i)
+            sequence_consider_steal_voice(&candidate, 0, &drum_samples[i], drum_samples[i].age, 3u);
+    if (candidate.count > sequence_audio_steal_limit
+        || (candidate.count == sequence_audio_steal_limit && candidate.priority > priority)) {
+#ifdef PLAT_HOST
+        sequence_steal_drops++;
+#endif
+        return;
+    }
+    if (candidate.count == sequence_audio_steal_limit) {
+        if (candidate.active)
+            *candidate.active = 0u;
+        else {
+            candidate.sample->data = 0;
+            candidate.sample->adpcm_data = 0;
+        }
+        candidate.count--;
+#ifdef PLAT_HOST
+        sequence_steals++;
+#endif
+    }
+    sequence_trigger_event(event);
+#ifdef PLAT_HOST
+    if (candidate.count + 1u > sequence_steal_peak)
+        sequence_steal_peak = candidate.count + 1u;
+#endif
+}
+
+static void sequence_trigger_audio_step(const sequence_t *source)
+{
+    if (sequence_audio_events) {
+        while (sequence_audio_event_index < sequence_audio_event_count
+               && sequence_event_step(sequence_audio_events[sequence_audio_event_index]) == sequence_audio_step)
+            sequence_trigger_stealing(sequence_audio_events[sequence_audio_event_index++]);
+        return;
+    }
+    for (uint32_t i = 0; i < source->header.count; i++) {
+        if (sequence_event_step(source->events[i]) == sequence_audio_step) {
+            if (sequence_audio_stealing)
+                sequence_trigger_stealing(source->events[i]);
+            else
+                sequence_trigger_event(source->events[i]);
+        }
+    }
+}
+
 static void sequence_audio_advance(void)
 {
     const sequence_t *source = sequence_audio_from_saved ? &sequence_playback : &sequence;
@@ -1821,12 +2037,17 @@ static void sequence_audio_advance(void)
         return;
     if (!sequence_audio_started) {
         sequence_audio_started = 1u;
+#ifdef PLAT_HOST
+        sequence_steals = sequence_steal_drops = sequence_steal_peak = 0u;
+        sequence_mix_peak = 0.0f;
+        sequence_mix_over_one = 0u;
+        sequence_mix_peak_step = 0u;
+#endif
         sequence_audio_step = sequence_audio_start;
         sequence_audio_samples = 0.0f;
+        sequence_audio_event_index = 0u;
         stop_audio_voices();
-        for (uint32_t i = 0; i < source->header.count; i++)
-            if (sequence_event_step(source->events[i]) == sequence_audio_step)
-                sequence_trigger_event(source->events[i]);
+        sequence_trigger_audio_step(source);
         return;
     }
     sequence_audio_samples += 1.0f;
@@ -1839,9 +2060,7 @@ static void sequence_audio_advance(void)
         sequence_audio_started = 0u;
         return;
     }
-    for (uint32_t i = 0; i < source->header.count; i++)
-        if (sequence_event_step(source->events[i]) == sequence_audio_step)
-            sequence_trigger_event(source->events[i]);
+    sequence_trigger_audio_step(source);
 }
 
 static void release_chord_key(uint32_t key)
@@ -2006,16 +2225,8 @@ static void trigger_live_key(uint32_t key, uint32_t velocity)
         }
         break;
     case 7u:
-        if (chord_layout && key >= CHORD_SHAPE_KEY) {
-            /* Split layout: upper keys pick the chord type; keys beyond the last type are silent. */
-            if (key - CHORD_SHAPE_KEY < CHORD_TYPES)
-                chord_controls[0] = (uint8_t)(key - CHORD_SHAPE_KEY);
-#ifdef PLAT_HOST
-            last_live_increment = 0.0f;
-#endif
-            live_key_voice[key] = -1;
-            return;
-        }
+        if (chord_layout && key >= CHORD_SHAPE_KEY && key - CHORD_SHAPE_KEY < CHORD_TYPES)
+            chord_controls[0] = (uint8_t)(key - CHORD_SHAPE_KEY);
         index = trigger_chord(note, 132300u, velocity, key);
         break;
     case 5u:
@@ -2743,6 +2954,22 @@ void app_render(int32_t *lr, uint32_t n, uint32_t master_q12)
         }
         master_gain += (target_gain - master_gain) * 0.004f;
         if (voices_active) {
+#ifdef PLAT_HOST
+            if (sequence_playing && sequence_audio_events) {
+                float l = mix + juno_mix * 0.72f + chorus_l * 0.24f;
+                float r = mix + juno_mix * 0.72f + chorus_r * 0.24f;
+                float peak = l < 0.0f ? -l : l;
+                float right_peak = r < 0.0f ? -r : r;
+                if (right_peak > peak)
+                    peak = right_peak;
+                if (peak > sequence_mix_peak) {
+                    sequence_mix_peak = peak;
+                    sequence_mix_peak_step = sequence_audio_step;
+                }
+                if (peak >= 1.0f)
+                    sequence_mix_over_one++;
+            }
+#endif
             left = (int32_t)(app_tanh(mix + juno_mix * 0.72f + chorus_l * 0.24f) * master_gain);
             right = (int32_t)(app_tanh(mix + juno_mix * 0.72f + chorus_r * 0.24f) * master_gain);
         } else {
@@ -2870,6 +3097,11 @@ void app_ui_init(void)
     sequence_stop_requested = 0u;
     sequence_audio_started = 0u;
     sequence_audio_from_saved = 0u;
+    sequence_audio_stealing = 0u;
+    sequence_audio_steal_limit = SEQUENCE_VOICES;
+    sequence_audio_events = 0;
+    sequence_audio_event_count = sequence_audio_event_index = 0u;
+    sequence_escape_cpu_peak = sequence_escape_xruns_start = 0u;
     sequence_audio_start = sequence_audio_step = sequence_audio_length = 0u;
     sequence_audio_samples = 0.0f;
     sequence_cursor_track = 0u;
@@ -3548,6 +3780,10 @@ static void sequence_start(uint8_t from_playback)
 {
     sequence_t *source;
     uint32_t start;
+    sequence_audio_stealing = 0u;
+    sequence_audio_steal_limit = SEQUENCE_VOICES;
+    sequence_audio_events = 0;
+    sequence_audio_event_count = 0u;
     if (from_playback) {
         if (sequence_selected_slot >= SEQUENCE_SLOTS || !sequence_slots[sequence_selected_slot].used)
             return;
@@ -3556,6 +3792,25 @@ static void sequence_start(uint8_t from_playback)
             return;
         }
         source = &sequence_playback;
+        if (sequence_selected_slot >= SEQUENCE_USER_SLOTS) {
+            uint32_t index = sequence_selected_slot - SEQUENCE_USER_SLOTS;
+            const sequence_builtin_t *builtin = &sequence_builtins[index];
+            if (sequence_builtin_factory_matches(index, source)) {
+                if (index == 0u) {
+                    sequence_audio_events = builtin->steal_events;
+                    sequence_audio_event_count = builtin->steal_count;
+                    sequence_audio_steal_limit = ESCAPE_EXPERIMENT_VOICES;
+                    sequence_escape_cpu_peak = 0u;
+                    sequence_escape_xruns_start = plat_xruns();
+                } else {
+                    sequence_audio_steal_limit = BUILTIN_STEAL_VOICES;
+                    for (uint32_t i = 0u; i < builtin->steal_count; i++)
+                        source->events[i] = sequence_arrange_builtin_event(index, builtin->steal_events[i]);
+                    source->header.count = (uint16_t)builtin->steal_count;
+                }
+                sequence_audio_stealing = 1u;
+            }
+        }
         start = 0u;
     } else {
         source = &sequence;
@@ -3919,7 +4174,7 @@ static void sequence_help_toggle(void)
 static uint8_t sequence_help_page_count(void)
 {
     return sequence_help_return_screen == SCREEN_SEQUENCE ? 4u
-        : sequence_help_return_screen == SCREEN_PLAYBACK ? 2u : 3u;
+        : sequence_help_return_screen == SCREEN_PLAYBACK ? 2u : 4u;
 }
 
 static void sequence_show_notice(uint8_t notice)
@@ -4228,8 +4483,6 @@ static void sequence_input(uint32_t buttons, uint32_t pressed, uint32_t keys,
                     } else {
                         trigger_live_key(key, 100u);
                     }
-                    if (selected_instrument == 7u && chord_layout && key >= CHORD_SHAPE_KEY)
-                        continue;
                     sequence_last_note = selected_instrument == 5u
                         ? sequence_current_variant()
                         : (uint8_t)clamp(53 + (int32_t)key
@@ -5009,10 +5262,11 @@ static void sequence_draw_info(void)
 
 static void sequence_draw_help(void)
 {
-    static const char *const main_lines[3][4] = {
-        {"SELECT: SOUND", "KEYS: PLAY NOTES", "OCT: SHIFT PITCH", "SEL: SOUND VARIANT"},
-        {"K1-K4: SOUND FX", "ENV: MUTE CHORDS", "LFO: MUTE BASS", "ARP: ARPEGGIATOR"},
-        {"EDIT+K1: TEMPO", "SAVE: STORE TEMPO", "PLAY OPENS PLAYBACK", "SEQ OPENS SEQUENCER"}
+    static const char *const main_lines[4][4] = {
+        {"VERSION " APP_VERSION, "SELECT: SOUND", "KEYS: PLAY NOTES", "OCT: SHIFT PITCH"},
+        {"SEL: SOUND VARIANT", "K1-K4: SOUND FX", "ENV: MUTE CHORDS", "LFO: MUTE BASS"},
+        {"ARP: ARPEGGIATOR", "EDIT+K1: TEMPO", "SAVE: STORE TEMPO", "PLAY OPENS PLAYBACK"},
+        {"SEQ OPENS SEQUENCER", "", "", ""}
     };
     static const char *const playback_lines[2][4] = {
         {"PRESET: PICK SONG", "PLAY: START / STOP", "REC: DELETE SONG", "KEY: LOAD TO EDIT"},
@@ -5024,7 +5278,7 @@ static void sequence_draw_help(void)
         {"EDIT+K1: BPM", "SEL: METER", "PLAY: START / STOP", "SAVE: STORE"},
         {"PLAYBACK: PICK SONG", "KEY: LOAD TO EDIT", "FIRST KEY: IGNORED", "SAVE: UPDATE SONG"}
     };
-    char main_title[] = "MAIN HELP 1/3";
+    char main_title[] = "MAIN HELP 1/4";
     char playback_title[] = "PLAYBACK HELP 1/2";
     char sequence_title[] = "SEQUENCER HELP 1/4";
     const char *const (*lines)[4];
@@ -5156,6 +5410,24 @@ static void sequence_draw_playback(void)
                   RGB(255, 45, 45));
     cv_blit(0, 0);
     cv_begin(240, 96, C_BLACK);
+    if (sequence_audio_events && sequence_selected_slot == SEQUENCE_USER_SLOTS) {
+        char cpu_text[] = "PEAK CPU 000%";
+        char xrun_text[] = "XRUN 000";
+        uint32_t cpu = sequence_escape_cpu_peak;
+        uint32_t xruns = plat_xruns() - sequence_escape_xruns_start;
+        if (cpu > 999u)
+            cpu = 999u;
+        if (xruns > 999u)
+            xruns = 999u;
+        cpu_text[9] = (char)('0' + cpu / 100u);
+        cpu_text[10] = (char)('0' + (cpu / 10u) % 10u);
+        cpu_text[11] = (char)('0' + cpu % 10u);
+        xrun_text[5] = (char)('0' + xruns / 100u);
+        xrun_text[6] = (char)('0' + (xruns / 10u) % 10u);
+        xrun_text[7] = (char)('0' + xruns % 10u);
+        draw_text(6, 42, cpu_text, C_GRAY);
+        draw_text(145, 42, xrun_text, C_GRAY);
+    }
     draw_text(6, 70, "PLAY START/STOP  REC DELETE", C_HI);
     draw_text(6, 82, "PRESET SELECT  KEY EDIT  HOME EXIT", C_GRAY);
     draw_text(180, 70, "GLO: HELP", C_HI);
@@ -5182,6 +5454,11 @@ void app_frame(void)
     int redraw, drum_label_changed = 0;
 
     app_input_only();
+    if (sequence_audio_events && sequence_playing) {
+        uint32_t cpu = plat_cpu_pct();
+        if (cpu > sequence_escape_cpu_peak)
+            sequence_escape_cpu_peak = cpu;
+    }
 #ifdef HAVE_SONG
     if (requested_escape_play) {
         if (!ui_escape_play) {
@@ -5426,6 +5703,54 @@ static int text_is(const char *a, const char *b)
 
 int app_expect(const char *what, int *got)
 {
+#ifdef PLAT_HOST
+    if (text_is(what, "seq_stealing")) {
+        *got = sequence_audio_stealing;
+        return 1;
+    }
+    if (text_is(what, "seq_steals")) {
+        *got = (int)sequence_steals;
+        return 1;
+    }
+    if (text_is(what, "seq_steal_drops")) {
+        *got = (int)sequence_steal_drops;
+        return 1;
+    }
+    if (text_is(what, "seq_steal_peak")) {
+        *got = (int)sequence_steal_peak;
+        return 1;
+    }
+    if (text_is(what, "seq_steal_limit")) {
+        *got = sequence_audio_steal_limit;
+        return 1;
+    }
+    if (text_is(what, "seq_active_drums")) {
+        *got = 0;
+        for (uint32_t i = 0u; i < ROSSFLM1_SAMPLE_COUNT; i++)
+            if (drum_samples[i].data || drum_samples[i].adpcm_data)
+                (*got)++;
+        return 1;
+    }
+    if (text_is(what, "seq_active_piano")) {
+        *got = 0;
+        for (uint32_t i = 0u; i < PIANO_VOICES; i++)
+            if (piano[i].active)
+                (*got)++;
+        return 1;
+    }
+    if (text_is(what, "seq_mix_peak_milli")) {
+        *got = (int)(sequence_mix_peak * 1000.0f);
+        return 1;
+    }
+    if (text_is(what, "seq_mix_over_one")) {
+        *got = (int)sequence_mix_over_one;
+        return 1;
+    }
+    if (text_is(what, "seq_mix_peak_step")) {
+        *got = (int)sequence_mix_peak_step;
+        return 1;
+    }
+#endif
     if (text_is(what, "keys")) {
         *got = (int)previous_keys;
         return 1;
@@ -5645,6 +5970,26 @@ int app_expect(const char *what, int *got)
         return 1;
     }
 #ifdef PLAT_HOST
+    if (text_is(what, "test_legacy_builtins")) {
+        int saved = 0;
+        for (uint32_t i = 0u; i < SEQUENCE_BUILTIN_COUNT; i++) {
+            sequence_prepare_builtin(i, 1);
+            if (sequence_store_slot(SEQUENCE_USER_SLOTS + i) == 0)
+                saved++;
+        }
+        sequence_reset();
+        sequence_scan_slots();
+        *got = saved;
+        return 1;
+    }
+    if (text_is(what, "chord_piano_keys")) {
+        uint32_t keys = 0u;
+        for (uint32_t i = 0; i < PIANO_VOICES; i++)
+            if (piano[i].key)
+                keys |= 1u << (piano[i].key - 1u);
+        *got = (int)keys;
+        return 1;
+    }
     if (text_is(what, "portrait_color")) {
         *got = portrait_color;
         return 1;

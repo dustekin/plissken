@@ -1,0 +1,17 @@
+# A failed upgrade reports the error and preserves the legacy songs for a later retry.
+wait 4000
+expect test_legacy_builtins 3
+flash_fail 1
+reboot
+tap PLAY
+expect seq_warning 7
+tapkey 0
+spin PRESET 3
+expect seq_instrument 6
+tap HOME
+flash_fail 0
+reboot
+tap PLAY
+tapkey 0
+spin PRESET 3
+expect seq_instrument 1

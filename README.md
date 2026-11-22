@@ -33,8 +33,40 @@ sequencer. The saved-song screen plays and edits named sequences.
 
 The original seven-part backing arrangement is disabled because its mix distorted. **PLAY** opens the saved-song
 screen; it does not start that disabled arrangement. The preloaded **Escape From Firmware**, **Halloween**, and
-**The Fog** sequences are independent, editable tracks. Saved-song playback is limited to four simultaneous sound
-voices, so dense arrangements may omit events when that budget is reached.
+**The FMog** sequences are independent, editable tracks. Saved-song playback is normally limited to five simultaneous
+sound voices, so dense arrangements may omit events when that budget is reached.
+
+Build 026 experiments with **voice stealing** during Playback of the three untouched factory songs: it plays
+additional or substituted notes and, when all four voices are busy, can cut an older voice to play a new one.
+Drums take priority over piano, Pro-1, guitar and bass; Juno has the lowest priority. Lower-priority new notes can still be
+skipped, and abrupt cuts may be audible. This does not create extra voices.
+
+Builds 027 and 028 replace untouched factory Escape's Playback arrangement with the same denser MIDI-derived
+arrangement, streamed from flash, using guitar, electric bass and rebalanced piano and synth parts. Build 027 tests
+four voices; build 028 tests five for Escape only. Both worked and sounded good on hardware; the user preferred five.
+The current source selects five via `ESCAPE_EXPERIMENT_VOICES`; set it to four to reproduce the 027 voice budget.
+Halloween and The FMog's factory Playback overlays retain their four-voice stealing budget.
+Escape's Playback screen shows the maximum sampled, smoothed CPU percentage and detected late-render count since
+playback started. These indicators do not detect every timing fault.
+Build 030 changes only this Escape Playback overlay's bass from Electric to NoMore; the saved editable arrangement
+and other songs are unchanged. Build 031 changes it to 808 and reduces its level only in the Escape overlay;
+build 032 uses Acoustic bass. These Playback bass parts follow the selected bass Sustain/Note mode.
+Build 033 removes the MIDI bass part from Escape's factory Playback entirely, freeing the five-voice budget for
+the other parts; the editable saved arrangement and other songs remain unchanged.
+
+The experiment is Playback-only: it does not change saved songs or their editor display. Edited built-ins play their
+saved arrangements without the experiment. Voice stealing is **not implemented for user-created sequencer songs**. Build 029 raises the sequencer editing and
+saved-song validation limit to five voices; it rejects a sixth overlapping voice. Individual instrument pools can
+have lower limits, so five notes of the same sound are not guaranteed. Five-voice songs cannot be loaded by older
+four-voice builds; do not delete them if you downgrade. The user reports the build 029 sequencer hardware test passed.
+
+The revised arrangements use piano for additional melodic parts, and electric bass in Halloween and The FMog.
+Piano parts follow the currently selected sampled or additive piano engine. On upgrade, untouched original built-in
+songs are updated automatically; edited built-ins are preserved. To restore a revised factory arrangement, delete
+that built-in in Playback and reboot. Deletion discards its edits.
+
+Known issue: the user reported distortion when pressing two CHORD PIANO keys simultaneously; the cause remains
+uninvestigated.
 
 ## Instrument sounds
 
@@ -47,7 +79,9 @@ voices, so dense arrangements may omit events when that budget is reached.
   is the startup mode. Sustain responds to key release; Note lets a sample play through its natural tail. The 808
   level is boosted. The former BassPlunk samples are removed.
 - **Juno, Pro-1, CS-50/CS-80, and CHORD:** select these from the main instrument list. CS-80-inspired patches and
-  chord layouts are available through their on-screen controls.
+  chord layouts are available through their on-screen controls. In CHORD SPLIT, all keys play chords; F4–C5
+  (keys 12–19, counting from zero) also select the chord type, while C#5–G5 retain the current type. The eight
+  types are major, minor, sus2, sus4, dominant 7, major 7, minor 7, and diminished.
 - **LM-1:** thirteen drum samples are played from the keys or sequencer. Samples are one-shots and do not transpose.
 
 Sample provenance, licenses, and processing details are in [CREDITS.md](CREDITS.md).
@@ -59,6 +93,7 @@ documented changes.
 
 | Version | Documented changes |
 | --- | --- |
+| **v0.30** (prepared, not published) | Five-voice sequencer and bass-free Escape Playback with voice stealing; prioritized stealing for untouched factory songs; revised piano and bass arrangements; CHORD SPLIT and version help improvements. The user reports the local v0.30 package passed hardware testing. |
 | **v0.20-rc1** | Release candidate: sampled piano is the default; guitar and bass gain the new sample timbres and sustain/one-shot modes; 808 is boosted; old guitar riffs and bass plunks are removed; the startup phrase's repeated low pulses are revoiced as E4. Local candidate package: build 023. |
 | **v0.15** | Adds The Fog as a preloaded sequence and vertically centers the startup animation. Build 018 was hardware-tested. |
 | **v0.14** | Adds Halloween as a preloaded sequence and balances its drum mix below the pitched parts. Build 017 was hardware-tested. |
@@ -68,16 +103,27 @@ documented changes.
 | **v0.1** | Early tag. The tag history records the root MPL-2.0 license; no fuller release notes were found. |
 
 The **v0.20-rc1** tag builds and publishes a GitHub prerelease with its firmware package and build attestation. The
-final **v0.20** release tag has not been created.
+final **v0.20** release tag has not been created. The **v0.30** package is prepared locally; its tag and GitHub
+release have not been created.
 
 ## Numbered internal builds
 
-There are 22 numbered packages in the current sequence, builds 002 through 023. Build 001 is not present in the
+There are 32 numbered packages in the current sequence, builds 002 through 033. Build 001 is not present in the
 builds folder. Hardware status is marked as **tested**, **not tested**, or **not recorded**; missing notes are not
 treated as evidence of a hardware test.
 
 | Build | Summary | FM-1 hardware status |
 | --- | --- | --- |
+| 033 | Removes the MIDI bass part from Escape's factory Playback. | Tested; hardware test passed |
+| 032 | Changes Escape's factory Playback bass to Acoustic. | Not tested |
+| 031 | Changes Escape's factory Playback bass to 808. | Not tested |
+| 030 | Changes Escape's factory Playback bass to NoMore. | Not tested |
+| 029 | Raises the sequencer and saved-song limit to five voices. | Tested; sequencer test passed |
+| 028 | Tests the rebuilt Escape arrangement with five voices and stealing. | Tested; user preferred it |
+| 027 | Tests the rebuilt Escape arrangement with four voices and stealing. | Tested; user reports good |
+| 026 | Tests prioritized voice stealing during Playback of untouched factory songs. | Tested; user reports good |
+| 025 | Renames The Fog to The FMog and revises the built-in piano and bass arrangements. | Not tested yet |
+| 024 | Makes CHORD SPLIT upper keys playable and shows the build version in main-screen help. | Tested; SPLIT and version display work |
 | 023 | v0.20-rc1 release-format candidate package. | Not tested yet |
 | 022 | Restores startup gain and replaces repeated low E2/E3 pulses with a single E4 pulse. | Tested; user confirmed it works fine |
 | 021 | Lowered startup phrase gain to investigate the buzz. | Tested; buzz remained |
@@ -140,7 +186,7 @@ The editor has four pitched tracks and one LM-1 drum track.
 - Press **PLAY** to start or stop the working sequence. During playback the display follows the play position; moving
   ALGO pauses that follow so you can edit another step.
 - Press **SAVE** to name and save the sequence. When editing a saved song, SAVE updates that song. There are up to
-  16 user songs plus the built-in Escape From Firmware, Halloween, and The Fog tracks.
+  16 user songs plus the built-in Escape From Firmware, Halloween, and The FMog tracks.
 - Press **SEQ** or **HOME** to return to the main screen. **GLO** opens sequencer help.
 
 ### PLAY screen
@@ -161,8 +207,8 @@ by `fm1-base`. Run commands from the repository root.
 # Normal FM-1 development package
 python3 base/tools/build.py .
 
-# Versioned release-candidate package
-python3 base/tools/build.py . --release 0.20-rc1
+# Versioned v0.30 release package
+python3 base/tools/build.py . --release 0.30
 
 # Host simulator and scenario tests
 python3 base/tools/build.py . --host
@@ -193,16 +239,15 @@ terms; see [CREDITS.md](CREDITS.md) and [base/LICENSING.md](base/LICENSING.md).
 
 - Continue improving the preloaded songs, including renderer choices, voice allocation, mix balance, and FM-1
   listening tests.
-- In CHORD SPLIT mode, make the second octave of keys playable in a future release. Its current non-playing behavior
-  is intentional, not a bug.
-- Rename the preloaded **The Fog** song to **The FMog** in a future release; the current firmware still calls it
-  The Fog.
-- Rebuild future songs using the sampled piano and the new guitar and bass instruments. Reuse the startup fix's
+- Continue refining songs with the sampled piano and new guitar and bass instruments. Reuse the startup fix's
   anti-buzz approach by simplifying or revoicing stacked low notes instead of lowering the overall gain, then
   verify the result on an FM-1.
 - Improve the live sound balance and quality of Juno, guitar, bass, and CHORD while staying within the FM-1's audio
   and voice limits.
 - Add quality-of-life improvements to the sequencer and saved-song workflow.
+- Add MIDI step-sequencer output for built-in and user-created songs, with tracks assignable to external instruments.
+- Explore importing and exporting user-created songs to phones or computers, plus a buildable Windows/Linux player
+  using the firmware's instruments. Investigate desktop conversion to MIDI or an FL Studio-readable DAW project.
 - Optimize CPU, RAM, flash use, and voice allocation before adding more demanding features.
 - Consider additional preloaded songs and original graphics. Keep local reference MIDI files out of the repository
   and verify permissions for any new samples, music, or artwork.

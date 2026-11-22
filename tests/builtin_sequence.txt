@@ -24,7 +24,7 @@ expect hits0 >0
 expect hits1 >0
 expect hits2 >0
 expect hits5 >0
-expect hits6 >0
+expect hits6 0
 tapkey 0
 expect seq_screen 1
 expect seq_playing 0

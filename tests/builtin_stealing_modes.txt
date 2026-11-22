@@ -1,0 +1,23 @@
+# Factory playback also remains bounded with additive piano and one-shot bass.
+wait 4000
+expect instrument 1
+turn ALGO 1
+turn SELECT 3
+expect instrument 4
+turn PRESET 1
+expect bass_one_shot 1
+tap PLAY
+turn PRESET 1
+tap PLAY
+expect seq_stealing 1
+wait 201000
+expect seq_playing 0
+expect seq_steals >0
+expect seq_steal_peak 4
+turn PRESET 1
+tap PLAY
+expect seq_stealing 1
+wait 89000
+expect seq_playing 0
+expect seq_steals >0
+expect seq_steal_peak 4

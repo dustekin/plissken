@@ -54,6 +54,7 @@ tap PLAY
 expect playback_mode 1
 tap PLAY
 expect seq_playing 1
+expect seq_stealing 0
 wait 500
 expect hits3 >0
 tap REC

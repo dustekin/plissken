@@ -3,6 +3,138 @@
 Each test build is saved as `plissken###.fwsc` with an increasing number. Newest first.
 Add an entry here whenever a new build is saved.
 
+## v0.30 release preparation
+- Local normal FM-1 release-format package `build/plissken-0.30.fwsc`, based on hardware-tested build 033.
+  The user reports the v0.30 hardware test passed; the release version display was not specifically confirmed.
+- All 43 current host scenarios, ten audio checks and the MIDI converter unit tests passed. The target build passed;
+  its identity is `FM-1_1981003000`, and `0.30` is present in the device image.
+- Device image 467,940 B; RAM .data+.bss 62,340 / 98,304 B; pool 216,676 / 344,064 B; package 614,938 B;
+  build ID `423E273E`; SHA-256
+  `55659DADF3E28977936DFDAAA19921A7E82533DDAA7BBEB0CDFEF79FA78F0D82`.
+- The package was built locally from uncommitted work; no v0.30 tag, GitHub release or attestation exists yet.
+  Five-voice songs cannot be loaded by older four-voice firmware. The reported two-key CHORD PIANO distortion
+  remains uninvestigated.
+
+## 033
+- Local `0.20-test033` rebuilds untouched factory Escape's Playback without the MIDI bass part, retaining five-voice
+  prioritized stealing. All 2,388 remaining events and their ordering are unchanged from 032; 105 bass events were
+  removed. The editable saved arrangement and other songs are unchanged.
+- Default host render: 497 steals, 146 dropped onsets, pre-tanh peak 1.242, 189 stereo frames at or above 1.0;
+  output WAV has no clipped samples. The full-song no-bass, alternate piano, sequencer and other factory-song
+  regressions passed. Normal FM-1 target build passed; the user reports the hardware test passed.
+- Device image 499,848 B; RAM .data+.bss 62,324 / 98,304 B; pool 216,676 / 344,064 B; package 614,938 B;
+  identity `FM-1_1981002000`; build ID `3EA356D3`; SHA-256
+  `568B399122747394E78A13B38097EB913BE8F9395E41757EF0F2A5A478E91B2F`.
+
+## 032
+- Local `0.20-test032` changes untouched factory Escape's Playback bass from 808 to Acoustic. The Acoustic sample
+  follows the selected Sustain/Note mode; event pitches/timing, five-voice stealing, saved arrangements and other
+  songs are unchanged.
+- Default host render: 559 steals, 166 dropped onsets, pre-tanh peak 1.211, 186 stereo frames at or above 1.0;
+  output WAV has no clipped samples. The Acoustic trigger, alternate bass/piano modes, sequencer and other
+  factory-song regressions passed. Normal FM-1 target build passed; not hardware-tested.
+- Device image 500,268 B; RAM .data+.bss 62,324 / 98,304 B; pool 216,676 / 344,064 B; package 614,938 B;
+  identity `FM-1_1981002000`; build ID `F6BBAC7C`; SHA-256
+  `B0450FCC790ED981DF3D96A15929F2765E831C958EF6DB54248061FB152E7DF7`.
+
+## 031
+- Local `0.20-test031` changes untouched factory Escape's Playback bass from NoMore to 808. The boosted 808 is
+  scaled to 22% of its usual gain only in the Escape overlay to reduce mix saturation; live instruments and other
+  songs are unchanged. Event pitches/timings and the five-voice limit remain unchanged.
+- Default host render: 569 steals, 172 dropped onsets, pre-tanh peak 1.211, 229 stereo frames at or above 1.0;
+  output WAV has no clipped samples. The 808 trigger, alternate bass/piano modes, sequencer and other factory-song
+  regressions passed. Normal FM-1 target build passed; not hardware-tested.
+- Device image 500,308 B; RAM .data+.bss 62,324 / 98,304 B; pool 216,676 / 344,064 B; package 614,938 B;
+  identity `FM-1_1981002000`; build ID `E20EBE18`; SHA-256
+  `B77A7F46A1F35B2FA80CFC47AF6BD3C50E61AF57CE512770222A3D569C7BEC9C`.
+
+## 030
+- Local `0.20-test030` changes the bass in untouched factory Escape's Playback overlay from Electric to NoMore.
+  The bass follows the selected Sustain/Note mode; event pitches and timing, five-voice stealing, saved songs and
+  other factory arrangements are unchanged. NoMore uses the project owner's existing sample.
+- Full default-mode host render: 554 steals, 162 dropped onsets, pre-tanh peak 1.211, 144 stereo frames at or
+  above 1.0; output WAV has no clipped samples. The NoMore trigger, alternate bass/piano modes, five-voice
+  sequencer and factory-song regressions passed. Normal FM-1 target build passed; not hardware-tested.
+- Device image 500,268 B; RAM .data+.bss 62,324 / 98,304 B; pool 216,676 / 344,064 B; package 614,938 B;
+  identity `FM-1_1981002000`; build ID `3E2746E7`; SHA-256
+  `9ED4AFBBAA2DB8B159D2E8355B3B3DB1900025B7B54425387B59FD746680C6C4`.
+
+## 029
+- Local `0.20-test029` raises the sequencer editing and saved-song validation budget from four to five simultaneous
+  voices. A sixth overlapping voice is rejected, including when editing chords or reserving drum tails. Voice
+  stealing remains absent for user songs and edited built-ins. Per-instrument pools can be smaller than five.
+- Escape retains build 028's five-voice Playback; Halloween and The FMog keep their four-voice factory overlays.
+  Five-voice songs cannot be loaded by older four-voice firmware; do not delete them if downgrading.
+- Host tests verified five simultaneous drum voices and four pianos plus one drum, saving/rebooting/reloading,
+  sixth-voice rejection, drum tails, edits, factory songs and sequencer regressions. Normal FM-1 target build
+  passed. Hardware-tested: the user reports the sequencer test passed.
+- Device image 500,268 B; RAM .data+.bss 62,324 / 98,304 B; pool 216,676 / 344,064 B; package 614,938 B;
+  identity `FM-1_1981002000`; build ID `0CEFE240`; SHA-256
+  `82F9B9BCAEC35680A0CE06B95F3803219EE6530C76F2F45CFF5C6C6F4A7E59E9`.
+
+## 028
+- Local `0.20-test028` uses the same dense Escape Playback arrangement as 027, with an experimental five-voice
+  budget only for untouched factory Escape. Other songs and the editor remain at four.
+- Default-mode host render: 585 steals, 178 dropped onsets, peak five voices; pre-tanh peak 1.211 with 207
+  stereo frames at or above 1.0; output WAV has no clipped samples. Alternate piano/bass mode and other-song,
+  user sequencer and edited-built-in checks passed. Target build passed. Hardware-tested: user reports it works,
+  sounds good, and sounds better than 027.
+- Device image 500,264 B; RAM .data+.bss 62,324 / 98,304 B; pool 216,676 / 344,064 B; package 614,938 B;
+  identity `FM-1_1981002000`; build ID `FAE3E536`; SHA-256
+  `CE96524F4BFC62B2A00FAFB0B60586186C864A970A92CFB78CD75D9FE2FA579D`.
+
+## 027
+- Local `0.20-test027` streams a 2,493-event MIDI-derived Escape arrangement from flash during untouched factory
+  Playback, with guitar, electric bass, piano, Juno, Pro-1 and drums. Its budget is four voices with stealing.
+  Saved arrangements and editor views are unchanged; edited built-ins bypass the overlay.
+- Default-mode host render: 732 steals, 215 dropped onsets, peak four voices; pre-tanh peak 1.184 with 132
+  stereo frames at or above 1.0; output WAV has no clipped samples. These peaks are not a hardware safety proof.
+  Host song, edit/persistence, migration and sequencer checks and target build passed. Hardware-tested: user reports
+  it works and sounds good.
+- Escape Playback displays maximum sampled smoothed CPU and detected late renders since playback began; neither
+  proves the absence of all timing faults. The two-key CHORD PIANO distortion remains unresolved.
+- Device image 500,272 B; RAM .data+.bss 62,340 / 98,304 B; pool 216,676 / 344,064 B; package 614,938 B;
+  identity `FM-1_1981002000`; build ID `779F3811`; SHA-256
+  `0011010ACFD11BDA1C61A9D4F0FC5B92769B70D181B3793EA2D11BE9DA0DFFC6`.
+
+## 026
+- Local `0.20-test026` build experiments with prioritized voice stealing during Playback of all three untouched
+  factory songs. It swaps 44 events in Escape and Halloween and adds 38 in The FMog. Drums are prioritized above
+  piano/Pro-1/bass, then Juno; older lower-priority voices may be cut and lower-priority new notes can be skipped.
+- Playback overlays are in RAM only; saved arrangements, edited built-ins and user songs remain unchanged. The
+  sequencer editor does not support voice stealing. Escape's full host render exactly matches the prior experiment.
+- Focused full-song, four-voice, sampled/additive piano, sustain/one-shot bass, edited-song persistence, sequencer,
+  migration and audio checks passed. Full host renders had no clipped output samples. Normal FM-1 target build
+  passed. Hardware-tested: the user reports the test is good. Device CPU/load has not been measured.
+  The previously reported two-key CHORD PIANO distortion is not fixed.
+- Device image 493,740 B; RAM .data+.bss 62,340 / 98,304 B; pool 216,676 / 344,064 B; package 614,938 B;
+  identity `FM-1_1981002000`; build ID `29B78060`; SHA-256
+  `B833A602A356C704F10E8F75101E2AACA222A7385FE390A5D5C1D9065CA8DEE5`.
+
+## 025
+- Local `0.20-test025` test build: The Fog is renamed The FMog. Escape and The FMog replace their CS-50 part
+  with piano; Halloween replaces a Juno part with piano. Halloween and The FMog use electric bass.
+- Untouched original built-ins upgrade automatically; edited built-ins are retained. The four-voice sequencer
+  limit and event timings remain unchanged; fast voice switching was not used. Piano follows the selected engine.
+- Focused built-in playback, migration/preservation/failure, SPLIT, phrase, sequencer and sampled audio host
+  tests passed. Full host song renders had no clipped output samples. Normal FM-1 target build passed.
+  The new arrangements and device CPU/load have not been auditioned or hardware-tested; host peaks do not prove
+  hardware audio safety. CHORD PIANO two-key distortion reported on build 024 remains uninvestigated.
+- Device image 481,556 B; RAM .data+.bss 62,340 / 98,304 B; pool 216,676 / 344,064 B; package 614,938 B;
+  identity `FM-1_1981002000`; build ID `9D89EB19`; SHA-256
+  `63D5918661E759BE599E4FB1623D8CA420A1406732B499321DD4BECE3A85272B`.
+
+## 024
+- Local `0.20-test024` test build: CHORD SPLIT upper keys play chords, and keys 12–19 also select chord type.
+  Main-screen GLO help displays the build version on its first page.
+- Focused chord, phrase recorder, sequencer and help host scenarios and the Pro-1 chord audio check passed.
+  The normal FM-1 target build passed. Hardware-tested: the user confirmed SPLIT and the version display work.
+  This is not a published GitHub release.
+- The user reported distortion when pressing two CHORD PIANO keys simultaneously. The cause and specific chord
+  types, pitches and velocities are not yet established; investigate before changing levels or voice allocation.
+- Device image 481,104 B; package 614,938 B; identity `FM-1_1981002000`; build ID `D914E066`; SHA-256
+  `8AED9F694E52040D088D99B138C19A04BC235119BA7861537CA61555601FF75F`.
+
 ## 023
 - Versioned `v0.20-rc1` release-candidate package, including the sampled piano, guitar, and bass updates and the
   corrected startup phrase.

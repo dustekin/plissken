@@ -61,32 +61,140 @@ turn PRESET 1
 expect chord_voice 0
 expect instrument 7
 
-# Split layout: EDIT+K4 toggles; upper keys pick the chord type and play nothing.
+# Split: every upper key plays; keys 12..19 also select chord types.
 turn ALGO 1
 expect chord_layout 1
 expect fx4 1
-key 17 down 100
-wait 300
-key 17 up
-wait 300
-expect fx1 5
-key 19 down 100
-wait 300
-key 19 up
-wait 300
-expect fx1 7
-key 25 down 100
-wait 300
-key 25 up
-wait 300
-expect fx1 7
-wav chord_split.wav
-key 3 down 250
-wait 500
+spin K2 -10
+spin K3 -10
+spin K4 -10
+key 3 down 100
+wait 100
+expect chord_piano_keys 8
+key 12 down 100
+wait 100
+expect fx1 0
+expect live_hz 349
+expect chord_piano_keys 4104
+key 12 up
+wait 100
+expect chord_piano_keys 8
 key 3 up
+wait 100
+expect chord_piano_keys 0
+key 13 down 100
+wait 100
+expect fx1 1
+expect chord_piano_keys 8192
+key 13 up
+key 14 down 100
+wait 100
+expect fx1 2
+expect chord_piano_keys 16384
+key 14 up
+key 15 down 100
+wait 100
+expect fx1 3
+expect chord_piano_keys 32768
+key 15 up
+key 16 down 100
+wait 100
+expect fx1 4
+expect chord_piano_keys 65536
+key 16 up
+key 17 down 100
+wait 100
+expect fx1 5
+expect chord_piano_keys 131072
+key 17 up
+key 18 down 100
+wait 100
+expect fx1 6
+expect chord_piano_keys 262144
+key 18 up
+key 19 down 100
+wait 100
+expect fx1 7
+expect chord_piano_keys 524288
+key 19 up
+wait 100
+key 20 down 100
+wait 100
+expect fx1 7
+expect chord_piano_keys 1048576
+key 20 up
+wait 100
+expect chord_piano_keys 0
+key 21 down 100
+wait 100
+expect chord_piano_keys 2097152
+key 21 up
+key 22 down 100
+wait 100
+expect chord_piano_keys 4194304
+key 22 up
+key 23 down 100
+wait 100
+expect chord_piano_keys 8388608
+key 23 up
+key 24 down 100
+wait 100
+expect chord_piano_keys 16777216
+key 24 up
+key 25 down 100
+wait 100
+expect chord_piano_keys 33554432
+key 25 up
+wait 100
+key 26 down 100
+wait 100
+expect fx1 7
+expect live_hz 784
+expect chord_piano_keys 67108864
+key 26 up
+wait 100
+expect chord_piano_keys 0
+peakreset
+wav chord_split.wav
+key 19 down 100
+wait 500
+key 19 up
 wait 100
 wavstop
 expect peak_db_min -30
+tap ARP
+key 20 down 100
+wait 400
+expect live_hz >0
+expect chord_piano_keys 1048576
+key 20 up
+wait 100
+expect chord_piano_keys 0
+tap ARP
+# The sequencer accepts upper SPLIT keys as chord roots.
+tap SEQ
+spin SELECT 23
+expect seq_sound 36
+expect instrument 7
+master 0
+tapkey 12
+expect fx1 0
+expect seq_events 1
+expect seq_note 65
+spin ALGO 1
+tapkey 26
+expect seq_events 2
+expect seq_note 79
+spin ALGO 1
+master 2048
+spin ALGO -2
+peakreset
+wav chord_split_sequence.wav
+tap PLAY
+wait 300
+wavstop
+expect peak_db_min -30
+tap HOME
 turn ALGO -1
 expect chord_layout 0
 turn K1 -10

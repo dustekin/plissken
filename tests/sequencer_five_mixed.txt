@@ -1,0 +1,27 @@
+# Four piano tracks and one drum play together from a saved song.
+wait 2000
+tap SEQ
+spin SELECT 1
+tapkey 0
+spin PRESET 1
+tapkey 2
+spin PRESET 1
+spin SELECT -1
+tapkey 4
+spin PRESET 1
+spin SELECT -2
+tapkey 5
+spin PRESET 1
+tapkey 0
+expect seq_events 5
+tap SAVE
+spin PRESET 1
+tap SAVE
+reboot
+tap PLAY
+tap PLAY
+expect seq_stealing 0
+expect hits1 4
+expect hits5 1
+expect seq_active_piano 4
+expect seq_active_drums 1

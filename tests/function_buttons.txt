@@ -6,8 +6,14 @@ tap LFO
 tap GLO
 expect main_help 1
 expect backing_mute 3
+wait 1500
+shot main_help_version.png
 spin SELECT 1
 expect seq_help_page 1
+spin SELECT 1
+spin SELECT 1
+spin SELECT 1
+expect seq_help_page 0
 tap GLO
 expect main_help 0
 tap ENV

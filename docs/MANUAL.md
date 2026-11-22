@@ -37,12 +37,31 @@ individual samples. Different drum samples can share a step; REC adds or removes
 New drum hits play the full sample, and their displayed length follows the sample duration and song tempo; MASTER
 does not change drum lengths. LM-1 is not offered in the other tracks' sound choices. Existing saved songs remain
 playable with their original drum lengths.
-Up to 16 user songs can be saved, plus the built-in Escape From Firmware, Halloween, and The Fog tracks. To play
-The Fog, press PLAY, turn PRESET to select it, then press PLAY again. Press a piano key instead of PLAY to open it
-for editing; that first key is not recorded. Deleting a built-in song restores it on the next boot. Each track
-supports up to 950 events and 128 bars. Playback allows at most four simultaneous sound voices; chord events count
+Up to 16 user songs can be saved, plus the built-in Escape From Firmware, Halloween, and The FMog tracks. To play
+The FMog, press PLAY, turn PRESET to select it, then press PLAY again. Press a piano key instead of PLAY to open it
+for editing; that first key is not recorded. Untouched original built-ins update automatically; edited built-ins are
+preserved. Deleting a built-in discards its edits and restores the current factory version on the next boot. Piano
+parts use the selected sampled or additive engine. Each track
+supports up to 950 events and 128 bars. Ordinary Playback allows at most five simultaneous sound voices; chord events count
 as multiple voices, and pitched samples are cut off at their selected duration. Drum tails reserve voices conservatively at the fastest
 tempo so later tempo changes cannot exceed that limit.
+
+For untouched factory songs only, Playback uses experimental arrangements with prioritized voice stealing:
+an older voice may be cut for a new note when the voice budget is full. Drums have highest priority,
+then piano, Pro-1, guitar and bass, then Juno; some new notes can still be skipped. Saved songs and their editor views
+are unchanged. Edited built-ins and user-created songs do not use stealing, and the sequencer's five-voice
+editing limit still applies.
+
+Internal builds 027 and 028 stream a denser Escape arrangement from flash during untouched factory Playback;
+the editable saved arrangement is unchanged. Build 027 uses four voices and build 028 tests five for Escape only.
+Build 029 also allows five voices in the sequencer; Halloween and The FMog's factory overlays still use four.
+Build 030 changes Escape's factory Playback bass from Electric to NoMore, following the selected bass Sustain/Note
+mode. Build 031 uses 808 at a reduced level in that overlay; build 032 uses Acoustic bass. Build 033 removes the
+MIDI bass part from the five-voice Escape Playback overlay. The editable saved arrangement is unchanged.
+Individual instrument voice pools can be smaller than five. Songs using five overlapping voices cannot be loaded
+by older four-voice firmware; avoid deleting these songs if you downgrade.
+Escape's Playback screen shows the maximum sampled, smoothed CPU percentage and detected late renders (XRUN)
+since playback started. A zero XRUN count does not guarantee timing safety; listen and test on hardware.
 
 In the sequencer, EDIT + K1 adjusts the working song's tempo (70–140 BPM), shown beside the time signature;
 K1 alone still adjusts the sound. SAVE stores the tempo with the song, and playback uses that saved tempo without
@@ -80,7 +99,11 @@ sequencer variants have been removed.
 
 The screen lists the instruments in white, with the selected keyboard sound in cyan-blue. The small bars beside the
 names are activity meters only. In the sequencer, the editor grid displays tracks and note lengths. CHORD plays one
-chord per key; K1 sets the chord type and ALGO chooses the 1 KEY or SPLIT layout.
+chord per key; K1 sets the chord type and ALGO chooses the 1 KEY or SPLIT layout. In SPLIT, all keys play chords:
+F4–C5 (keys 12–19, counting from zero) also select major, minor, sus2, sus4, dominant 7, major 7, minor 7, or
+diminished respectively; C#5–G5 use the selected type. The sequencer uses the current chord controls on playback;
+chord type is not stored per event. The first page of main-screen GLO help shows the build's release version, or DEV
+for unversioned builds.
 At startup, the display shows the color skyline artwork from `assets/startup.png`, centered vertically and packed into
 a four-color RGB565 palette, for 3 seconds. A cyan scanline sweeps down the image while the Pro-1 voice plays a short
 keyboard phrase.
@@ -89,7 +112,7 @@ keyboard phrase.
 
 The preloaded MIDI/backing arrangement is disabled in this build because it distorted; it may return after further
 work on gain staging and instrument count. PLAY instead selects and plays songs saved in the visual sequencer.
-Escape From Firmware, Halloween, and The Fog are the preloaded sequencer tracks; additional preloaded MIDI selection
+Escape From Firmware, Halloween, and The FMog are the preloaded sequencer tracks; additional preloaded MIDI selection
 is not implemented. Drum playback uses the 13 Rossf LM-1 samples packed at build time; see the project credits
 for their license and attribution.
 Guitar and bass modeling are intentionally simple. Bluetooth and per-track mute/level controls are not implemented.

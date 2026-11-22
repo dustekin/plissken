@@ -13,24 +13,31 @@ turn PRESET 1
 turn ALGO 1
 tapkey 3
 expect seq_events 4
-# Four long notes already occupy the sound budget at step 4.
-turn PRESET 2
+# A fifth voice is accepted; a sixth is rejected.
+turn PRESET 1
 turn ALGO 1
 tapkey 4
-expect seq_events 4
+expect seq_events 5
+tapkey 5
+expect seq_events 5
 expect seq_warning 1
 # Turning an existing note into a chord cannot exceed the same voice limit.
+wait 2000
+expect seq_warning 0
+spin PRESET 1
 spin ALGO -4
 expect seq_sound 0
 spin SELECT 24
 expect seq_instrument 0
-expect seq_events 4
+expect seq_events 5
 expect seq_warning 1
 # The limit also applies to piano-key insertion during playback.
+wait 2000
+expect seq_warning 0
 tap PLAY
 spin ALGO 4
 tapkey 4
-expect seq_events 4
+expect seq_events 5
 expect seq_warning 1
 tap PLAY
 tap HOME

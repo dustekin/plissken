@@ -1,0 +1,133 @@
+#!/usr/bin/env python3
+"""Generate playback-only voice-stealing candidates from existing song conversions."""
+import argparse
+import re
+from collections import Counter
+from pathlib import Path
+
+import song_to_sequence as sequence
+
+ROOT = Path(__file__).resolve().parents[1]
+SPECS = {
+    "escape": {
+        "options": {"pitch_grid_overrides": {6: 1}},
+        "add": {0: 8, 1: 8, 2: 8, 6: 20},
+        "replace": True,
+    },
+    "halloween": {
+        "options": {
+            "included_parts": (0, 1, 4, 5),
+            "instrument_overrides": {1: 0},
+            "part_transposes": {1: -12},
+            "steps_per_bar": 20,
+            "polyphonic_parts": (0,),
+        },
+        "add": {1: 16, 5: 28},
+        "replace": True,
+    },
+    "fog": {
+        "options": {
+            "included_parts": (0, 1, 4, 5, 6),
+            "instrument_overrides": {0: 1, 1: 0},
+            "priority_parts": (1, 6, 4, 0, 5),
+            "rotate_priority": False,
+        },
+        "add": {0: 4, 5: 34},
+        "replace": False,
+    },
+}
+
+
+def build_candidate(name, song_path, samples_path):
+    spec = SPECS[name]
+    bpm, bars, events, _ = sequence.analyze(song_path, samples_path, **spec["options"])
+    original_text = (ROOT / "dsp" / f"{name}_sequence.h").read_text()
+    original = {int(value, 16) for value in re.findall(r"0x([0-9A-Fa-f]+)u", original_text)}
+    baseline = [event for event in events if sequence.encode_event(event) in original]
+    if len(baseline) != len(original):
+        raise ValueError(f"{name}: converted source does not match the factory sequence")
+    extras = [
+        event for event in events
+        if sequence.encode_event(event) not in original
+        and sum(old["step"] <= event["step"] < old["end"] for old in baseline) >= 3
+        and any(old["step"] < event["step"] < old["end"] for old in baseline)
+    ]
+    chosen = []
+    for part, count in spec["add"].items():
+        options = [event for event in extras if event["part"] == part]
+        if len(options) < count:
+            raise ValueError(f"{name}: part {part} has only {len(options)} candidates")
+        chosen.extend(options[(2 * index + 1) * len(options) // (2 * count)]
+                      for index in range(count))
+
+    removed = set()
+    if spec["replace"]:
+        for candidate in sorted(chosen, key=lambda event: event["step"]):
+            eligible = [
+                (index, event) for index, event in enumerate(baseline)
+                if index not in removed and event["part"] == candidate["part"]
+                and abs(event["step"] - candidate["step"]) >= 8
+                and all(not (event["step"] <= extra["step"] < event["end"]) for extra in chosen)
+            ]
+            if not eligible:
+                raise ValueError(f"{name}: no replaceable part {candidate['part']} event")
+            index, _ = min(
+                eligible,
+                key=lambda pair: (
+                    pair[1]["note"] != candidate["note"],
+                    abs(pair[1]["step"] - candidate["step"]),
+                ),
+            )
+            removed.add(index)
+
+    retained = {sequence.encode_event(event) for index, event in enumerate(baseline)
+                if index not in removed}
+    retained.update(sequence.encode_event(event) for event in chosen)
+    result = [event for event in events if sequence.encode_event(event) in retained]
+    if len(result) != len(retained) or len(result) > 952:
+        raise ValueError(f"{name}: duplicate events or candidate exceeds storage event limit")
+    if spec["replace"] and Counter(event["part"] for event in baseline) != Counter(
+        event["part"] for event in result
+    ):
+        raise ValueError(f"{name}: replacement changed the per-part event counts")
+    collisions = sum(
+        sum(event["step"] <= extra["step"] < event["end"] for event in result) > 4
+        for extra in chosen
+    )
+    if not collisions:
+        raise ValueError(f"{name}: candidate contains no added over-budget onsets")
+    print(f"{name}: {len(result)} events, {len(chosen)} added, {len(removed)} replaced, "
+          f"{collisions} added onsets overlap more than four events")
+    return bpm, bars, result
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--escape", type=Path, required=True)
+    parser.add_argument("--halloween", type=Path, required=True)
+    parser.add_argument("--fog", type=Path, required=True)
+    parser.add_argument("--samples", type=Path, required=True)
+    parser.add_argument("--output", type=Path, required=True)
+    args = parser.parse_args()
+    sequence.MAX_EVENTS = 10000
+    sequence.MAX_VOICES = 100
+    candidates = {
+        name: build_candidate(name, getattr(args, name), args.samples)
+        for name in SPECS
+    }
+    with args.output.open("w", newline="\n") as output:
+        output.write("/* Generated by tools/generate_builtin_steal.py; do not edit. */\n")
+        for name, (_, _, events) in candidates.items():
+            output.write(f"#define {name.upper()}_STEAL_EVENT_COUNT {len(events)}u\n")
+            output.write(f"static const uint32_t {name}_steal_events[{name.upper()}_STEAL_EVENT_COUNT] = {{\n")
+            for offset in range(0, len(events), 4):
+                packed = ", ".join(
+                    f"0x{sequence.encode_event(event):08X}u"
+                    for event in events[offset:offset + 4]
+                )
+                output.write(f"    {packed},\n")
+            output.write("};\n")
+
+
+if __name__ == "__main__":
+    main()
