@@ -6,7 +6,7 @@ expect playback_mode 1
 tapkey 0
 expect seq_screen 1
 expect seq_events 950
-expect seq_bars 65
+expect seq_bars 64
 expect seq_tempo 80
 tap HOME
 tap PLAY

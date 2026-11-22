@@ -45,7 +45,8 @@ Builds 027 and 028 replace untouched factory Escape's Playback arrangement with 
 arrangement, streamed from flash, using guitar, electric bass and rebalanced piano and synth parts. Build 027 tests
 four voices; build 028 tests five for Escape only. Both worked and sounded good on hardware; the user preferred five.
 The current source selects five via `ESCAPE_EXPERIMENT_VOICES`; set it to four to reproduce the 027 voice budget.
-Halloween and The FMog's factory Playback overlays retain their four-voice stealing budget.
+Build 034 tests a five-voice budget for Halloween and The FMog as well. In default host renders this eliminates
+10 and six voice steals respectively; the user reports the songs sound great on hardware.
 Escape's Playback screen shows the maximum sampled, smoothed CPU percentage and detected late-render count since
 playback started. These indicators do not detect every timing fault.
 Build 030 changes only this Escape Playback overlay's bass from Electric to NoMore; the saved editable arrangement
@@ -53,6 +54,8 @@ and other songs are unchanged. Build 031 changes it to 808 and reduces its level
 build 032 uses Acoustic bass. These Playback bass parts follow the selected bass Sustain/Note mode.
 Build 033 removes the MIDI bass part from Escape's factory Playback entirely, freeing the five-voice budget for
 the other parts; the editable saved arrangement and other songs remain unchanged.
+Build 036 is a listening comparison that removes 361 lower notes from matched piano octaves in that overlay;
+the other 2,027 events retain their order. The user preferred it on hardware.
 
 The experiment is Playback-only: it does not change saved songs or their editor display. Edited built-ins play their
 saved arrangements without the experiment. Voice stealing is **not implemented for user-created sequencer songs**. Build 029 raises the sequencer editing and
@@ -65,8 +68,14 @@ Piano parts follow the currently selected sampled or additive piano engine. On u
 songs are updated automatically; edited built-ins are preserved. To restore a revised factory arrangement, delete
 that built-in in Playback and reboot. Deletion discards its edits.
 
-Known issue: the user reported distortion when pressing two CHORD PIANO keys simultaneously; the cause remains
-uninvestigated.
+Build 036 removes the empty opening bar from untouched factory Escape and The FMog in both Playback and the editor.
+Untouched v0.30 factory slots upgrade automatically; edited slots and user songs are preserved. Halloween's drum
+intro is unchanged. Older firmware may no longer recognize the trimmed built-ins as factory songs after downgrade;
+deleting a built-in to restore the older factory version discards edits.
+
+Timing concern: the user reported distortion with two CHORD JUNO or CHORD PRO keys in SPLIT mode. With the render
+optimization in build 035, the user reports no audible distortion, but still observed high CPU and XRUNs.
+These indicators do not detect every timing fault; the load remains under investigation.
 
 ## Instrument sounds
 
@@ -93,6 +102,7 @@ documented changes.
 
 | Version | Documented changes |
 | --- | --- |
+| **v0.31** | Lighter Escape Playback, five-voice Halloween and The FMog Playback, trimmed empty factory-song openings, and optimized JUNO/PRO rendering. The user reports the versioned package passed hardware testing. |
 | **v0.30** | Five-voice sequencer and bass-free Escape Playback with voice stealing; prioritized stealing for untouched factory songs; revised piano and bass arrangements; CHORD SPLIT and version help improvements. The user reports the local v0.30 package passed hardware testing. |
 | **v0.20-rc1** | Release candidate: sampled piano is the default; guitar and bass gain the new sample timbres and sustain/one-shot modes; 808 is boosted; old guitar riffs and bass plunks are removed; the startup phrase's repeated low pulses are revoiced as E4. Local candidate package: build 023. |
 | **v0.15** | Adds The Fog as a preloaded sequence and vertically centers the startup animation. Build 018 was hardware-tested. |
@@ -108,12 +118,15 @@ when its tag is pushed.
 
 ## Numbered internal builds
 
-There are 32 numbered packages in the current sequence, builds 002 through 033. Build 001 is not present in the
+There are 35 numbered packages in the current sequence, builds 002 through 036. Build 001 is not present in the
 builds folder. Hardware status is marked as **tested**, **not tested**, or **not recorded**; missing notes are not
 treated as evidence of a hardware test.
 
 | Build | Summary | FM-1 hardware status |
 | --- | --- | --- |
+| 036 | Removes the empty opening bars in Escape and The FMog; compares a lighter Escape piano arrangement. | Openings passed; user preferred the alternative |
+| 035 | Tests reduced JUNO and PRO render work, retaining the CHORD diagnostics. | No audible JUNO/PRO distortion; CPU/XRUN readings remain high |
+| 034 | Tests five-voice Halloween and The FMog Playback and CHORD CPU/XRUN diagnostics. | Songs sound great; JUNO test reported XRUNs |
 | 033 | Removes the MIDI bass part from Escape's factory Playback. | Tested; hardware test passed |
 | 032 | Changes Escape's factory Playback bass to Acoustic. | Not tested |
 | 031 | Changes Escape's factory Playback bass to 808. | Not tested |
@@ -237,6 +250,9 @@ terms; see [CREDITS.md](CREDITS.md) and [base/LICENSING.md](base/LICENSING.md).
 
 ## Future development
 
+- Continue investigating CHORD JUNO/PRO timing load.
+- Plan sequencer and saved-song quality-of-life improvements for v0.32.
+- Target full song sharing for v0.40 or v0.50, depending on implementation complexity.
 - Continue improving the preloaded songs, including renderer choices, voice allocation, mix balance, and FM-1
   listening tests.
 - Continue refining songs with the sampled piano and new guitar and bass instruments. Reuse the startup fix's

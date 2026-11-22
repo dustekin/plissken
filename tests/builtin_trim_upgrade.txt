@@ -1,0 +1,51 @@
+# Existing untouched v0.30 factory songs lose their empty opening bar; edited songs stay unchanged.
+wait 4000
+expect store_writes 3
+expect test_pretrim_builtins 3
+reboot
+expect store_writes 8
+tap PLAY
+tapkey 0
+expect seq_bars 64
+expect seq_events 950
+tap HOME
+tap PLAY
+tap PLAY
+expect seq_stealing 1
+expect hits0 >0
+tap PLAY
+turn PRESET 2
+tapkey 0
+expect seq_bars 44
+expect seq_events 904
+tap HOME
+tap PLAY
+turn PRESET 2
+tap PLAY
+expect seq_stealing 1
+expect hits5 >0
+tap PLAY
+tap HOME
+reboot
+expect store_writes 8
+# Recreate the previous factory data and edit Escape before the next upgrade.
+expect test_pretrim_builtins 3
+tap PLAY
+tapkey 0
+expect seq_bars 65
+press EDIT
+spin K1 1
+release EDIT
+expect seq_tempo 81
+tap SAVE
+tap SAVE
+tap HOME
+reboot
+tap PLAY
+tapkey 0
+expect seq_bars 65
+expect seq_tempo 81
+tap HOME
+tap PLAY
+tap PLAY
+expect seq_stealing 0

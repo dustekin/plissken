@@ -24,7 +24,7 @@
 #define SEQUENCE_DRUM_TRACK 4u
 #define SEQUENCE_TRACKS 5u
 #define SEQUENCE_VOICES 5u
-#define BUILTIN_STEAL_VOICES 4u
+#define BUILTIN_STEAL_VOICES 5u
 #define ESCAPE_EXPERIMENT_VOICES 5u
 #define SEQUENCE_DRUM_NATURAL 7u
 #define SEQUENCE_DRUM_LEVEL 0.42f
@@ -692,8 +692,12 @@ static void ladder_update(voice_t *voice, float cutoff, float k)
 static float ladder_tick(voice_t *voice, float x, float k)
 {
     float g = voice->ladder_g, v, y, u;
-    float feedback = (1.0f - g) * (g * g * g * voice->lp1 + g * g * voice->lp2 + g * voice->lp3 + voice->lp4);
-    u = ladder_tanh((x * 0.5f - k * feedback) * voice->ladder_den);
+    u = x * 0.5f;
+    if (k != 0.0f) {
+        float feedback = (1.0f - g) * (g * g * g * voice->lp1 + g * g * voice->lp2 + g * voice->lp3 + voice->lp4);
+        u = (u - k * feedback) * voice->ladder_den;
+    }
+    u = ladder_tanh(u);
     v = (u - voice->lp1) * g;
     y = v + voice->lp1;
     voice->lp1 = fm_flush(y + v);
@@ -1478,6 +1482,16 @@ static uint32_t sequence_arrange_builtin_event(uint32_t index, uint32_t event)
                                track, instrument, variant);
 }
 
+static uint32_t sequence_builtin_leading_steps(uint32_t index)
+{
+    return index == 0u || index == 2u ? 16u : 0u;
+}
+
+static uint32_t sequence_trim_builtin_event(uint32_t index, uint32_t event)
+{
+    return event - sequence_builtin_leading_steps(index);
+}
+
 static void sequence_arrange_builtin(uint32_t index)
 {
     uint8_t piano_track = index == 1u ? 1u : 3u;
@@ -1488,14 +1502,15 @@ static void sequence_arrange_builtin(uint32_t index)
         sequence.events[i] = sequence_arrange_builtin_event(index, sequence.events[i]);
 }
 
-static int sequence_builtin_factory_matches(uint32_t index, const sequence_t *data)
+static int sequence_builtin_factory_matches(uint32_t index, const sequence_t *data, int trimmed)
 {
     const sequence_builtin_t *builtin = &sequence_builtins[index];
     const sequence_header_t *header = &data->header;
     uint8_t piano_track = index == 1u ? 1u : 3u;
     uint32_t i;
     if (header->version != SEQUENCE_VERSION || header->count != builtin->count
-        || header->meter != builtin->meter || header->bars != builtin->bars
+        || header->meter != builtin->meter
+        || header->bars != builtin->bars - (trimmed && sequence_builtin_leading_steps(index) ? 1u : 0u)
         || header->tempo != builtin->tempo || header->drum_variant != 0u)
         return 0;
     for (i = 0u; i < SEQUENCE_MELODIC_TRACKS; i++) {
@@ -1510,13 +1525,17 @@ static int sequence_builtin_factory_matches(uint32_t index, const sequence_t *da
     for (; i < SEQUENCE_NAME_LENGTH; i++)
         if (header->name[i] != 0)
             return 0;
-    for (i = 0u; i < builtin->count; i++)
-        if (data->events[i] != sequence_arrange_builtin_event(index, builtin->events[i]))
+    for (i = 0u; i < builtin->count; i++) {
+        uint32_t event = sequence_arrange_builtin_event(index, builtin->events[i]);
+        if (trimmed)
+            event = sequence_trim_builtin_event(index, event);
+        if (data->events[i] != event)
             return 0;
+    }
     return 1;
 }
 
-static void sequence_prepare_builtin(uint32_t index, int legacy)
+static void sequence_prepare_builtin(uint32_t index, int legacy, int trimmed)
 {
     const sequence_builtin_t *builtin = &sequence_builtins[index];
     const char *name = legacy && index == 2u ? "the fog" : builtin->stored_name;
@@ -1531,8 +1550,14 @@ static void sequence_prepare_builtin(uint32_t index, int legacy)
         sequence.header.name[i] = name[i];
     for (uint32_t i = 0; i < builtin->count; i++)
         sequence.events[i] = builtin->events[i];
-    if (!legacy)
+    if (!legacy) {
         sequence_arrange_builtin(index);
+        if (trimmed && sequence_builtin_leading_steps(index)) {
+            sequence.header.bars--;
+            for (uint32_t i = 0u; i < sequence.header.count; i++)
+                sequence.events[i] = sequence_trim_builtin_event(index, sequence.events[i]);
+        }
+    }
 }
 
 static void sequence_seed_builtin(uint32_t index)
@@ -1545,24 +1570,30 @@ static void sequence_seed_builtin(uint32_t index)
     int loaded = size >= (int)sizeof header && size <= (int)PLAT_STORE_MAX
         ? plat_store_head(object, &header, sizeof header) : -1;
     if (loaded == (int)sizeof header && sequence_header_valid(&header, size)) {
-        if (!sequence_builtin_legacy_header_matches(index, &header))
+        int legacy = sequence_builtin_legacy_header_matches(index, &header);
+        if (!legacy && (!sequence_builtin_leading_steps(index) || header.bars != builtin->bars))
             return;
         if (plat_store_load(object, &sequence, sizeof sequence) != size) {
             sequence_builtin_seed_failed = 1u;
             return;
         }
-        for (uint32_t i = 0u; i < builtin->count; i++)
-            if (sequence.events[i] != builtin->events[i]) {
+        if (legacy) {
+            for (uint32_t i = 0u; i < builtin->count; i++)
+                if (sequence.events[i] != builtin->events[i]) {
+                    sequence_reset();
+                    return;
+                }
+        } else if (!sequence_builtin_factory_matches(index, &sequence, 0)) {
                 sequence_reset();
                 return;
-            }
+        }
     } else if (size >= (int)sizeof header && size <= (int)PLAT_STORE_MAX
                && loaded != (int)sizeof header) {
         sequence_builtin_seed_failed = 1u;
         return;
     }
 
-    sequence_prepare_builtin(index, 0);
+    sequence_prepare_builtin(index, 0, 1);
     if (sequence_store_slot(slot) != 0)
         sequence_builtin_seed_failed = 1u;
     sequence_reset();
@@ -2011,7 +2042,8 @@ static void sequence_trigger_audio_step(const sequence_t *source)
 {
     if (sequence_audio_events) {
         while (sequence_audio_event_index < sequence_audio_event_count
-               && sequence_event_step(sequence_audio_events[sequence_audio_event_index]) == sequence_audio_step)
+               && sequence_event_step(sequence_audio_events[sequence_audio_event_index])
+                    - sequence_builtin_leading_steps(0u) == sequence_audio_step)
             sequence_trigger_stealing(sequence_audio_events[sequence_audio_event_index++]);
         return;
     }
@@ -2348,7 +2380,7 @@ static float juno_pwm_phase;
 /* Juno-style: saw + PWM pulse + sub, slow attack, darkening low-pass. */
 static float juno_voice(voice_t *voice, float level, const uint8_t controls[4])
 {
-    float increment, duty, saw, pulse, sub, x, amp, cutoff;
+    float increment, duty, saw, pulse, sub, x, amp, cutoff, blep, edge;
     if (voice->age >= voice->duration) {
         voice->active = 0u;
         return 0.0f;
@@ -2367,8 +2399,12 @@ static float juno_voice(voice_t *voice, float level, const uint8_t controls[4])
     if (voice->phase2 >= 1.0f)
         voice->phase2 -= 1.0f;
     duty = 0.5f + 0.35f * juno_pwm_phase;
-    saw = bandlimited_saw(voice->phase, increment);
-    pulse = bandlimited_pulse(voice->phase, increment, duty);
+    blep = poly_blep(voice->phase, increment);
+    saw = 2.0f * voice->phase - 1.0f - blep;
+    edge = voice->phase - duty;
+    if (edge < 0.0f)
+        edge += 1.0f;
+    pulse = (voice->phase < duty ? 1.0f : -1.0f) + blep - poly_blep(edge, increment);
     sub = bandlimited_pulse(voice->phase2, voice->increment * 0.5f, 0.5f);
     x = saw * 0.35f + pulse * 0.3f + sub * 0.4f;
     voice->envelope *= 0.99996f;
@@ -2384,7 +2420,7 @@ static float juno_voice(voice_t *voice, float level, const uint8_t controls[4])
 /* Pro One-style: bright detuned saws, short filter and amplitude decay, late vibrato. */
 static float pro_voice(voice_t *voice, float level, const uint8_t controls[4])
 {
-    float increment, sub_increment, a, b, sub, x, amp, cutoff, vibrato;
+    float increment, sub_increment, a, b, sub, x, amp, cutoff, vibrato, lfo;
     if (voice->age >= voice->duration) {
         voice->active = 0u;
         return 0.0f;
@@ -2393,9 +2429,11 @@ static float pro_voice(voice_t *voice, float level, const uint8_t controls[4])
     amp = voice->age < 30u ? (float)voice->age * (1.0f / 30.0f) : 1.0f;
     if (voice->duration - voice->age < 600u)
         amp *= (float)(voice->duration - voice->age) * (1.0f / 600.0f);
-    vibrato = voice->age > 4000u ? 1.0f + 0.0035f * fm_sinf((float)voice->age * (5.5f / SAMPLE_RATE) * FM_TWO_PI) : 1.0f;
+    lfo = voice->age > 4000u || controls[3]
+        ? fm_sinf((float)voice->age * (5.5f / SAMPLE_RATE) * FM_TWO_PI) : 0.0f;
+    vibrato = voice->age > 4000u ? 1.0f + 0.0035f * lfo : 1.0f;
     if (controls[3])
-        vibrato += 0.004f * (float)controls[3] * fm_sinf((float)voice->age * (5.5f / SAMPLE_RATE) * FM_TWO_PI);
+        vibrato += 0.004f * (float)controls[3] * lfo;
     increment = voice->increment * vibrato;
     voice->phase += increment;
     if (voice->phase >= 1.0f)
@@ -3795,7 +3833,7 @@ static void sequence_start(uint8_t from_playback)
         if (sequence_selected_slot >= SEQUENCE_USER_SLOTS) {
             uint32_t index = sequence_selected_slot - SEQUENCE_USER_SLOTS;
             const sequence_builtin_t *builtin = &sequence_builtins[index];
-            if (sequence_builtin_factory_matches(index, source)) {
+            if (sequence_builtin_factory_matches(index, source, 1)) {
                 if (index == 0u) {
                     sequence_audio_events = builtin->steal_events;
                     sequence_audio_event_count = builtin->steal_count;
@@ -3805,7 +3843,8 @@ static void sequence_start(uint8_t from_playback)
                 } else {
                     sequence_audio_steal_limit = BUILTIN_STEAL_VOICES;
                     for (uint32_t i = 0u; i < builtin->steal_count; i++)
-                        source->events[i] = sequence_arrange_builtin_event(index, builtin->steal_events[i]);
+                        source->events[i] = sequence_trim_builtin_event(index,
+                            sequence_arrange_builtin_event(index, builtin->steal_events[i]));
                     source->header.count = (uint16_t)builtin->steal_count;
                 }
                 sequence_audio_stealing = 1u;
@@ -5970,10 +6009,11 @@ int app_expect(const char *what, int *got)
         return 1;
     }
 #ifdef PLAT_HOST
-    if (text_is(what, "test_legacy_builtins")) {
+    if (text_is(what, "test_legacy_builtins") || text_is(what, "test_pretrim_builtins")) {
         int saved = 0;
+        int legacy = text_is(what, "test_legacy_builtins");
         for (uint32_t i = 0u; i < SEQUENCE_BUILTIN_COUNT; i++) {
-            sequence_prepare_builtin(i, 1);
+            sequence_prepare_builtin(i, legacy, 0);
             if (sequence_store_slot(SEQUENCE_USER_SLOTS + i) == 0)
                 saved++;
         }

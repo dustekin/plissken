@@ -1,0 +1,15 @@
+# A failed v0.30 factory upgrade preserves its data for retry.
+wait 4000
+expect test_pretrim_builtins 3
+flash_fail 1
+reboot
+tap PLAY
+expect seq_warning 7
+tapkey 0
+expect seq_bars 65
+tap HOME
+flash_fail 0
+reboot
+tap PLAY
+tapkey 0
+expect seq_bars 64

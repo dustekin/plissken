@@ -1,4 +1,4 @@
-# Only rebuilt Escape has the experimental five-voice playback budget.
+# Factory Playback uses a five-voice budget.
 wait 4000
 tap PLAY
 tap PLAY
@@ -17,7 +17,7 @@ expect hits4 0
 turn PRESET 1
 tap PLAY
 expect seq_stealing 1
-expect seq_steal_limit 4
+expect seq_steal_limit 5
 wait 201000
 expect seq_playing 0
-expect seq_steal_peak 4
+expect seq_steal_peak 5

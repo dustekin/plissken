@@ -40,7 +40,9 @@ playable with their original drum lengths.
 Up to 16 user songs can be saved, plus the built-in Escape From Firmware, Halloween, and The FMog tracks. To play
 The FMog, press PLAY, turn PRESET to select it, then press PLAY again. Press a piano key instead of PLAY to open it
 for editing; that first key is not recorded. Untouched original built-ins update automatically; edited built-ins are
-preserved. Deleting a built-in discards its edits and restores the current factory version on the next boot. Piano
+preserved. Build 036 removes the empty opening bar from untouched factory Escape and The FMog, including their
+editor views; Halloween's drum intro is unchanged. Older firmware may not recognize the trimmed built-ins as
+factory songs after downgrade. Deleting a built-in discards its edits and restores the current factory version on the next boot. Piano
 parts use the selected sampled or additive engine. Each track
 supports up to 950 events and 128 bars. Ordinary Playback allows at most five simultaneous sound voices; chord events count
 as multiple voices, and pitched samples are cut off at their selected duration. Drum tails reserve voices conservatively at the fastest
@@ -54,10 +56,11 @@ editing limit still applies.
 
 Internal builds 027 and 028 stream a denser Escape arrangement from flash during untouched factory Playback;
 the editable saved arrangement is unchanged. Build 027 uses four voices and build 028 tests five for Escape only.
-Build 029 also allows five voices in the sequencer; Halloween and The FMog's factory overlays still use four.
+Build 029 also allows five voices in the sequencer; build 034 tests five in Halloween and The FMog's factory overlays.
 Build 030 changes Escape's factory Playback bass from Electric to NoMore, following the selected bass Sustain/Note
 mode. Build 031 uses 808 at a reduced level in that overlay; build 032 uses Acoustic bass. Build 033 removes the
-MIDI bass part from the five-voice Escape Playback overlay. The editable saved arrangement is unchanged.
+MIDI bass part from the five-voice Escape Playback overlay. Build 036 compares an overlay with the lower notes of
+matched piano octaves removed; its piano thinning does not alter the editable saved arrangement.
 Individual instrument voice pools can be smaller than five. Songs using five overlapping voices cannot be loaded
 by older four-voice firmware; avoid deleting these songs if you downgrade.
 Escape's Playback screen shows the maximum sampled, smoothed CPU percentage and detected late renders (XRUN)

@@ -8,7 +8,21 @@ from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(ROOT / "tools"))
+import generate_escape_playback
 from tools import song_to_sequence
+
+
+class EscapeComparisonTests(unittest.TestCase):
+    def test_only_matching_piano_octaves_are_thinned(self):
+        events = [
+            {"part": 6, "step": 3, "note": 40, "duration": 1},
+            {"part": 6, "step": 3, "note": 52, "duration": 1},
+            {"part": 6, "step": 4, "note": 40, "duration": 1},
+            {"part": 6, "step": 4, "note": 52, "duration": 2},
+            {"part": 0, "step": 3, "note": 40, "duration": 1},
+        ]
+        self.assertEqual(generate_escape_playback.thin_piano_octaves(events), events[1:])
 
 
 class SongToSequenceDiagnosticsTests(unittest.TestCase):

@@ -12,12 +12,10 @@ tap PLAY
 expect seq_stealing 1
 wait 201000
 expect seq_playing 0
-expect seq_steals >0
-expect seq_steal_peak 4
+expect seq_steal_peak 5
 turn PRESET 1
 tap PLAY
 expect seq_stealing 1
 wait 89000
 expect seq_playing 0
-expect seq_steals >0
-expect seq_steal_peak 4
+expect seq_steal_peak 5

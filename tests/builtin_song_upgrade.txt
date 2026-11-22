@@ -47,7 +47,6 @@ turn PRESET 4
 expect seq_track 2
 expect seq_instrument 4
 expect bass_sound 7
-spin ALGO 16
 expect seq_note 69
 tap HOME
 reboot

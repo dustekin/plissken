@@ -3,6 +3,60 @@
 Each test build is saved as `plissken###.fwsc` with an increasing number. Newest first.
 Add an entry here whenever a new build is saved.
 
+## v0.31 release preparation
+- Local normal FM-1 package `build/plissken-0.31.fwsc` retains hardware-tested build 036's preferred Escape
+  arrangement and trimmed openings, but removes the temporary CHORD CPU/XRUN display. The user reports that the
+  versioned package passed all requested hardware checks, with no issues for now. Earlier measured CHORD XRUNs
+  remain an unresolved timing risk.
+- All 45 top-level host scenarios, ten audio checks, converter tests and the normal FM-1 target build passed.
+  A source snapshot excluding ignored local files produced the same package SHA-256 as the local build.
+- Device image 466,392 B; RAM .data+.bss 62,324 / 98,304 B; pool 216,676 / 344,064 B; package 614,938 B;
+  identity `FM-1_1981003100`; local build ID `E0CBC664`, clean-source build ID `909FB528`; package SHA-256
+  `B5CC4BD43A1F26E97C3F9CC2125DD8D0A505D1D906871038E583C0025528241E`.
+
+## 036
+- Local `0.31-test036` removes one empty opening bar from untouched factory Escape and The FMog in Playback
+  and the editor; their v0.30 factory slots are migrated on boot. Edited built-ins and user songs are preserved.
+  Halloween starts with a hi-hat and retains its drum intro. Older firmware may treat trimmed built-ins as edited.
+- Escape Playback is an optional listening comparison: 361 lower notes in matched piano octave pairs are omitted,
+  retaining the other 2,027 bass-free MIDI-derived events and their order. The editable arrangement is not thinned.
+  Default host render: 415 steals, 82 dropped onsets, pre-tanh peak 1.242, 62 frames at or above 1.0, no clipped
+  output samples (build 035: 497, 146, 1.242, 189). First audible samples occur about 0.009 s after start for
+  Escape and 0.0003 s for The FMog, versus about 3.009 s and 1.952 s in 034. These are host observations.
+- All 45 top-level host scenarios, ten audio checks, converter tests and the normal FM-1 target build passed;
+  migration, edited-song preservation, write-failure retry and legacy upgrades were tested. On hardware, the user
+  preferred this Escape arrangement, confirmed the openings and reported no other issues.
+- Device image 466,640 B; RAM .data+.bss 62,324 / 98,304 B; pool 216,676 / 344,064 B; package 614,938 B;
+  identity `FM-1_1981003100`; build ID `27759D58`; SHA-256
+  `C4A817FE18722C36E552341D6778AC178A66B0C9B99D785D3E6062EC6D4811BA`.
+
+## 035
+- Local `0.31-test035` retains build 034's five-voice Halloween/The FMog Playback and CHORD diagnostics. It avoids
+  redundant JUNO oscillator correction, zero-resonance ladder feedback, and duplicate PRO vibrato evaluation.
+  The user reports no audible distortion with two-key JUNO or PRO and considers the issue corrected for now.
+  Reported readings were JUNO 125% CPU / 115 XRUNs and PRO 90% CPU / 90 XRUNs; timing load remains a concern.
+- Three two-key CHORD host renders (JUNO, PRO and PRO with vibrato) match 034 sample-for-sample. All 43 top-level
+  host scenarios, ten audio checks and MIDI converter tests passed, as did the normal FM-1 target build.
+  Hardware-tested as described above.
+- Device image 467,916 B; RAM .data+.bss 62,324 / 98,304 B; pool 216,676 / 344,064 B; package 614,938 B;
+  identity `FM-1_1981003100`; build ID `0CA77458`; SHA-256
+  `DB8AA065A3AFD81D089E9926923997191CCF7C46031302D5EC7A993FB28196C9`.
+
+## 034
+- Local `0.31-test034` tests five-voice factory Playback for Halloween and The FMog. In default host renders,
+  Halloween's steals fall from 10 to zero and The FMog's from six to zero, with zero dropped onsets in both.
+  Their events and saved arrangements are unchanged. Escape remains unchanged.
+- Temporary CHORD diagnostic displays peak sampled, smoothed CPU and detected XRUNs since selecting CHORD.
+  Select another instrument and return to CHORD to reset them. The diagnostic redraws every 250 ms and cannot
+  detect every timing fault; host output does not establish the cause of the reported hardware distortion.
+- All 43 top-level host scenarios, ten audio checks, MIDI converter unit tests and the normal FM-1 target build
+  passed. The three full default host renders have no clipped samples. Hardware: the user reports both songs
+  sound great; two-key CHORD JUNO reported 105% CPU and 354 XRUNs. A PRO observation was 10% CPU and 315 XRUNs;
+  its key count/reset state was not clear.
+- Device image 468,040 B; RAM .data+.bss 62,324 / 98,304 B; pool 216,676 / 344,064 B; package 614,938 B;
+  identity `FM-1_1981003100`; build ID `537D23A7`; SHA-256
+  `3B317B422E3C9A7E278ED3C8E37D536A716A770D2A8B5720128C7BBD058D8370`.
+
 ## v0.30 release preparation
 - Local normal FM-1 release-format package `build/plissken-0.30.fwsc`, based on hardware-tested build 033.
   The user reports the v0.30 hardware test passed; the release version display was not specifically confirmed.
@@ -12,7 +66,8 @@ Add an entry here whenever a new build is saved.
   build ID `423E273E`; SHA-256
   `55659DADF3E28977936DFDAAA19921A7E82533DDAA7BBEB0CDFEF79FA78F0D82`.
 - The package was built locally before the work was committed. Five-voice songs cannot be loaded by older
-  four-voice firmware. The reported two-key CHORD PIANO distortion remains uninvestigated.
+  four-voice firmware. The earlier CHORD PIANO report was corrected: the user reports two-key CHORD JUNO and PRO
+  distortion in SPLIT mode; CHORD PIANO is fine. The cause remains uninvestigated.
 
 ## 033
 - Local `0.20-test033` rebuilds untouched factory Escape's Playback without the MIDI bass part, retaining five-voice
