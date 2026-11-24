@@ -9,9 +9,8 @@ directory is the build system and platform submodule. The keyboard offers Juno, 
 drums, CS-50/CS-80 and CHORD sounds, along with a live phrase recorder and a visual five-track sequencer with
 saved-song playback.
 
-Current version allows you play a variety of instruments, write your own songs and edit versions of The Fog, Eacape from New York and Halloween themes. Future versions will include midi and export of songs, hopefully. 
-**v0.15** adds The Fog as a preloaded track and centers the startup animation vertically. The older published,
-signed v0.11 release does not include the visual sequencer and saved-song playback features described below.
+Current version allows you play a variety of instruments, write your own songs and edit versions of The Fog, Eacape from New York and Halloween themes. 
+Future versions will include midi and export of songs, hopefully. 
 
 It's a crappy little firmware, not meant to be serious, just wanted to prove I could do it with vibecoding.
 
