@@ -4,7 +4,7 @@
 
 WARNING - One user has reported bricking after installing but thry didn't use F-Install. I highly recommend you don't use browser installers for firmware, they seem to cause problems! I have hardware tested Plissken multiple times, including here https://youtube.com/shorts/GOW90MxLPbM?feature=share. Please always use a bootloader!
 
-a guide to FM-Installer bootloader https://youtu.be/6htjeFKx5Wo?is=Yi9R9PAuOM8itAnM
+Here is a guide to FM-Flasher bootloader https://youtu.be/6htjeFKx5Wo?is=Yi9R9PAuOM8itAnM
 
 Plissken is a live-performance instrument and sequencer prototype for the M-VAVE FM-1. It is built on `fm1-base`; the `base/`
 directory is the build system and platform submodule. The keyboard offers Juno, piano, Pro-1, guitar, bass, LM-1
