@@ -26,33 +26,56 @@ simple guitar power chords, electric bass, and 13 LM-1 drum samples.
 | Piano keys | Play the selected sound; LM-1 maps keys cyclically to its 13 samples |
 
 In the sequencer editor, PRESET chooses one of four pitched-sound tracks or the fifth LM-1 track, ALGO moves the step cursor, SELECT chooses the track's
-sound, SEL cycles the time signature, and moving MASTER changes only the selected pitched note's length. Piano keys play and
-insert or replace the note at the cursor, including during playback. REC removes a selected note or adds one at an
-empty cell. OCT− / OCT+ change the octave of pitched sounds; note, octave and K1–K4 effect changes briefly appear
+sound, SEL cycles the time signature, and moving MASTER changes only the selected pitched note's length. Hold EDIT
+and turn ALGO to jump to the start of another bar; jumping beyond the song's end extends it up to 128 bars.
+Piano keys play and
+insert or replace the note at the cursor, including during playback. REC removes a selected note when playback is
+stopped. OCT− / OCT+ change the octave of pitched sounds; note, octave and K1–K4 effect changes briefly appear
 as text. PLAY starts or stops the working sequence. GLO opens the larger-text help, where any knob changes pages;
-GLO, SEQ or HOME returns to the editor. SEQ or HOME exits the editor. SAVE prompts for a name and stores the song.
+GLO, SEQ or HOME returns to the editor. SEQ or HOME exits the editor. SAVE prompts for a name and stores the song;
+later saves update that song. EDIT + SAVE prompts for a name and saves a copy in a free user slot, then edits the
+copy instead. A built-in copy uses its editable arrangement, not its separate factory Playback overlay.
+If all user slots are full, delete a song in Playback first.
 During playback the display and cursor follow the music; moving ALGO pauses follow for editing. Stop and restart
 playback to resume following. On the LM-1 track, SELECT chooses a sample and piano keys choose and insert their
-individual samples. Different drum samples can share a step; REC adds or removes only the selected sample.
+individual samples. Different drum samples can share a step; REC removes only the selected sample.
+With playback stopped, EDIT + REC copies the selected track's current bar, and EDIT + SEL pastes it at the
+selected destination bar. Pitched bars can be pasted to pitched tracks and drum bars to the drum track, provided
+the time signature matches. If the destination contains events, SEL confirms replacement and HOME or SEQ cancels.
+Only events starting in each bar are copied or replaced; notes spanning into it are unchanged. An empty copied bar
+can clear an occupied destination after confirmation. The clipboard remains available across song loads until
+reboot and is not saved with the song.
 New drum hits play the full sample, and their displayed length follows the sample duration and song tempo; MASTER
 does not change drum lengths. LM-1 is not offered in the other tracks' sound choices. Existing saved songs remain
 playable with their original drum lengths.
 Up to 16 user songs can be saved, plus the built-in Escape From Firmware, Halloween, and The FMog tracks. To play
-The FMog, press PLAY, turn PRESET to select it, then press PLAY again. Press a piano key instead of PLAY to open it
-for editing; that first key is not recorded. Untouched original built-ins update automatically; edited built-ins are
+The FMog, press PLAY, turn PRESET to select it, then press PLAY again. Press EDIT or SEQ to open the selected song
+for editing. Pressing a piano key also opens it; that first key is only navigation and is not played or recorded.
+To delete a selected song, press REC, then REC again to confirm; HOME or SEQ cancels. Playback stops when the
+confirmation opens.
+Untouched original built-ins update automatically; edited built-ins are
 preserved. Build 036 removes the empty opening bar from untouched factory Escape and The FMog, including their
 editor views; Halloween's drum intro is unchanged. Older firmware may not recognize the trimmed built-ins as
 factory songs after downgrade. Deleting a built-in discards its edits and restores the current factory version on the next boot. Piano
 parts use the selected sampled or additive engine. Each track
-supports up to 950 events and 128 bars. Ordinary Playback allows at most five simultaneous sound voices; chord events count
-as multiple voices, and pitched samples are cut off at their selected duration. Drum tails reserve voices conservatively at the fastest
-tempo so later tempo changes cannot exceed that limit.
+supports up to 950 events and 128 bars. Dense arrangements can be entered and saved. Editor preview and saved-song
+Playback are capped at five simultaneous sound voices; chord events count as three or four voices, pitched samples
+are cut off at their selected duration, and drum tails reserve voices conservatively at the fastest tempo.
+Build 038 trimmed additional full empty opening bars from stored Escape songs when loading them. Build 044 removes
+that load-time trim so edited Escape songs retain their intended opening silence; it cannot restore silence that
+was already removed and saved.
+Build 043 removes 30 steps from the previously trimmed factory Escape opening, including its initial Juno note,
+so both the editor arrangement and factory Playback begin at the first LM-1 hit. Untouched older factory versions
+upgrade automatically; edited Escape saves are not migrated. The shortened song is padded to whole bars, and older
+firmware may not recognize it as a factory song after downgrade.
+Build 044 rejects note lengths beyond the 128-bar limit and counts live editor keys in the five-voice playback
+budget. Live notes may be skipped or cut according to the same priorities as sequenced notes.
 
-For untouched factory songs only, Playback uses experimental arrangements with prioritized voice stealing:
-an older voice may be cut for a new note when the voice budget is full. Drums have highest priority,
-then piano, Pro-1, guitar and bass, then Juno; some new notes can still be skipped. Saved songs and their editor views
-are unchanged. Edited built-ins and user-created songs do not use stealing, and the sequencer's five-voice
-editing limit still applies.
+When a new event would exceed the five-voice budget, Playback may cut older voices to make room. Drums have the
+highest priority; piano, Pro-1, guitar, bass and CS sounds share the middle priority; Juno has the lowest.
+Lower-priority incoming events can still be skipped, and chord events may require cutting multiple voices. This
+applies to user songs, edited built-ins and editor preview as well as untouched factory songs. Factory Playback
+overlays do not change their saved arrangements.
 
 Internal builds 027 and 028 stream a denser Escape arrangement from flash during untouched factory Playback;
 the editable saved arrangement is unchanged. Build 027 uses four voices and build 028 tests five for Escape only.
@@ -61,8 +84,8 @@ Build 030 changes Escape's factory Playback bass from Electric to NoMore, follow
 mode. Build 031 uses 808 at a reduced level in that overlay; build 032 uses Acoustic bass. Build 033 removes the
 MIDI bass part from the five-voice Escape Playback overlay. Build 036 compares an overlay with the lower notes of
 matched piano octaves removed; its piano thinning does not alter the editable saved arrangement.
-Individual instrument voice pools can be smaller than five. Songs using five overlapping voices cannot be loaded
-by older four-voice firmware; avoid deleting these songs if you downgrade.
+Individual instrument voice pools can be smaller than five. Older four-voice firmware may reject dense songs; back
+up saved songs before downgrading.
 Escape's Playback screen shows the maximum sampled, smoothed CPU percentage and detected late renders (XRUN)
 since playback started. A zero XRUN count does not guarantee timing safety; listen and test on hardware.
 

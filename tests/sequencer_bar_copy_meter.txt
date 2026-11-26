@@ -1,0 +1,59 @@
+# In 5/4, notes keep their offset and length; tails can extend into later bars.
+wait 2000
+tap SEQ
+tap SEL
+tap SEL
+tap SEL
+tap SEL
+expect seq_meter 4
+master 2500
+spin ALGO 19
+tapkey 0
+expect seq_event_duration 4
+press EDIT
+tap REC
+spin ALGO 1
+tap SEL
+release EDIT
+expect seq_events 2
+expect seq_bars 3
+spin ALGO 19
+expect seq_note 53
+expect seq_event_duration 4
+tap SAVE
+spin PRESET 1
+tap SAVE
+press EDIT
+tap SAVE
+release EDIT
+spin PRESET 2
+tap SAVE
+expect seq_saved 5
+tap HOME
+tap PLAY
+tap EDIT
+# The clipboard survives loading another song; a tail spanning the destination remains untouched.
+press EDIT
+spin ALGO 2
+tap SEL
+release EDIT
+expect seq_screen 1
+expect seq_events 3
+expect seq_bars 4
+spin ALGO 19
+expect seq_note 53
+expect seq_event_duration 4
+tap SAVE
+tap SAVE
+reboot
+tap PLAY
+tap EDIT
+expect seq_bars 4
+spin ALGO 19
+expect seq_note 53
+spin ALGO 20
+expect seq_note 53
+spin ALGO 20
+expect seq_note 53
+expect seq_event_duration 4
+tap HOME

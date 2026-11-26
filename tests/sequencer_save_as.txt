@@ -1,0 +1,78 @@
+# A new song's later saves update it; cancelled and failed copies leave it active.
+wait 2000
+tap SEQ
+tapkey 0
+tap SAVE
+spin PRESET 1
+tap SAVE
+expect seq_saved 4
+spin ALGO 1
+tapkey 1
+tap SAVE
+tap SAVE
+expect seq_saved 4
+press EDIT
+tap SAVE
+release EDIT
+spin PRESET 2
+tap HOME
+tap SAVE
+tap SAVE
+expect seq_saved 4
+press EDIT
+tap SAVE
+release EDIT
+spin PRESET 2
+flash_fail 1
+tap SAVE
+expect seq_warning 4
+expect seq_saved 4
+flash_fail 0
+tap SAVE
+expect seq_saved 5
+# The successful copy is active; a normal save updates it, not the original.
+tapkey 2
+tap SAVE
+tap SAVE
+expect seq_saved 5
+reboot
+tap PLAY
+tap EDIT
+spin ALGO 1
+expect seq_note 54
+tap HOME
+tap PLAY
+spin PRESET 1
+tap EDIT
+spin ALGO 1
+expect seq_note 55
+tap HOME
+# Saving a built-in as a user copy must not change its source.
+tap PLAY
+spin PRESET 2
+tap EDIT
+expect seq_tempo 80
+press EDIT
+spin K1 10
+tap SAVE
+release EDIT
+spin PRESET 3
+tap SAVE
+expect seq_saved 6
+press EDIT
+spin K1 5
+release EDIT
+tap SAVE
+tap SAVE
+expect seq_saved 6
+reboot
+tap PLAY
+spin PRESET 2
+tap EDIT
+expect seq_tempo 95
+tap HOME
+tap PLAY
+spin PRESET 3
+tap EDIT
+expect seq_tempo 80
+tap HOME

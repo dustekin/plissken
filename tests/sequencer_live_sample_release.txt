@@ -1,0 +1,44 @@
+# Releasing an older key must not shorten a newer sample in its reused voice.
+wait 2000
+tap SEQ
+spin SELECT 4
+tap PLAY
+key 0 down
+wait 20
+key 1 down
+wait 20
+key 2 down
+wait 20
+key 3 down
+wait 20
+expect seq_active_guitar_samples 3
+key 0 up
+wait 80
+expect seq_active_guitar_samples 3
+key 3 up
+wait 80
+expect seq_active_guitar_samples 2
+key 1 up
+key 2 up
+tap PLAY
+reboot
+tap SEQ
+spin SELECT 8
+expect seq_sound 8
+expect instrument 4
+tap PLAY
+expect seq_playing 1
+key 0 down
+wait 20
+key 1 down
+wait 20
+key 2 down
+wait 20
+expect seq_active_bass_samples 2
+key 0 up
+wait 80
+expect seq_active_bass_samples 2
+key 2 up
+wait 80
+expect seq_active_bass_samples 1
+tap PLAY

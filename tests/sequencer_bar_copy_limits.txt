@@ -1,0 +1,43 @@
+# A long note may not be pasted beyond the 128-bar limit.
+wait 2000
+tap SEQ
+master 4096
+tapkey 0
+expect seq_events 1
+press EDIT
+tap REC
+spin ALGO 127
+tap SEL
+release EDIT
+expect seq_warning 2
+expect seq_events 1
+tap HOME
+reboot
+# Fill the remaining event capacity; a further paste must not partially modify the song.
+tap SEQ
+spin PRESET 4
+tapkey 0
+press EDIT
+tap REC
+release EDIT
+tap HOME
+tap PLAY
+tap EDIT
+expect seq_events 949
+spin PRESET 4
+press EDIT
+spin ALGO 70
+tap SEL
+expect seq_events 950
+spin ALGO 1
+tap SEL
+expect seq_events 951
+spin ALGO 1
+tap SEL
+expect seq_events 952
+spin ALGO 1
+tap SEL
+release EDIT
+expect seq_warning 2
+expect seq_events 952
+tap HOME

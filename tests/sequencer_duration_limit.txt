@@ -1,0 +1,48 @@
+# A note at the last step cannot be extended past the song limit or corrupt its saved slot.
+wait 2000
+tap SEQ
+master 0
+press EDIT
+spin ALGO 127
+release EDIT
+spin ALGO 15
+tapkey 0
+expect seq_cursor 2047
+expect seq_bars 128
+tap SAVE
+spin PRESET 1
+tap SAVE
+master 4095
+expect seq_warning 2
+expect seq_event_duration 0
+tap SAVE
+tap SAVE
+reboot
+tap PLAY
+tap EDIT
+expect seq_screen 1
+spin ALGO 2047
+expect seq_note 53
+expect seq_event_duration 0
+# A long note ending exactly at the limit is still allowed and survives saving.
+tap HOME
+reboot
+tap SEQ
+master 4095
+press EDIT
+spin ALGO 124
+release EDIT
+tapkey 1
+expect seq_cursor 1984
+expect seq_bars 128
+expect seq_event_duration 6
+tap SAVE
+spin PRESET 1
+tap SAVE
+reboot
+tap PLAY
+spin PRESET 1
+tap EDIT
+spin ALGO 1984
+expect seq_note 54
+expect seq_event_duration 6

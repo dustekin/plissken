@@ -26,11 +26,11 @@ expect seq_steals 0
 expect seq_steal_drops 0
 expect seq_steal_peak 5
 expect store_writes 3
-# Editing and playing the saved factory arrangement do not use stealing.
+# Editing and playing a saved factory arrangement uses the same five-voice cap.
 tapkey 0
 expect seq_events 904
 tap PLAY
-expect seq_stealing 0
+expect seq_stealing 1
 wait 1000
 tap PLAY
 tap HOME
@@ -51,7 +51,7 @@ tap HOME
 tap PLAY
 turn PRESET 1
 tap PLAY
-expect seq_stealing 0
+expect seq_stealing 1
 wait 1000
 expect seq_steals 0
 tap PLAY
@@ -76,7 +76,7 @@ reboot
 tap PLAY
 turn PRESET 2
 tap PLAY
-expect seq_stealing 0
+expect seq_stealing 1
 expect seq_playback_tempo 124
 tap PLAY
 tap HOME

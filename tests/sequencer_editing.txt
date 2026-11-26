@@ -76,6 +76,10 @@ spin PRESET 1
 expect seq_help_page 3
 shot seq_help_4.png
 spin ALGO 1
+expect seq_help_page 4
+wait 100
+shot seq_help_5.png
+spin ALGO 1
 expect seq_help_page 0
 master 1280
 expect seq_help_page 1

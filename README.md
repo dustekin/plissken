@@ -33,8 +33,9 @@ sequencer. The saved-song screen plays and edits named sequences.
 
 The original seven-part backing arrangement is disabled because its mix distorted. **PLAY** opens the saved-song
 screen; it does not start that disabled arrangement. The preloaded **Escape From Firmware**, **Halloween**, and
-**The FMog** sequences are independent, editable tracks. Saved-song playback is normally limited to five simultaneous
-sound voices, so dense arrangements may omit events when that budget is reached.
+**The FMog** sequences are independent, editable tracks. Dense sequencer arrangements can be created and saved;
+editor preview and saved-song playback cap audio at five simultaneous voices using prioritized voice stealing.
+Drums have the highest priority and Juno the lowest; a lower-priority incoming note can be skipped.
 
 Build 026 experiments with **voice stealing** during Playback of the three untouched factory songs: it plays
 additional or substituted notes and, when all four voices are busy, can cut an older voice to play a new one.
@@ -57,11 +58,12 @@ the other parts; the editable saved arrangement and other songs remain unchanged
 Build 036 is a listening comparison that removes 361 lower notes from matched piano octaves in that overlay;
 the other 2,027 events retain their order. The user preferred it on hardware.
 
-The experiment is Playback-only: it does not change saved songs or their editor display. Edited built-ins play their
-saved arrangements without the experiment. Voice stealing is **not implemented for user-created sequencer songs**. Build 029 raises the sequencer editing and
-saved-song validation limit to five voices; it rejects a sixth overlapping voice. Individual instrument pools can
-have lower limits, so five notes of the same sound are not guaranteed. Five-voice songs cannot be loaded by older
-four-voice builds; do not delete them if you downgrade. The user reports the build 029 sequencer hardware test passed.
+The factory-song Playback overlays do not change saved arrangements or their editor display. User-created songs and
+edited built-ins play their saved arrangements with the same five-voice stealing budget. Chord events consume three
+or four voices; when an event needs several voices, multiple older voices may be cut to make room. Individual
+instrument pools can be smaller than five, so five notes of the same sound are not guaranteed. Older four-voice
+firmware may reject denser songs; back them up before downgrading. The user reports the build 029 sequencer hardware
+test passed.
 
 The revised arrangements use piano for additional melodic parts, and electric bass in Halloween and The FMog.
 Piano parts follow the currently selected sampled or additive piano engine. On upgrade, untouched original built-in
@@ -72,6 +74,15 @@ Build 036 removes the empty opening bar from untouched factory Escape and The FM
 Untouched v0.30 factory slots upgrade automatically; edited slots and user songs are preserved. Halloween's drum
 intro is unchanged. Older firmware may no longer recognize the trimmed built-ins as factory songs after downgrade;
 deleting a built-in to restore the older factory version discards edits.
+Build 038 trimmed additional full empty opening bars from stored Escape songs when loading them. Build 044 removes
+that load-time trim so edited Escape songs retain their intended opening silence; it cannot restore silence that
+was already removed and saved.
+Build 043 removes the first 30 sixteenth-note steps from the previously trimmed, untouched factory Escape, including
+its opening Juno note, so the first LM-1 hit starts immediately in both the editor arrangement and factory Playback.
+Untouched older factory versions upgrade automatically; edited Escape saves are not migrated. The shorter song is
+padded to whole bars. Older firmware may not recognize the new factory arrangement after downgrade.
+Build 044 also rejects note lengths that would exceed the 128-bar song limit and includes live editor keys in the
+five-voice playback budget. Live notes may be skipped or cut according to the same priorities as sequenced notes.
 
 Timing concern: the user reported distortion with two CHORD JUNO or CHORD PRO keys in SPLIT mode. With the render
 optimization in build 035, the user reports no audible distortion, but still observed high CPU and XRUNs.
@@ -102,6 +113,7 @@ documented changes.
 
 | Version | Documented changes |
 | --- | --- |
+| **v0.32** | Dense sequencer editing with five-voice stealing, bar navigation and copy/paste, improved save and Playback controls, a shorter factory Escape opening, and saved-song safety fixes. Based on hardware-tested build 044; the versioned package has not been separately hardware-tested. |
 | **v0.31** | Lighter Escape Playback, five-voice Halloween and The FMog Playback, trimmed empty factory-song openings, and optimized JUNO/PRO rendering. The user reports the versioned package passed hardware testing. |
 | **v0.30** | Five-voice sequencer and bass-free Escape Playback with voice stealing; prioritized stealing for untouched factory songs; revised piano and bass arrangements; CHORD SPLIT and version help improvements. The user reports the local v0.30 package passed hardware testing. |
 | **v0.20-rc1** | Release candidate: sampled piano is the default; guitar and bass gain the new sample timbres and sustain/one-shot modes; 808 is boosted; old guitar riffs and bass plunks are removed; the startup phrase's repeated low pulses are revoiced as E4. Local candidate package: build 023. |
@@ -113,17 +125,24 @@ documented changes.
 | **v0.1** | Early tag. The tag history records the root MPL-2.0 license; no fuller release notes were found. |
 
 The **v0.20-rc1** tag builds and publishes a GitHub prerelease with its firmware package and build attestation. The
-final **v0.20** release tag has not been created. The **v0.30** release workflow builds and attests a package
-when its tag is pushed.
+final **v0.20** release tag has not been created. Version tags trigger the workflow to build and attest a package.
 
 ## Numbered internal builds
 
-There are 35 numbered packages in the current sequence, builds 002 through 036. Build 001 is not present in the
+There are 43 numbered packages in the current sequence, builds 002 through 044. Build 001 is not present in the
 builds folder. Hardware status is marked as **tested**, **not tested**, or **not recorded**; missing notes are not
 treated as evidence of a hardware test.
 
 | Build | Summary | FM-1 hardware status |
 | --- | --- | --- |
+| 044 | Preserves Escape opening silence, prevents invalid note lengths, and budgets live preview voices. | Tested; user reports it works fine |
+| 043 | Starts untouched factory Escape at the first drum hit while preserving edited saves. | Tested; hardware test passed |
+| 042 | Adds single-track bar copy and paste; fixes reverse track selection. | Tested; result not specified |
+| 041 | SAVE updates the active song; EDIT + SAVE creates a user-slot copy. | Tested; hardware test passed |
+| 040 | Adds EDIT + ALGO bar navigation in the sequencer. | Tested; hardware test passed |
+| 039 | Adds Playback song-delete confirmation and corrects sequencer REC help. | Tested; user reports it was fine |
+| 038 | Trims empty opening bars from Escape; EDIT and SEQ open the selected song in the sequencer. | Tested; user reports hardware testing was good |
+| 037 | Allows dense sequencer arrangements; prioritized stealing keeps playback within five voices. | Not tested |
 | 036 | Removes the empty opening bars in Escape and The FMog; compares a lighter Escape piano arrangement. | Openings passed; user preferred the alternative |
 | 035 | Tests reduced JUNO and PRO render work, retaining the CHORD diagnostics. | No audible JUNO/PRO distortion; CPU/XRUN readings remain high |
 | 034 | Tests five-voice Halloween and The FMog Playback and CHORD CPU/XRUN diagnostics. | Songs sound great; JUNO test reported XRUNs |
@@ -186,7 +205,8 @@ packages in `builds/` are local test artifacts and are not tracked by Git.
 
 The editor has four pitched tracks and one LM-1 drum track.
 
-- Turn **PRESET** to choose a track; turn **ALGO** to move the step cursor.
+- Turn **PRESET** to choose a track; turn **ALGO** to move the step cursor. Hold **EDIT** while turning **ALGO**
+  to jump to the beginning of another bar. Moving beyond the end extends the song, up to 128 bars.
 - Turn **SELECT** to choose the track's instrument or drum sample. The LM-1 sound is only available on the drum
   track.
 - Press a piano key to play and insert or replace a note at the selected step. On the drum track, keys select and
@@ -196,20 +216,29 @@ The editor has four pitched tracks and one LM-1 drum track.
 - Press **SEL** to change the time signature. Turn **MASTER** to set the selected pitched note's length; drum-hit
   length follows the sample and tempo.
 - Hold **EDIT** and turn **K1** to change the sequence tempo. This tempo is separate from the main-screen tempo.
+- With playback stopped, hold **EDIT** and press **REC** to copy the selected track's current bar. Move to a
+  destination bar and press **EDIT + SEL** to paste; if it contains notes, press **SEL** to replace them or
+  **HOME** or **SEQ** to cancel. Pitched bars paste to pitched tracks and drums to the drum track, with the same
+  time signature. Copy and replacement cover events that start in the bar; notes spanning into it are unchanged.
+  Copying an empty bar can clear a destination after confirmation. The clipboard remains available until reboot
+  and is not saved with the song.
 - Press **PLAY** to start or stop the working sequence. During playback the display follows the play position; moving
   ALGO pauses that follow so you can edit another step.
-- Press **SAVE** to name and save the sequence. When editing a saved song, SAVE updates that song. There are up to
-  16 user songs plus the built-in Escape From Firmware, Halloween, and The FMog tracks.
+- Press **SAVE** to name and save the sequence; subsequent saves update that song. Hold **EDIT** and press **SAVE**
+  to name a copy in a free user slot and continue editing the copy. Built-in copies use the editable arrangement,
+  not the separate factory Playback overlay. If all user slots are full, free one in Playback before saving a copy.
+  There are 16 user slots plus three built-in songs.
 - Press **SEQ** or **HOME** to return to the main screen. **GLO** opens sequencer help.
 
 ### PLAY screen
 
 1. Press **PLAY** on the main screen to open the saved-song selector.
 2. Turn **PRESET** to choose a song, then press **PLAY** to start or stop playback.
-3. Press **REC** to delete the selected song. Deleting a built-in track restores it on the next boot.
-4. Press any piano key to load the selected song into the SEQ editor. That first key only opens the editor and is not
-   recorded. Use **SAVE** in the editor to write changes back to the selected song.
-5. Press **HOME** or **SEQ** to leave Playback. **GLO** opens Playback help.
+3. Press **REC** to request deletion, then **REC** again to confirm, or **HOME** or **SEQ** to cancel.
+   Playback stops when the prompt opens. Deleting a built-in track restores it on the next boot.
+4. Press **EDIT** or **SEQ** to load the selected song into the SEQ editor. Pressing a piano key also opens the editor;
+   that first key only navigates and does not play or insert its note. Use **SAVE** in the editor to write changes back.
+5. Press **HOME** to leave Playback. **GLO** opens Playback help.
 
 ## Build and test
 
@@ -220,8 +249,8 @@ by `fm1-base`. Run commands from the repository root.
 # Normal FM-1 development package
 python3 base/tools/build.py .
 
-# Versioned v0.30 release package
-python3 base/tools/build.py . --release 0.30
+# Versioned v0.32 release package
+python3 base/tools/build.py . --release 0.32
 
 # Host simulator and scenario tests
 python3 base/tools/build.py . --host
@@ -251,7 +280,6 @@ terms; see [CREDITS.md](CREDITS.md) and [base/LICENSING.md](base/LICENSING.md).
 ## Future development
 
 - Continue investigating CHORD JUNO/PRO timing load.
-- Plan sequencer and saved-song quality-of-life improvements for v0.32.
 - Target full song sharing for v0.40 or v0.50, depending on implementation complexity.
 - Continue improving the preloaded songs, including renderer choices, voice allocation, mix balance, and FM-1
   listening tests.
@@ -260,7 +288,6 @@ terms; see [CREDITS.md](CREDITS.md) and [base/LICENSING.md](base/LICENSING.md).
   verify the result on an FM-1.
 - Improve the live sound balance and quality of Juno, guitar, bass, and CHORD while staying within the FM-1's audio
   and voice limits.
-- Add quality-of-life improvements to the sequencer and saved-song workflow.
 - Add MIDI step-sequencer output for built-in and user-created songs, with tracks assignable to external instruments.
 - Explore importing and exporting user-created songs to phones or computers, plus a buildable Windows/Linux player
   using the firmware's instruments. Investigate desktop conversion to MIDI or an FL Studio-readable DAW project.

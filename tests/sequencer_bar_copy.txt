@@ -1,0 +1,99 @@
+# Copying and pasting pitched bars preserves notes and requires replacement confirmation.
+wait 4000
+tap SEQ
+press EDIT
+tap SEL
+release EDIT
+expect seq_warning 9
+master 0
+spin ALGO 2
+tapkey 0
+spin ALGO 5
+tapkey 1
+expect seq_events 2
+press EDIT
+tap REC
+release EDIT
+expect seq_events 2
+spin ALGO 9
+tapkey 2
+spin PRESET 1
+expect seq_track 1
+tapkey 4
+spin PRESET -1
+expect seq_track 0
+expect seq_cursor 16
+expect seq_events 4
+press EDIT
+tap SEL
+release EDIT
+expect seq_screen 0
+expect seq_events 4
+wait 100
+shot seq_paste_confirm.png
+tap HOME
+expect seq_screen 1
+expect seq_note 55
+press EDIT
+tap SEL
+release EDIT
+tap SEL
+expect seq_events 5
+expect seq_note -1
+spin ALGO 2
+expect seq_note 53
+expect seq_event_duration 0
+spin ALGO 5
+expect seq_note 54
+spin PRESET 1
+spin ALGO -7
+expect seq_track 1
+expect seq_cursor 16
+expect seq_note 57
+# Paste to another pitched track and another bar.
+press EDIT
+spin ALGO 1
+tap SEL
+release EDIT
+expect seq_events 7
+spin ALGO 2
+expect seq_note 53
+spin ALGO 5
+expect seq_note 54
+# Incompatible tracks, meters and playback do not modify the song.
+spin PRESET 3
+expect seq_track 4
+press EDIT
+tap SEL
+release EDIT
+expect seq_warning 10
+expect seq_events 7
+spin PRESET 1
+tap SEL
+expect seq_meter 1
+press EDIT
+tap SEL
+release EDIT
+expect seq_warning 11
+expect seq_events 7
+tap PLAY
+press EDIT
+tap REC
+release EDIT
+expect seq_warning 12
+expect seq_events 7
+wait 600
+tap PLAY
+tap SAVE
+spin PRESET 1
+tap SAVE
+reboot
+tap PLAY
+tap EDIT
+spin ALGO 18
+expect seq_note 53
+press EDIT
+tap SEL
+release EDIT
+expect seq_warning 9
+tap HOME

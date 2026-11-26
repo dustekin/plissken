@@ -1,0 +1,22 @@
+# A failed upgrade leaves the old Escape playable and retries at the next boot.
+wait 4000
+expect test_previous_escape 1
+flash_fail 1
+reboot
+tap PLAY
+expect seq_warning 7
+tap PLAY
+wait 100
+expect hits0 >0
+tap EDIT
+expect seq_events 950
+expect seq_bars 64
+expect seq_note 76
+tap HOME
+flash_fail 0
+reboot
+tap PLAY
+tap EDIT
+expect seq_events 949
+expect seq_bars 63
+expect seq_note -1

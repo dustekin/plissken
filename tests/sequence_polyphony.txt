@@ -13,31 +13,35 @@ turn PRESET 1
 turn ALGO 1
 tapkey 3
 expect seq_events 4
-# A fifth voice is accepted; a sixth is rejected.
+# Dense overlaps can be entered; playback applies the voice budget.
 turn PRESET 1
 turn ALGO 1
 tapkey 4
 expect seq_events 5
 tapkey 5
-expect seq_events 5
-expect seq_warning 1
-# Turning an existing note into a chord cannot exceed the same voice limit.
+expect seq_events 6
+expect seq_warning 0
+# Changing a note into a chord is also allowed.
 wait 2000
 expect seq_warning 0
 spin PRESET 1
 spin ALGO -4
 expect seq_sound 0
 spin SELECT 24
-expect seq_instrument 0
-expect seq_events 5
-expect seq_warning 1
-# The limit also applies to piano-key insertion during playback.
+expect seq_instrument 7
+expect seq_events 6
+expect seq_warning 0
+# Piano-key insertion during playback is allowed for dense songs too.
 wait 2000
 expect seq_warning 0
 tap PLAY
+expect seq_stealing 1
 spin ALGO 4
 tapkey 4
-expect seq_events 5
-expect seq_warning 1
+expect seq_events 7
+expect seq_warning 0
+wait 1000
+expect seq_steals >0
+expect seq_steal_peak 5
 tap PLAY
 tap HOME

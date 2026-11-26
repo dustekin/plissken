@@ -1,0 +1,19 @@
+# Releasing a held note in the replacement prompt must release its live voice.
+wait 2000
+tap SEQ
+spin PRESET 1
+key 0 down 100
+wait 50
+expect chord_piano_keys 1
+press EDIT
+tap REC
+tap SEL
+release EDIT
+expect seq_screen 0
+key 0 up
+wait 50
+expect chord_piano_keys 0
+tap HOME
+expect seq_screen 1
+expect seq_events 1
+tap HOME

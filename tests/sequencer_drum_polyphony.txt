@@ -1,4 +1,4 @@
-# Full drum tails share the five-voice budget, even after a tempo increase.
+# Dense drum tails can be entered despite the five-voice playback cap.
 wait 2000
 tap SEQ
 master 4096
@@ -14,9 +14,10 @@ tapkey 5
 expect seq_events 5
 spin ALGO 5
 tapkey 0
-expect seq_events 5
-expect seq_warning 1
+expect seq_events 6
+expect seq_warning 0
 spin ALGO 1
 tapkey 0
-expect seq_events 6
+expect seq_events 7
+expect seq_warning 0
 tap HOME

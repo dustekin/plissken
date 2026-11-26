@@ -39,15 +39,17 @@ expect seq_events 1
 tapkey 1
 expect seq_events 2
 expect seq_cursor 0
-# Distinct hits share the five-voice budget.
+# Distinct hits can exceed the five-voice playback budget.
 tapkey 2
 tapkey 3
 tapkey 4
 expect seq_events 5
 tapkey 5
-expect seq_events 5
-expect seq_note -1
-expect seq_warning 1
+expect seq_events 6
+expect seq_note 5
+expect seq_warning 0
+spin SELECT -1
+tap REC
 spin SELECT -1
 tap REC
 spin SELECT -1
@@ -56,7 +58,7 @@ spin SELECT -1
 tap REC
 expect seq_events 2
 spin SELECT -1
-# Drum and pitched notes share the same limit.
+# Drum and pitched notes share the same playback cap.
 spin PRESET 1
 tapkey 0
 spin PRESET 1
@@ -66,16 +68,16 @@ spin PRESET 3
 tapkey 2
 expect seq_events 5
 tapkey 3
-expect seq_events 5
-expect seq_note -1
-expect seq_warning 1
+expect seq_events 6
+expect seq_note 3
+expect seq_warning 0
 spin SELECT -1
 tap REC
 spin PRESET 1
 tap REC
 spin PRESET 1
 tap REC
-expect seq_events 2
+expect seq_events 3
 spin PRESET 3
 spin SELECT -1
 wait 100
@@ -88,7 +90,7 @@ expect seq_saved 4
 tap PLAY
 tap PLAY
 wait 200
-expect hits5 2
+expect hits5 3
 tap HOME
 tap SEQ
 tap GLO

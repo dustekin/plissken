@@ -1,0 +1,100 @@
+# Save as refuses to overwrite an existing song when all user slots are full.
+wait 2000
+tap SEQ
+tapkey 0
+tap SAVE
+spin PRESET 1
+tap SAVE
+press EDIT
+tap SAVE
+release EDIT
+spin PRESET 1
+tap SAVE
+press EDIT
+tap SAVE
+release EDIT
+spin PRESET 1
+tap SAVE
+press EDIT
+tap SAVE
+release EDIT
+spin PRESET 1
+tap SAVE
+press EDIT
+tap SAVE
+release EDIT
+spin PRESET 1
+tap SAVE
+press EDIT
+tap SAVE
+release EDIT
+spin PRESET 1
+tap SAVE
+press EDIT
+tap SAVE
+release EDIT
+spin PRESET 1
+tap SAVE
+press EDIT
+tap SAVE
+release EDIT
+spin PRESET 1
+tap SAVE
+press EDIT
+tap SAVE
+release EDIT
+spin PRESET 1
+tap SAVE
+press EDIT
+tap SAVE
+release EDIT
+spin PRESET 1
+tap SAVE
+press EDIT
+tap SAVE
+release EDIT
+spin PRESET 1
+tap SAVE
+press EDIT
+tap SAVE
+release EDIT
+spin PRESET 1
+tap SAVE
+press EDIT
+tap SAVE
+release EDIT
+spin PRESET 1
+tap SAVE
+press EDIT
+tap SAVE
+release EDIT
+spin PRESET 1
+tap SAVE
+press EDIT
+tap SAVE
+release EDIT
+spin PRESET 1
+tap SAVE
+press EDIT
+tap SAVE
+release EDIT
+spin PRESET 1
+tap SAVE
+expect seq_saved 19
+press EDIT
+tap SAVE
+release EDIT
+expect seq_screen 1
+expect seq_warning 8
+expect seq_saved 19
+tapkey 1
+tap SAVE
+tap SAVE
+expect seq_saved 19
+reboot
+expect seq_saved 19
+tap PLAY
+spin PRESET 15
+tap EDIT
+expect seq_note 54
+tap HOME

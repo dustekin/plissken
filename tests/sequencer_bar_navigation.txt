@@ -1,0 +1,59 @@
+# EDIT + ALGO jumps to bar starts, extends the song, and respects meter and bounds.
+wait 2000
+tap SEQ
+spin ALGO 5
+expect seq_cursor 5
+press EDIT
+spin ALGO 1
+expect seq_cursor 16
+expect seq_bars 2
+spin ALGO 2
+expect seq_cursor 48
+expect seq_bars 4
+spin ALGO -1
+expect seq_cursor 32
+spin ALGO -99
+expect seq_cursor 0
+release EDIT
+spin ALGO 2
+expect seq_cursor 2
+tap SEL
+tap SEL
+tap SEL
+tap SEL
+expect seq_meter 4
+press EDIT
+spin ALGO 1
+expect seq_cursor 20
+spin ALGO 2
+expect seq_cursor 60
+expect seq_bars 4
+release EDIT
+# A bar jump during playback pauses follow and leaves playback running.
+tap PLAY
+wait 200
+press EDIT
+spin ALGO 1
+release EDIT
+expect seq_follow 0
+expect seq_playing 1
+expect seq_cursor 80
+expect seq_bars 5
+wait 600
+tap PLAY
+press EDIT
+spin ALGO 999
+expect seq_cursor 2540
+expect seq_bars 128
+spin ALGO 1
+expect seq_cursor 2540
+release EDIT
+spin ALGO 1
+expect seq_cursor 2541
+press EDIT
+spin ALGO 1
+expect seq_cursor 2540
+spin ALGO -999
+expect seq_cursor 0
+release EDIT
+tap HOME

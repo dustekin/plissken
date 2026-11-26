@@ -35,6 +35,7 @@
 #define SEQUENCE_SLOTS (SEQUENCE_USER_SLOTS + SEQUENCE_BUILTIN_COUNT)
 #define SEQUENCE_NAME_LENGTH 12u
 #define SEQUENCE_MAX_STEPS 4096u
+#define ESCAPE_FIRST_DRUM_STEP 46u
 #define TRACKS 7
 #define INSTRUMENTS (TRACKS + 1u)
 #define SEQUENCE_NAME_ALPHABET "abcdefghijklmnopqrstuvwxyz0123456789 "
@@ -148,6 +149,7 @@ typedef struct {
     float gain;
     int8_t adpcm_step_index;
     uint8_t loops;   /* extra passes over the data, each quieter than the last */
+    uint8_t key;
 } sample_voice_t;
 
 typedef struct {
@@ -196,8 +198,10 @@ typedef struct {
     char name[SEQUENCE_NAME_LENGTH];
 } sequence_slot_t;
 
-enum { SCREEN_MAIN, SCREEN_SEQUENCE, SCREEN_HELP, SCREEN_NAME, SCREEN_DELETE, SCREEN_PLAYBACK };
+enum { SCREEN_MAIN, SCREEN_SEQUENCE, SCREEN_HELP, SCREEN_NAME, SCREEN_DELETE, SCREEN_PLAYBACK,
+       SCREEN_CONFIRM_DELETE, SCREEN_CONFIRM_PASTE };
 enum { METER_4_4, METER_8_4, METER_8_8, METER_16_16, METER_5_4, METER_COUNT };
+enum { BUILTIN_UNTRIMMED, BUILTIN_PREVIOUS_TRIM, BUILTIN_CURRENT_TRIM };
 
 typedef struct {
     const char *display_name;
@@ -299,6 +303,7 @@ static uint8_t sequence_audio_stealing;
 static uint8_t sequence_audio_steal_limit;
 static const uint32_t *sequence_audio_events;
 static uint32_t sequence_audio_event_count, sequence_audio_event_index;
+static uint32_t sequence_audio_event_offset;
 static uint32_t sequence_escape_cpu_peak, sequence_escape_xruns_start;
 #ifdef PLAT_HOST
 static uint32_t sequence_steals, sequence_steal_drops, sequence_steal_peak;
@@ -309,6 +314,7 @@ static uint32_t sequence_mix_peak_step;
 static uint8_t sequence_name_cursor;
 static uint8_t sequence_name_value;
 static uint8_t sequence_name_length;
+static char sequence_name_buffer[SEQUENCE_NAME_LENGTH];
 static uint8_t sequence_save_slot;
 static uint8_t sequence_slot_count;
 static uint8_t sequence_last_note;
@@ -316,7 +322,8 @@ static uint8_t sequence_last_note_valid;
 static uint8_t sequence_help_page;
 static uint32_t sequence_help_master;
 static uint8_t sequence_help_return_screen;
-enum { SEQUENCE_NOTICE_NONE, SEQUENCE_NOTICE_NOTE, SEQUENCE_NOTICE_OCTAVE, SEQUENCE_NOTICE_FX };
+enum { SEQUENCE_NOTICE_NONE, SEQUENCE_NOTICE_NOTE, SEQUENCE_NOTICE_OCTAVE, SEQUENCE_NOTICE_FX,
+       SEQUENCE_NOTICE_BAR_COPIED, SEQUENCE_NOTICE_BAR_PASTED };
 static uint8_t sequence_notice, sequence_notice_note, sequence_notice_instrument, sequence_notice_variant;
 static uint8_t sequence_notice_knob, sequence_notice_value;
 static int8_t sequence_notice_octave;
@@ -325,6 +332,9 @@ static uint32_t sequence_notice_until;
 static sequence_t sequence;
 static sequence_t sequence_playback;
 static sequence_slot_t sequence_slots[SEQUENCE_SLOTS];
+static uint32_t sequence_clipboard_events[SEQUENCE_EVENT_MAX];
+static uint16_t sequence_clipboard_count;
+static uint8_t sequence_clipboard_valid, sequence_clipboard_meter, sequence_clipboard_drums;
 /* Backing-part mutes set by ENV (chords), LFO (bass) or the GLO layer. */
 static volatile uint8_t backing_mute;
 #define MUTE_CHORDS 1u
@@ -724,6 +734,7 @@ static void trigger_sample(sample_voice_t *voice, const int8_t *data, uint32_t l
     voice->rate = 1.0f;
     voice->gain = 1.0f;
     voice->loops = 0u;
+    voice->key = 0u;
 }
 
 static void trigger_drum_sample(uint32_t sample)
@@ -791,6 +802,7 @@ static void trigger_adpcm_sample(sample_voice_t *voice, const uint8_t *data, uin
         : voice->adpcm_a;
     voice->position = 0.0f;
     voice->loops = 0u;
+    voice->key = 0u;
 }
 
 static float sample_voice(sample_voice_t *voice, float level)
@@ -1317,20 +1329,6 @@ static int sequence_contents_valid(const sequence_t *data)
         if (start + sequence_event_length_steps(event, data->header.tempo) > total_steps)
             return 0;
     }
-    for (uint32_t i = 0; i < data->header.count; i++) {
-        uint32_t event = data->events[i];
-        uint32_t start = sequence_event_step(event);
-        uint32_t active = 0u;
-        for (uint32_t j = 0; j < data->header.count; j++) {
-            uint32_t other = data->events[j];
-            uint32_t other_start = sequence_event_step(other);
-            uint32_t other_end = other_start + sequence_event_length_steps(other, SEQUENCE_MAX_TEMPO);
-            if (start >= other_start && start < other_end)
-                active += sequence_sound_cost(sequence_event_instrument(other));
-            if (active > SEQUENCE_VOICES)
-                return 0;
-        }
-    }
     return 1;
 }
 
@@ -1394,28 +1392,6 @@ static int32_t sequence_find_event(uint8_t track, uint32_t step_index)
     return -1;
 }
 
-static int sequence_polyphony_ok(uint32_t start, uint32_t length, int32_t skip, uint8_t instrument)
-{
-    /* Reserve drum tails at the fastest tempo, so later tempo changes remain safe. */
-    for (uint32_t step_index = start; step_index < start + length; step_index++) {
-        uint32_t active = sequence_sound_cost(instrument);
-        for (uint32_t i = 0; i < sequence.header.count; i++) {
-            uint32_t event, event_start, event_end;
-            if ((int32_t)i == skip)
-                continue;
-            event = sequence.events[i];
-            event_start = sequence_event_step(event);
-            event_end = event_start + sequence_event_length_steps(event, SEQUENCE_MAX_TEMPO);
-            if (step_index >= event_start && step_index < event_end) {
-                active += sequence_sound_cost(sequence_event_instrument(event));
-                if (active > SEQUENCE_VOICES)
-                    return 0;
-            }
-        }
-    }
-    return 1;
-}
-
 static void sequence_extend_to(uint32_t end_step)
 {
     uint32_t steps_per_bar = sequence_steps_per_bar[sequence.header.meter];
@@ -1441,6 +1417,8 @@ static int sequence_store_slot(uint32_t slot)
     sequence.header.magic = SEQUENCE_MAGIC;
     sequence.header.version = SEQUENCE_VERSION;
     bytes = (uint32_t)sizeof sequence.header + (uint32_t)sequence.header.count * sizeof(uint32_t);
+    if (!sequence_header_valid(&sequence.header, (int)bytes) || !sequence_contents_valid(&sequence))
+        return -1;
     return plat_store_save(sequence_slot_object(slot), &sequence, bytes);
 }
 
@@ -1487,6 +1465,13 @@ static uint32_t sequence_builtin_leading_steps(uint32_t index)
     return index == 0u || index == 2u ? 16u : 0u;
 }
 
+static uint32_t sequence_builtin_trim_steps(uint32_t index, int trimmed)
+{
+    if (index == 0u && trimmed == BUILTIN_CURRENT_TRIM)
+        return ESCAPE_FIRST_DRUM_STEP;
+    return trimmed ? sequence_builtin_leading_steps(index) : 0u;
+}
+
 static uint32_t sequence_trim_builtin_event(uint32_t index, uint32_t event)
 {
     return event - sequence_builtin_leading_steps(index);
@@ -1507,10 +1492,13 @@ static int sequence_builtin_factory_matches(uint32_t index, const sequence_t *da
     const sequence_builtin_t *builtin = &sequence_builtins[index];
     const sequence_header_t *header = &data->header;
     uint8_t piano_track = index == 1u ? 1u : 3u;
-    uint32_t i;
-    if (header->version != SEQUENCE_VERSION || header->count != builtin->count
+    uint32_t i, count = 0u, steps_per_bar = sequence_steps_per_bar[builtin->meter];
+    uint32_t trim = sequence_builtin_trim_steps(index, trimmed);
+    uint32_t bars = ((uint32_t)builtin->bars * steps_per_bar - trim + steps_per_bar - 1u)
+        / steps_per_bar;
+    if (header->version != SEQUENCE_VERSION
         || header->meter != builtin->meter
-        || header->bars != builtin->bars - (trimmed && sequence_builtin_leading_steps(index) ? 1u : 0u)
+        || header->bars != bars
         || header->tempo != builtin->tempo || header->drum_variant != 0u)
         return 0;
     for (i = 0u; i < SEQUENCE_MELODIC_TRACKS; i++) {
@@ -1527,12 +1515,12 @@ static int sequence_builtin_factory_matches(uint32_t index, const sequence_t *da
             return 0;
     for (i = 0u; i < builtin->count; i++) {
         uint32_t event = sequence_arrange_builtin_event(index, builtin->events[i]);
-        if (trimmed)
-            event = sequence_trim_builtin_event(index, event);
-        if (data->events[i] != event)
+        if (sequence_event_step(event) < trim)
+            continue;
+        if (count >= header->count || data->events[count++] != event - trim)
             return 0;
     }
-    return 1;
+    return count == header->count;
 }
 
 static void sequence_prepare_builtin(uint32_t index, int legacy, int trimmed)
@@ -1552,10 +1540,16 @@ static void sequence_prepare_builtin(uint32_t index, int legacy, int trimmed)
         sequence.events[i] = builtin->events[i];
     if (!legacy) {
         sequence_arrange_builtin(index);
-        if (trimmed && sequence_builtin_leading_steps(index)) {
-            sequence.header.bars--;
+        if (trimmed && sequence_builtin_trim_steps(index, trimmed)) {
+            uint32_t trim = sequence_builtin_trim_steps(index, trimmed);
+            uint32_t steps_per_bar = sequence_steps_per_bar[sequence.header.meter];
+            uint32_t count = 0u;
+            sequence.header.bars = (uint8_t)(((uint32_t)sequence.header.bars * steps_per_bar
+                - trim + steps_per_bar - 1u) / steps_per_bar);
             for (uint32_t i = 0u; i < sequence.header.count; i++)
-                sequence.events[i] = sequence_trim_builtin_event(index, sequence.events[i]);
+                if (sequence_event_step(sequence.events[i]) >= trim)
+                    sequence.events[count++] = sequence.events[i] - trim;
+            sequence.header.count = (uint16_t)count;
         }
     }
 }
@@ -1571,7 +1565,9 @@ static void sequence_seed_builtin(uint32_t index)
         ? plat_store_head(object, &header, sizeof header) : -1;
     if (loaded == (int)sizeof header && sequence_header_valid(&header, size)) {
         int legacy = sequence_builtin_legacy_header_matches(index, &header);
-        if (!legacy && (!sequence_builtin_leading_steps(index) || header.bars != builtin->bars))
+        if (!legacy && (!sequence_builtin_leading_steps(index)
+            || (header.bars != builtin->bars
+                && !(index == 0u && header.bars == builtin->bars - 1u))))
             return;
         if (plat_store_load(object, &sequence, sizeof sequence) != size) {
             sequence_builtin_seed_failed = 1u;
@@ -1583,7 +1579,9 @@ static void sequence_seed_builtin(uint32_t index)
                     sequence_reset();
                     return;
                 }
-        } else if (!sequence_builtin_factory_matches(index, &sequence, 0)) {
+        } else if (!sequence_builtin_factory_matches(index, &sequence, BUILTIN_UNTRIMMED)
+                   && !(index == 0u
+                        && sequence_builtin_factory_matches(index, &sequence, BUILTIN_PREVIOUS_TRIM))) {
                 sequence_reset();
                 return;
         }
@@ -1593,7 +1591,7 @@ static void sequence_seed_builtin(uint32_t index)
         return;
     }
 
-    sequence_prepare_builtin(index, 0, 1);
+    sequence_prepare_builtin(index, 0, index == 0u ? BUILTIN_CURRENT_TRIM : BUILTIN_PREVIOUS_TRIM);
     if (sequence_store_slot(slot) != 0)
         sequence_builtin_seed_failed = 1u;
     sequence_reset();
@@ -1970,10 +1968,25 @@ typedef struct {
     uint8_t priority;
 } sequence_steal_candidate_t;
 
+static int sequence_steal_selected(const sequence_steal_candidate_t *selected,
+                                   uint32_t selected_count, uint8_t *active,
+                                   sample_voice_t *sample)
+{
+    for (uint32_t i = 0u; i < selected_count; i++)
+        if ((active && selected[i].active == active)
+            || (sample && selected[i].sample == sample))
+            return 1;
+    return 0;
+}
+
 static void sequence_consider_steal_voice(sequence_steal_candidate_t *candidate,
                                            uint8_t *active, sample_voice_t *sample,
-                                           uint32_t age, uint8_t priority)
+                                           uint32_t age, uint8_t priority,
+                                           const sequence_steal_candidate_t *selected,
+                                           uint32_t selected_count)
 {
+    if (sequence_steal_selected(selected, selected_count, active, sample))
+        return;
     if (active ? !*active : !sample->data && !sample->adpcm_data)
         return;
     candidate->count++;
@@ -1985,57 +1998,96 @@ static void sequence_consider_steal_voice(sequence_steal_candidate_t *candidate,
     }
 }
 
-static void sequence_trigger_stealing(uint32_t event)
+static int sequence_reserve_voices(uint8_t instrument, uint8_t variant, uint8_t note)
 {
-    uint8_t instrument = sequence_event_instrument(event);
-    uint8_t note = sequence_event_note(event);
-    uint8_t priority = instrument == 5u ? 3u : instrument == 0u ? 1u : 2u;
-    sequence_steal_candidate_t candidate = {0, 0, 0u, 0u, 4u};
-    for (uint32_t i = 0u; i < JUNO_VOICES; i++)
-        sequence_consider_steal_voice(&candidate, &juno[i].active, 0, juno[i].age, 1u);
-    for (uint32_t i = 0u; i < PIANO_VOICES; i++)
-        sequence_consider_steal_voice(&candidate, &piano[i].active, 0, piano[i].age, 2u);
-    for (uint32_t i = 0u; i < PRO_ONE_VOICES; i++)
-        sequence_consider_steal_voice(&candidate, &pro_one[i].active, 0, pro_one[i].age, 2u);
-    for (uint32_t i = 0u; i < GUITAR_VOICES; i++) {
-        sequence_consider_steal_voice(&candidate, &guitar[i].active, 0, guitar[i].age, 2u);
-        if (instrument != 3u || i != guitar_sample_next % GUITAR_VOICES)
-            sequence_consider_steal_voice(&candidate, 0, &guitar_sample_voices[i],
-                                           guitar_sample_voices[i].age, 2u);
-    }
-    for (uint32_t i = 0u; i < MONO_VOICES; i++) {
-        sequence_consider_steal_voice(&candidate, &bass[i].active, 0, bass[i].age, 2u);
-        if (instrument != 4u || i != bass_sample_next % MONO_VOICES)
-            sequence_consider_steal_voice(&candidate, 0, &bass_sample_voices[i],
-                                           bass_sample_voices[i].age, 2u);
-    }
-    for (uint32_t i = 0u; i < ROSSFLM1_SAMPLE_COUNT; i++)
-        if (instrument != 5u || note != i)
-            sequence_consider_steal_voice(&candidate, 0, &drum_samples[i], drum_samples[i].age, 3u);
-    if (candidate.count > sequence_audio_steal_limit
-        || (candidate.count == sequence_audio_steal_limit && candidate.priority > priority)) {
+    uint8_t priority = instrument == 5u ? 3u
+        : instrument == 0u || (instrument == 7u
+            && chord_instruments[variant < 5u ? variant : 0u] == 0u) ? 1u : 2u;
+    uint32_t cost = sequence_sound_cost(instrument);
+    sequence_steal_candidate_t selected[SEQUENCE_VOICES];
+    sequence_steal_candidate_t candidate;
+    uint32_t selected_count = 0u;
+
+    if (cost > sequence_audio_steal_limit) {
 #ifdef PLAT_HOST
         sequence_steal_drops++;
 #endif
-        return;
+        return 0;
     }
-    if (candidate.count == sequence_audio_steal_limit) {
-        if (candidate.active)
-            *candidate.active = 0u;
-        else {
-            candidate.sample->data = 0;
-            candidate.sample->adpcm_data = 0;
+
+    for (;;) {
+        candidate.active = 0;
+        candidate.sample = 0;
+        candidate.age = 0u;
+        candidate.count = 0u;
+        candidate.priority = 4u;
+        for (uint32_t i = 0u; i < JUNO_VOICES; i++)
+            sequence_consider_steal_voice(&candidate, &juno[i].active, 0, juno[i].age,
+                                          1u, selected, selected_count);
+        for (uint32_t i = 0u; i < PIANO_VOICES; i++)
+            sequence_consider_steal_voice(&candidate, &piano[i].active, 0, piano[i].age,
+                                          2u, selected, selected_count);
+        for (uint32_t i = 0u; i < PRO_ONE_VOICES; i++)
+            sequence_consider_steal_voice(&candidate, &pro_one[i].active, 0, pro_one[i].age,
+                                          2u, selected, selected_count);
+        for (uint32_t i = 0u; i < GUITAR_VOICES; i++) {
+            sequence_consider_steal_voice(&candidate, &guitar[i].active, 0, guitar[i].age,
+                                          2u, selected, selected_count);
+            if (instrument != 3u || !variant || i != guitar_sample_next % GUITAR_VOICES)
+                sequence_consider_steal_voice(&candidate, 0, &guitar_sample_voices[i],
+                    guitar_sample_voices[i].age, 2u, selected, selected_count);
         }
-        candidate.count--;
+        for (uint32_t i = 0u; i < MONO_VOICES; i++) {
+            sequence_consider_steal_voice(&candidate, &bass[i].active, 0, bass[i].age,
+                                          2u, selected, selected_count);
+            if (instrument != 4u || !variant || i != bass_sample_next % MONO_VOICES)
+                sequence_consider_steal_voice(&candidate, 0, &bass_sample_voices[i],
+                    bass_sample_voices[i].age, 2u, selected, selected_count);
+        }
+        for (uint32_t i = 0u; i < CS50_VOICES; i++)
+            sequence_consider_steal_voice(&candidate, &cs50[i].active, 0, cs50[i].age,
+                                          2u, selected, selected_count);
+        for (uint32_t i = 0u; i < CS80_VOICES; i++)
+            sequence_consider_steal_voice(&candidate, &cs80[i].active, 0, cs80[i].age,
+                                          2u, selected, selected_count);
+        for (uint32_t i = 0u; i < ROSSFLM1_SAMPLE_COUNT; i++)
+            if (instrument != 5u || note != i)
+                sequence_consider_steal_voice(&candidate, 0, &drum_samples[i],
+                    drum_samples[i].age, 3u, selected, selected_count);
+
+        if (candidate.count + cost <= sequence_audio_steal_limit)
+            break;
+        if (!candidate.count || candidate.priority > priority
+            || selected_count >= SEQUENCE_VOICES) {
 #ifdef PLAT_HOST
-        sequence_steals++;
+            sequence_steal_drops++;
 #endif
+            return 0;
+        }
+        selected[selected_count++] = candidate;
     }
-    sequence_trigger_event(event);
+
+    for (uint32_t i = 0u; i < selected_count; i++) {
+        if (selected[i].active)
+            *selected[i].active = 0u;
+        else {
+            selected[i].sample->data = 0;
+            selected[i].sample->adpcm_data = 0;
+        }
+    }
 #ifdef PLAT_HOST
-    if (candidate.count + 1u > sequence_steal_peak)
-        sequence_steal_peak = candidate.count + 1u;
+    sequence_steals += selected_count;
+    if (candidate.count + cost > sequence_steal_peak)
+        sequence_steal_peak = candidate.count + cost;
 #endif
+    return 1;
+}
+
+static void sequence_trigger_stealing(uint32_t event)
+{
+    if (sequence_reserve_voices(sequence_event_instrument(event), sequence_event_variant(event),
+                                sequence_event_note(event)))
+        sequence_trigger_event(event);
 }
 
 static void sequence_trigger_audio_step(const sequence_t *source)
@@ -2043,7 +2095,7 @@ static void sequence_trigger_audio_step(const sequence_t *source)
     if (sequence_audio_events) {
         while (sequence_audio_event_index < sequence_audio_event_count
                && sequence_event_step(sequence_audio_events[sequence_audio_event_index])
-                    - sequence_builtin_leading_steps(0u) == sequence_audio_step)
+                    - sequence_audio_event_offset == sequence_audio_step)
             sequence_trigger_stealing(sequence_audio_events[sequence_audio_event_index++]);
         return;
     }
@@ -2078,6 +2130,10 @@ static void sequence_audio_advance(void)
         sequence_audio_step = sequence_audio_start;
         sequence_audio_samples = 0.0f;
         sequence_audio_event_index = 0u;
+        while (sequence_audio_events && sequence_audio_event_index < sequence_audio_event_count
+               && sequence_event_step(sequence_audio_events[sequence_audio_event_index])
+                    < sequence_audio_event_offset)
+            sequence_audio_event_index++;
         stop_audio_voices();
         sequence_trigger_audio_step(source);
         return;
@@ -2139,18 +2195,24 @@ static void release_live_key(uint32_t key)
     if (instrument == 3u && live_key_bass_sample[key]) {
         if (index >= 0 && (uint32_t)index < GUITAR_VOICES) {
             sample_voice_t *sample_voice = &guitar_sample_voices[index];
-            if (!guitar_one_shot && sample_voice->adpcm_data)
-                sample_voice->max_samples = sample_voice->age + 2205u;
+            if (sample_voice->key == (uint8_t)(key + 1u)) {
+                if (!guitar_one_shot && sample_voice->adpcm_data)
+                    sample_voice->max_samples = sample_voice->age + 2205u;
+                sample_voice->key = 0u;
+            }
         }
         live_key_bass_sample[key] = 0u;
         live_key_voice[key] = -1;
         return;
     }
     if (instrument == 4u && live_key_bass_sample[key]) {
-        if (!bass_one_shot && index >= 0 && (uint32_t)index < MONO_VOICES) {
+        if (index >= 0 && (uint32_t)index < MONO_VOICES) {
             sample_voice_t *sample_voice = &bass_sample_voices[index];
-            if (sample_voice->data || sample_voice->adpcm_data)
-                sample_voice->max_samples = sample_voice->age + 2205u;
+            if (sample_voice->key == (uint8_t)(key + 1u)) {
+                if (!bass_one_shot && (sample_voice->data || sample_voice->adpcm_data))
+                    sample_voice->max_samples = sample_voice->age + 2205u;
+                sample_voice->key = 0u;
+            }
         }
         live_key_bass_sample[key] = 0u;
         live_key_voice[key] = -1;
@@ -2236,6 +2298,7 @@ static void trigger_live_key(uint32_t key, uint32_t velocity)
     case 3u:
         if (guitar_sound) {
             index = trigger_guitar_sample(note, velocity);
+            guitar_sample_voices[index].key = (uint8_t)(key + 1u);
             live_key_bass_sample[key] = 1u;
             live_key_voice[key] = (int8_t)index;
 #ifdef PLAT_HOST
@@ -2250,6 +2313,7 @@ static void trigger_live_key(uint32_t key, uint32_t velocity)
     case 4u:
         if (bass_sound) {
             index = trigger_bass_note(note, 132300u, velocity);
+            bass_sample_voices[index].key = (uint8_t)(key + 1u);
             live_key_bass_sample[key] = 1u;
         } else {
             index = trigger_bass_note(note, 132300u, velocity);
@@ -3139,6 +3203,7 @@ void app_ui_init(void)
     sequence_audio_steal_limit = SEQUENCE_VOICES;
     sequence_audio_events = 0;
     sequence_audio_event_count = sequence_audio_event_index = 0u;
+    sequence_audio_event_offset = 0u;
     sequence_escape_cpu_peak = sequence_escape_xruns_start = 0u;
     sequence_audio_start = sequence_audio_step = sequence_audio_length = 0u;
     sequence_audio_samples = 0.0f;
@@ -3150,6 +3215,8 @@ void app_ui_init(void)
     sequence_editing_saved = 0u;
     sequence_editing_slot = 0u;
     sequence_builtin_seed_failed = 0u;
+    sequence_clipboard_valid = 0u;
+    sequence_clipboard_count = 0u;
     sequence_notice = SEQUENCE_NOTICE_NONE;
     sequence_help_page = 0u;
     sequence_last_note = 60u;
@@ -3693,13 +3760,6 @@ static void sequence_change_sound(int32_t delta)
     if (sound_delta >= 12)
         sound_delta += (int32_t)ROSSFLM1_SAMPLE_COUNT;
     event_index = sequence_find_event(sequence_cursor_track, sequence_cursor_step);
-    if (event_index >= 0
-        && !sequence_polyphony_ok(sequence_cursor_step,
-                                  sequence_note_steps[sequence_event_duration(sequence.events[event_index])],
-                                  event_index, sequence_sound_instrument((uint8_t)sound_delta))) {
-        sequence_show_warning(1u);
-        return;
-    }
     sequence_apply_sound((uint8_t)sound_delta);
     if (event_index >= 0) {
         uint32_t old = sequence.events[event_index];
@@ -3725,13 +3785,13 @@ static void sequence_change_duration(uint8_t duration)
         sequence_duration_index = duration;
         return;
     }
-    if (!sequence_polyphony_ok(sequence_cursor_step, sequence_note_steps[duration], event_index,
-                               sequence_event_instrument(sequence.events[event_index]))) {
-        sequence_show_warning(1u);
-        return;
-    }
     {
         uint32_t old = sequence.events[event_index];
+        if (sequence_event_step(old) + sequence_note_steps[duration]
+            > 128u * sequence_steps_per_bar[sequence.header.meter]) {
+            sequence_show_warning(2u);
+            return;
+        }
         sequence.events[event_index] = sequence_event_make(
             sequence_event_step(old), sequence_event_note(old), duration,
             sequence_cursor_track, sequence_event_instrument(old), sequence_event_variant(old));
@@ -3770,11 +3830,6 @@ static int sequence_insert_note(uint8_t note)
     if (sequence_cursor_step + sequence_event_length_steps(event, sequence.header.tempo)
         > 128u * sequence_steps_per_bar[sequence.header.meter]) {
         sequence_show_warning(2u);
-        return 0;
-    }
-    if (!sequence_polyphony_ok(sequence_cursor_step, sequence_event_length_steps(event, SEQUENCE_MAX_TEMPO),
-                               event_index, selected_instrument)) {
-        sequence_show_warning(1u);
         return 0;
     }
     lock = plat_lock();
@@ -3833,10 +3888,14 @@ static void sequence_start(uint8_t from_playback)
         if (sequence_selected_slot >= SEQUENCE_USER_SLOTS) {
             uint32_t index = sequence_selected_slot - SEQUENCE_USER_SLOTS;
             const sequence_builtin_t *builtin = &sequence_builtins[index];
-            if (sequence_builtin_factory_matches(index, source, 1)) {
+            int current_escape = index == 0u
+                && sequence_builtin_factory_matches(index, source, BUILTIN_CURRENT_TRIM);
+            if (current_escape || sequence_builtin_factory_matches(index, source, BUILTIN_PREVIOUS_TRIM)) {
                 if (index == 0u) {
                     sequence_audio_events = builtin->steal_events;
                     sequence_audio_event_count = builtin->steal_count;
+                    sequence_audio_event_offset = current_escape
+                        ? ESCAPE_FIRST_DRUM_STEP : sequence_builtin_leading_steps(index);
                     sequence_audio_steal_limit = ESCAPE_EXPERIMENT_VOICES;
                     sequence_escape_cpu_peak = 0u;
                     sequence_escape_xruns_start = plat_xruns();
@@ -3866,6 +3925,7 @@ static void sequence_start(uint8_t from_playback)
     sequence_follow_playback = !from_playback;
     sequence_playback_tempo = source->header.tempo;
     sequence_stop_requested = 0u;
+    sequence_audio_stealing = 1u;
     sequence_playing = 1u;
 }
 
@@ -4002,32 +4062,34 @@ static void sequence_start_name_prompt(uint8_t slot)
     sequence_warning = 0u;
     sequence_name_cursor = 0u;
     sequence_name_length = 0u;
+    for (uint32_t i = 0; i < SEQUENCE_NAME_LENGTH - 1u; i++)
+        sequence_name_buffer[i] = ' ';
+    sequence_name_buffer[SEQUENCE_NAME_LENGTH - 1u] = 0;
     if (sequence_editing_saved && slot == sequence_editing_slot) {
-        for (uint32_t i = 0; i < SEQUENCE_NAME_LENGTH - 1u && sequence.header.name[i]; i++)
+        for (uint32_t i = 0; i < SEQUENCE_NAME_LENGTH - 1u && sequence.header.name[i]; i++) {
+            sequence_name_buffer[i] = sequence.header.name[i];
             sequence_name_length = (uint8_t)(i + 1u);
-        while (sequence_name_length && sequence.header.name[sequence_name_length - 1u] == ' ')
+        }
+        while (sequence_name_length && sequence_name_buffer[sequence_name_length - 1u] == ' ')
             sequence_name_length--;
         sequence_name_value = (uint8_t)(sizeof SEQUENCE_NAME_ALPHABET - 2u);
         for (uint32_t i = 0; i < sizeof SEQUENCE_NAME_ALPHABET - 1u; i++) {
-            if (SEQUENCE_NAME_ALPHABET[i] == sequence.header.name[0]) {
+            if (SEQUENCE_NAME_ALPHABET[i] == sequence_name_buffer[0]) {
                 sequence_name_value = (uint8_t)i;
                 break;
             }
         }
     } else {
         sequence_name_value = (uint8_t)(sizeof SEQUENCE_NAME_ALPHABET - 2u);
-        for (uint32_t i = 0; i < SEQUENCE_NAME_LENGTH; i++)
-            sequence.header.name[i] = ' ';
-        sequence.header.name[SEQUENCE_NAME_LENGTH - 1u] = 0;
     }
     sequence_screen = SCREEN_NAME;
     ui_drawn = 0u;
 }
 
-static void sequence_begin_save(void)
+static void sequence_begin_save(uint8_t save_as)
 {
     sequence_scan_slots();
-    if (sequence_editing_saved) {
+    if (sequence_editing_saved && !save_as) {
         if (sequence_editing_slot < SEQUENCE_SLOTS && sequence_slots[sequence_editing_slot].used) {
             sequence_start_name_prompt(sequence_editing_slot);
             return;
@@ -4039,6 +4101,10 @@ static void sequence_begin_save(void)
             sequence_start_name_prompt((uint8_t)slot);
             return;
         }
+    }
+    if (save_as) {
+        sequence_show_warning(8u);
+        return;
     }
     sequence_selected_slot = 0u;
     while (sequence_selected_slot < SEQUENCE_USER_SLOTS && !sequence_slots[sequence_selected_slot].used)
@@ -4056,10 +4122,10 @@ static void sequence_name_turn(int32_t delta)
     if (next < 0)
         next += (int32_t)(sizeof SEQUENCE_NAME_ALPHABET - 1u);
     sequence_name_value = (uint8_t)next;
-    sequence.header.name[sequence_name_cursor] = SEQUENCE_NAME_ALPHABET[next];
+    sequence_name_buffer[sequence_name_cursor] = SEQUENCE_NAME_ALPHABET[next];
     if (sequence_name_cursor >= sequence_name_length && SEQUENCE_NAME_ALPHABET[next] != ' ')
         sequence_name_length = (uint8_t)(sequence_name_cursor + 1u);
-    while (sequence_name_length && sequence.header.name[sequence_name_length - 1u] == ' ')
+    while (sequence_name_length && sequence_name_buffer[sequence_name_length - 1u] == ' ')
         sequence_name_length--;
 }
 
@@ -4079,36 +4145,44 @@ static void sequence_name_move(int32_t delta)
     if (cursor >= (int32_t)SEQUENCE_NAME_LENGTH - 1)
         cursor = (int32_t)SEQUENCE_NAME_LENGTH - 2;
     sequence_name_cursor = (uint8_t)cursor;
-    sequence_name_value = sequence_name_char_index(sequence.header.name[sequence_name_cursor]);
+    sequence_name_value = sequence_name_char_index(sequence_name_buffer[sequence_name_cursor]);
     ui_drawn = 0u;
 }
 
 static void sequence_name_delete(void)
 {
     for (uint32_t i = sequence_name_cursor; i + 1u < SEQUENCE_NAME_LENGTH - 1u; i++)
-        sequence.header.name[i] = sequence.header.name[i + 1u];
-    sequence.header.name[SEQUENCE_NAME_LENGTH - 2u] = ' ';
+        sequence_name_buffer[i] = sequence_name_buffer[i + 1u];
+    sequence_name_buffer[SEQUENCE_NAME_LENGTH - 2u] = ' ';
     if (sequence_name_cursor)
         sequence_name_cursor--;
     sequence_name_length = 0u;
     for (uint32_t i = 0; i < SEQUENCE_NAME_LENGTH - 1u; i++)
-        if (sequence.header.name[i] != ' ')
+        if (sequence_name_buffer[i] != ' ')
             sequence_name_length = (uint8_t)(i + 1u);
-    sequence_name_value = sequence_name_char_index(sequence.header.name[sequence_name_cursor]);
+    sequence_name_value = sequence_name_char_index(sequence_name_buffer[sequence_name_cursor]);
     ui_drawn = 0u;
 }
 
 static void sequence_save_named(void)
 {
+    char previous_name[SEQUENCE_NAME_LENGTH];
     if (!sequence_name_length) {
         sequence_show_warning(3u);
         return;
     }
-    sequence.header.name[sequence_name_length] = 0;
+    for (uint32_t i = 0; i < SEQUENCE_NAME_LENGTH; i++) {
+        previous_name[i] = sequence.header.name[i];
+        sequence.header.name[i] = i < sequence_name_length ? sequence_name_buffer[i] : 0;
+    }
     if (sequence_store_slot(sequence_save_slot) != 0) {
+        for (uint32_t i = 0; i < SEQUENCE_NAME_LENGTH; i++)
+            sequence.header.name[i] = previous_name[i];
         sequence_show_warning(4u);
         return;
     }
+    sequence_editing_saved = 1u;
+    sequence_editing_slot = sequence_save_slot;
     sequence_scan_slots();
     sequence_screen = SCREEN_SEQUENCE;
     ui_drawn = 0u;
@@ -4212,7 +4286,7 @@ static void sequence_help_toggle(void)
 
 static uint8_t sequence_help_page_count(void)
 {
-    return sequence_help_return_screen == SCREEN_SEQUENCE ? 4u
+    return sequence_help_return_screen == SCREEN_SEQUENCE ? 5u
         : sequence_help_return_screen == SCREEN_PLAYBACK ? 2u : 4u;
 }
 
@@ -4232,6 +4306,102 @@ static void sequence_show_fx_notice(uint8_t knob)
         sequence_notice_fx_label[i] = label[i];
     sequence_notice_fx_label[3] = 0;
     sequence_show_notice(SEQUENCE_NOTICE_FX);
+}
+
+static void sequence_copy_bar(void)
+{
+    uint32_t steps_per_bar = sequence_steps_per_bar[sequence.header.meter];
+    uint32_t first = (sequence_cursor_step / steps_per_bar) * steps_per_bar;
+    sequence_clipboard_count = 0u;
+    for (uint32_t i = 0; i < sequence.header.count; i++) {
+        uint32_t event = sequence.events[i];
+        uint32_t step = sequence_event_step(event);
+        if (sequence_event_track(event) == sequence_cursor_track
+            && step >= first && step < first + steps_per_bar) {
+            sequence_clipboard_events[sequence_clipboard_count++] =
+                sequence_event_make(step - first, sequence_event_note(event),
+                    sequence_event_duration(event), sequence_event_track(event),
+                    sequence_event_instrument(event), sequence_event_variant(event));
+        }
+    }
+    sequence_clipboard_meter = sequence.header.meter;
+    sequence_clipboard_drums = sequence_cursor_track == SEQUENCE_DRUM_TRACK;
+    sequence_clipboard_valid = 1u;
+    sequence_warning = 0u;
+    sequence_show_notice(SEQUENCE_NOTICE_BAR_COPIED);
+}
+
+static void sequence_paste_bar(uint8_t confirmed)
+{
+    uint32_t steps_per_bar = sequence_steps_per_bar[sequence.header.meter];
+    uint32_t first = (sequence_cursor_step / steps_per_bar) * steps_per_bar;
+    uint32_t remaining = 0u, removed = 0u, required = first + 1u;
+    uint32_t limit = 128u * steps_per_bar;
+    if (!sequence_clipboard_valid) {
+        sequence_show_warning(9u);
+        return;
+    }
+    if (sequence_clipboard_drums != (sequence_cursor_track == SEQUENCE_DRUM_TRACK)) {
+        sequence_show_warning(10u);
+        return;
+    }
+    if (sequence_clipboard_meter != sequence.header.meter) {
+        sequence_show_warning(11u);
+        return;
+    }
+    if (first >= limit) {
+        sequence_show_warning(2u);
+        return;
+    }
+    for (uint32_t i = 0; i < sequence.header.count; i++) {
+        uint32_t event = sequence.events[i], step = sequence_event_step(event);
+        if (sequence_event_track(event) == sequence_cursor_track
+            && step >= first && step < first + steps_per_bar)
+            removed++;
+        else
+            remaining++;
+    }
+    if (remaining + sequence_clipboard_count > SEQUENCE_EVENT_MAX) {
+        sequence_show_warning(2u);
+        return;
+    }
+    for (uint32_t i = 0; i < sequence_clipboard_count; i++) {
+        uint32_t event = sequence_clipboard_events[i];
+        uint32_t end = first + sequence_event_step(event)
+            + sequence_event_length_steps(event, sequence.header.tempo);
+        if (end > limit) {
+            sequence_show_warning(2u);
+            return;
+        }
+        if (end > required)
+            required = end;
+    }
+    if (removed && !confirmed) {
+        sequence_screen = SCREEN_CONFIRM_PASTE;
+        ui_drawn = 0u;
+        return;
+    }
+    {
+        uint32_t lock = plat_lock(), count = 0u;
+        for (uint32_t i = 0; i < sequence.header.count; i++) {
+            uint32_t event = sequence.events[i], step = sequence_event_step(event);
+            if (sequence_event_track(event) != sequence_cursor_track
+                || step < first || step >= first + steps_per_bar)
+                sequence.events[count++] = event;
+        }
+        for (uint32_t i = 0; i < sequence_clipboard_count; i++) {
+            uint32_t event = sequence_clipboard_events[i];
+            sequence.events[count++] = sequence_event_make(first + sequence_event_step(event),
+                sequence_event_note(event), sequence_event_duration(event), sequence_cursor_track,
+                sequence_event_instrument(event), sequence_event_variant(event));
+        }
+        sequence.header.count = (uint16_t)count;
+        plat_unlock(lock);
+    }
+    sequence_extend_to(required);
+    sequence_load_cursor_sound();
+    sequence_warning = 0u;
+    sequence_show_notice(SEQUENCE_NOTICE_BAR_PASTED);
 }
 
 #ifdef HAVE_SONG
@@ -4431,6 +4601,35 @@ static void sequence_input(uint32_t buttons, uint32_t pressed, uint32_t keys,
 {
     uint8_t screen = sequence_screen;
     uint32_t keys_pressed = keys & ~previous_keys;
+    if (screen == SCREEN_CONFIRM_PASTE) {
+        for (uint32_t key = 0; key < NKEYS; key++)
+            if (!(keys & (1u << key)) && (previous_keys & (1u << key)))
+                release_live_key(key);
+        if (pressed & ((1u << B_HOME) | (1u << B_SEQ))) {
+            sequence_screen = SCREEN_SEQUENCE;
+        } else if (pressed & (1u << B_SEL)) {
+            sequence_screen = SCREEN_SEQUENCE;
+            sequence_paste_bar(1u);
+        }
+        previous_keys = keys;
+        previous_buttons = buttons;
+        portrait_master_last = master_position;
+        ui_drawn = 0u;
+        return;
+    }
+    if (screen == SCREEN_CONFIRM_DELETE) {
+        if (pressed & ((1u << B_HOME) | (1u << B_SEQ))) {
+            sequence_screen = SCREEN_PLAYBACK;
+        } else if (pressed & (1u << B_REC)) {
+            sequence_screen = SCREEN_PLAYBACK;
+            sequence_delete_saved_track();
+        }
+        previous_keys = keys;
+        previous_buttons = buttons;
+        portrait_master_last = master_position;
+        ui_drawn = 0u;
+        return;
+    }
     if (screen == SCREEN_HELP) {
         if (pressed & ((1u << B_GLO) | (1u << B_SEQ) | (1u << B_HOME)))
             sequence_help_toggle();
@@ -4471,7 +4670,7 @@ static void sequence_input(uint32_t buttons, uint32_t pressed, uint32_t keys,
         if (screen == SCREEN_SEQUENCE)
             sequence_to_main();
         else if (screen == SCREEN_PLAYBACK)
-            sequence_to_main();
+            sequence_edit_selected();
         else
             sequence_screen = SCREEN_SEQUENCE;
         previous_keys = keys;
@@ -4516,11 +4715,27 @@ static void sequence_input(uint32_t buttons, uint32_t pressed, uint32_t keys,
                         sequence_apply_sound((uint8_t)(12u + key % ROSSFLM1_SAMPLE_COUNT));
                         sequence_store_track_sound();
                     }
-                    if (selected_instrument == 5u) {
-                        trigger_drum_sample(sequence_current_variant());
+                    {
+                        uint8_t locked = sequence_playing;
+                        uint32_t lock = locked ? plat_lock() : 0u;
+                        int play_key;
+                        if (selected_instrument == 7u && chord_layout
+                            && key >= CHORD_SHAPE_KEY && key - CHORD_SHAPE_KEY < CHORD_TYPES)
+                            chord_controls[0] = (uint8_t)(key - CHORD_SHAPE_KEY);
+                        play_key = !locked
+                            || sequence_reserve_voices(selected_instrument, sequence_current_variant(),
+                                selected_instrument == 5u ? sequence_current_variant() : 0u);
                         live_key_voice[key] = -1;
-                    } else {
-                        trigger_live_key(key, 100u);
+                        live_key_bass_sample[key] = 0u;
+                        live_key_cs80[key] = 0u;
+                        if (play_key) {
+                            if (selected_instrument == 5u)
+                                trigger_drum_sample(sequence_current_variant());
+                            else
+                                trigger_live_key(key, 100u);
+                        }
+                        if (locked)
+                            plat_unlock(lock);
                     }
                     sequence_last_note = selected_instrument == 5u
                         ? sequence_current_variant()
@@ -4549,22 +4764,54 @@ static void sequence_input(uint32_t buttons, uint32_t pressed, uint32_t keys,
             ui_drawn = 0u;
         }
         if (preset_delta) {
-            int32_t track = ((int32_t)sequence_cursor_track + preset_delta % SEQUENCE_TRACKS)
-                % SEQUENCE_TRACKS;
+            int32_t track = ((int32_t)sequence_cursor_track + preset_delta % (int32_t)SEQUENCE_TRACKS)
+                % (int32_t)SEQUENCE_TRACKS;
             if (track < 0)
                 track += SEQUENCE_TRACKS;
             sequence_cursor_track = (uint8_t)track;
             sequence_load_cursor_sound();
             ui_drawn = 0u;
         }
-        if (algorithm_delta)
-            sequence_move_cursor(algorithm_delta);
+        if (algorithm_delta) {
+            if (buttons & (1u << B_EDIT)) {
+                uint32_t steps_per_bar = sequence_steps_per_bar[sequence.header.meter];
+                int64_t bar = (int64_t)(sequence_cursor_step / steps_per_bar) + algorithm_delta;
+                if (bar < 0)
+                    bar = 0;
+                if (bar > 127)
+                    bar = 127;
+                sequence_move_cursor((int32_t)(bar * steps_per_bar) - sequence_cursor_step);
+            } else {
+                sequence_move_cursor(algorithm_delta);
+            }
+        }
         if (select_delta && (!sequence_playing || sequence_cursor_track == SEQUENCE_DRUM_TRACK))
             sequence_change_sound(select_delta);
-        if ((pressed & (1u << B_SEL)) && !sequence_playing)
-            sequence_change_meter();
-        if ((pressed & (1u << B_REC)) && !sequence_playing)
-            sequence_delete_note();
+        if (pressed & (1u << B_SEL)) {
+            if (buttons & (1u << B_EDIT)) {
+                if (sequence_playing)
+                    sequence_show_warning(12u);
+                else
+                    sequence_paste_bar(0u);
+            } else if (!sequence_playing) {
+                sequence_change_meter();
+            }
+        }
+        if (sequence_screen == SCREEN_CONFIRM_PASTE) {
+            previous_buttons = buttons;
+            portrait_master_last = master_position;
+            return;
+        }
+        if (pressed & (1u << B_REC)) {
+            if (buttons & (1u << B_EDIT)) {
+                if (sequence_playing)
+                    sequence_show_warning(12u);
+                else
+                    sequence_copy_bar();
+            } else if (!sequence_playing) {
+                sequence_delete_note();
+            }
+        }
         if (pressed & (1u << B_PLAY)) {
             uint32_t now = plat_ms();
             if (sequence_last_play_press_valid
@@ -4586,7 +4833,7 @@ static void sequence_input(uint32_t buttons, uint32_t pressed, uint32_t keys,
             }
         }
         if ((pressed & (1u << B_SAVE)) && !sequence_playing)
-            sequence_begin_save();
+            sequence_begin_save((buttons & (1u << B_EDIT)) != 0u);
         {
             uint8_t duration = sequence_master_duration(master_position);
             if (duration != sequence_master_duration(portrait_master_last) && !sequence_playing
@@ -4643,10 +4890,19 @@ static void sequence_input(uint32_t buttons, uint32_t pressed, uint32_t keys,
             sequence_delete_selected();
     } else if (screen == SCREEN_PLAYBACK) {
         sequence_step_slot(preset_delta);
-        if (keys_pressed) {
+        if (pressed & (1u << B_EDIT)) {
+            sequence_edit_selected();
+        } else if (keys_pressed) {
             sequence_edit_selected();
         } else if (pressed & (1u << B_REC)) {
-            sequence_delete_saved_track();
+            if (sequence_selected_slot < SEQUENCE_SLOTS && sequence_slots[sequence_selected_slot].used) {
+                sequence_stop();
+                sequence_warning = 0u;
+                sequence_screen = SCREEN_CONFIRM_DELETE;
+                ui_drawn = 0u;
+            } else {
+                sequence_show_warning(5u);
+            }
         } else if (pressed & (1u << B_PLAY)) {
             if (sequence_playing)
                 sequence_stop();
@@ -5130,6 +5386,10 @@ static void sequence_draw_notice(void)
         text[8] = (char)('0' + (sequence_notice_value / 10u) % 10u);
         text[9] = (char)('0' + sequence_notice_value % 10u);
         draw_text(6, 42, text, knob_colors[sequence_notice_knob]);
+    } else if (sequence_notice == SEQUENCE_NOTICE_BAR_COPIED) {
+        draw_text(6, 42, "BAR COPIED", C_HI);
+    } else if (sequence_notice == SEQUENCE_NOTICE_BAR_PASTED) {
+        draw_text(6, 42, "BAR PASTED", C_HI);
     }
 }
 
@@ -5235,10 +5495,14 @@ static void sequence_draw_grid(void)
         cv_rect(x - 1, y - 2, 3, row_height + 4, C_HI);
     }
     if (sequence_warning && ((plat_ms() / 250u) & 1u) == 0u) {
-        const char *message = sequence_warning == 1u ? "TOO MANY SIMULTANEOUS SOUNDS, SNAKE"
-            : sequence_warning == 2u ? "SEQUENCE IS FULL"
+        const char *message = sequence_warning == 2u ? "SEQUENCE IS FULL"
             : sequence_warning == 3u ? "ENTER A TRACK NAME"
-            : sequence_warning == 5u ? "NO SAVED TRACKS" : "SAVE FAILED";
+            : sequence_warning == 5u ? "NO SAVED TRACKS"
+            : sequence_warning == 8u ? "NO FREE SONG SLOTS"
+            : sequence_warning == 9u ? "COPY A BAR FIRST"
+            : sequence_warning == 10u ? "WRONG TRACK TYPE"
+            : sequence_warning == 11u ? "METER MISMATCH"
+            : sequence_warning == 12u ? "STOP PLAYBACK FIRST" : "SAVE FAILED";
         int32_t chars = 0;
         for (const char *p = message; *p; p++)
             chars++;
@@ -5289,7 +5553,7 @@ static void sequence_draw_info(void)
         draw_text(52, 26, sequence_note_names[duration < 7u ? duration : 0u], C_HI);
     }
     sequence_draw_notice();
-    draw_text(6, 56, "PRESET: TRACK   ALGO: STEP   REC: ADD/DEL", C_DIM);
+    draw_text(6, 56, "PRESET: TRACK   ALGO: STEP   REC: DELETE", C_DIM);
     draw_text(6, 78, "GLO=HELP", C_HI);
     draw_text(101, 78, sequence_meter_names[sequence.header.meter], C_HI);
     tempo_text[4] = (char)('0' + tempo / 100u);
@@ -5308,18 +5572,19 @@ static void sequence_draw_help(void)
         {"SEQ OPENS SEQUENCER", "", "", ""}
     };
     static const char *const playback_lines[2][4] = {
-        {"PRESET: PICK SONG", "PLAY: START / STOP", "REC: DELETE SONG", "KEY: LOAD TO EDIT"},
-        {"FIRST KEY: IGNORED", "SAVE: UPDATE SONG", "HOME: EXIT PLAYBACK", "PRESET: NEXT SONG"}
+        {"PRESET: PICK SONG", "PLAY: START / STOP", "REC: DELETE SONG", "EDIT / SEQ: LOAD"},
+        {"REC AGAIN: DELETE", "HOME / SEQ: CANCEL", "KEY: LOAD TO EDIT", "FIRST KEY: IGNORED"}
     };
-    static const char *const sequence_lines[4][4] = {
+    static const char *const sequence_lines[5][4] = {
         {"PRESET: TRACK", "ALGO: STEP", "SELECT: SOUND", "MASTER: LENGTH"},
-        {"KEYS: SET NOTE", "REC: ADD / DEL", "OCT +/-: OCTAVE", "K1-K4: FX"},
+        {"KEYS: SET NOTE", "REC: DELETE NOTE", "OCT +/-: OCTAVE", "K1-K4: FX"},
         {"EDIT+K1: BPM", "SEL: METER", "PLAY: START / STOP", "SAVE: STORE"},
-        {"PLAYBACK: PICK SONG", "KEY: LOAD TO EDIT", "FIRST KEY: IGNORED", "SAVE: UPDATE SONG"}
+        {"EDIT+ALGO: BAR", "JUMP TO BAR START", "EDIT+SAVE: COPY", "ALGO: PAUSE FOLLOW"},
+        {"EDIT+REC: COPY BAR", "EDIT+SEL: PASTE BAR", "SEL: CONFIRM", "HOME/SEQ: CANCEL"}
     };
     char main_title[] = "MAIN HELP 1/4";
     char playback_title[] = "PLAYBACK HELP 1/2";
-    char sequence_title[] = "SEQUENCER HELP 1/4";
+    char sequence_title[] = "SEQUENCER HELP 1/5";
     const char *const (*lines)[4];
     char *title;
     int32_t title_x;
@@ -5356,7 +5621,7 @@ static void sequence_draw_name(void)
 {
     char name[SEQUENCE_NAME_LENGTH];
     for (uint32_t i = 0; i < SEQUENCE_NAME_LENGTH; i++)
-        name[i] = sequence.header.name[i];
+        name[i] = sequence_name_buffer[i];
     name[SEQUENCE_NAME_LENGTH - 1u] = 0;
     cv_begin(240, 144, C_BLACK);
     draw_text(84, 14, "SAVE TRACK", C_WHITE);
@@ -5407,6 +5672,36 @@ static void sequence_draw_delete(void)
     cv_blit(0, 0);
     cv_begin(240, 96, C_BLACK);
     draw_text(12, 72, "SEL: DELETE   HOME: CANCEL", C_HI);
+    cv_blit(0, 144);
+}
+
+static void sequence_draw_confirm_delete(void)
+{
+    cv_begin(240, 144, C_BLACK);
+    draw_text(66, 14, "DELETE SONG?", C_WHITE);
+    draw_text(18, 60, sequence_slot_name(sequence_selected_slot), C_HI);
+    draw_text(18, 100, "THIS CANNOT BE UNDONE", C_GRAY);
+    cv_blit(0, 0);
+    cv_begin(240, 96, C_BLACK);
+    draw_text(12, 72, "REC: DELETE   HOME/SEQ: CANCEL", C_HI);
+    cv_blit(0, 144);
+}
+
+static void sequence_draw_confirm_paste(void)
+{
+    uint32_t bar = sequence_cursor_step / sequence_steps_per_bar[sequence.header.meter] + 1u;
+    char target[] = "TRACK 0  BAR 000";
+    target[6] = (char)('1' + sequence_cursor_track);
+    target[13] = (char)('0' + bar / 100u);
+    target[14] = (char)('0' + (bar / 10u) % 10u);
+    target[15] = (char)('0' + bar % 10u);
+    cv_begin(240, 144, C_BLACK);
+    draw_text(66, 14, "REPLACE BAR?", C_WHITE);
+    draw_text(70, 60, target, C_HI);
+    draw_text(18, 100, "THIS CANNOT BE UNDONE", C_GRAY);
+    cv_blit(0, 0);
+    cv_begin(240, 96, C_BLACK);
+    draw_text(12, 72, "SEL: REPLACE  HOME/SEQ: CANCEL", C_HI);
     cv_blit(0, 144);
 }
 
@@ -5468,7 +5763,7 @@ static void sequence_draw_playback(void)
         draw_text(145, 42, xrun_text, C_GRAY);
     }
     draw_text(6, 70, "PLAY START/STOP  REC DELETE", C_HI);
-    draw_text(6, 82, "PRESET SELECT  KEY EDIT  HOME EXIT", C_GRAY);
+    draw_text(6, 82, "EDIT/SEQ/KEY: EDIT  HOME: EXIT", C_GRAY);
     draw_text(180, 70, "GLO: HELP", C_HI);
     cv_blit(0, 144);
 }
@@ -5541,6 +5836,10 @@ void app_frame(void)
                 sequence_draw_name();
             else if (sequence_screen == SCREEN_DELETE)
                 sequence_draw_delete();
+            else if (sequence_screen == SCREEN_CONFIRM_DELETE)
+                sequence_draw_confirm_delete();
+            else if (sequence_screen == SCREEN_CONFIRM_PASTE)
+                sequence_draw_confirm_paste();
             else
                 sequence_draw_playback();
             ui_drawn = 1u;
@@ -5549,20 +5848,23 @@ void app_frame(void)
         {
             uint32_t lights = 0u;
             if (sequence_screen == SCREEN_SEQUENCE || sequence_screen == SCREEN_NAME
+                || sequence_screen == SCREEN_CONFIRM_PASTE
                 || sequence_screen == SCREEN_DELETE
                 || (sequence_screen == SCREEN_HELP && sequence_help_return_screen == SCREEN_SEQUENCE))
                 lights |= 1u << B_SEQ;
             if (sequence_screen == SCREEN_HELP && sequence_help_return_screen == SCREEN_MAIN)
                 lights |= 1u << B_GLO;
             if (sequence_playing || sequence_screen == SCREEN_PLAYBACK
+                || sequence_screen == SCREEN_CONFIRM_DELETE
                 || (sequence_screen == SCREEN_HELP && sequence_help_return_screen == SCREEN_PLAYBACK))
                 lights |= 1u << B_PLAY;
             if (sequence_screen == SCREEN_SEQUENCE
                 && sequence_find_event(sequence_cursor_track, sequence_cursor_step) >= 0)
                 lights |= 1u << B_REC;
-            if (sequence_screen == SCREEN_PLAYBACK && sequence_slot_count
-                && sequence_selected_slot < SEQUENCE_SLOTS
-                && sequence_slots[sequence_selected_slot].used)
+            if (sequence_screen == SCREEN_CONFIRM_DELETE
+                || (sequence_screen == SCREEN_PLAYBACK && sequence_slot_count
+                    && sequence_selected_slot < SEQUENCE_SLOTS
+                    && sequence_slots[sequence_selected_slot].used))
                 lights |= 1u << B_REC;
             if (sequence_screen == SCREEN_NAME)
                 lights |= 1u << B_SAVE;
@@ -5774,6 +6076,20 @@ int app_expect(const char *what, int *got)
         *got = 0;
         for (uint32_t i = 0u; i < PIANO_VOICES; i++)
             if (piano[i].active)
+                (*got)++;
+        return 1;
+    }
+    if (text_is(what, "seq_active_guitar_samples")) {
+        *got = 0;
+        for (uint32_t i = 0u; i < GUITAR_VOICES; i++)
+            if (guitar_sample_voices[i].data || guitar_sample_voices[i].adpcm_data)
+                (*got)++;
+        return 1;
+    }
+    if (text_is(what, "seq_active_bass_samples")) {
+        *got = 0;
+        for (uint32_t i = 0u; i < MONO_VOICES; i++)
+            if (bass_sample_voices[i].data || bass_sample_voices[i].adpcm_data)
                 (*got)++;
         return 1;
     }
@@ -6009,11 +6325,32 @@ int app_expect(const char *what, int *got)
         return 1;
     }
 #ifdef PLAT_HOST
+    if (text_is(what, "test_previous_escape")) {
+        sequence_prepare_builtin(0u, 0, BUILTIN_PREVIOUS_TRIM);
+        *got = sequence_store_slot(SEQUENCE_USER_SLOTS) == 0 ? 1 : 0;
+        sequence_reset();
+        sequence_scan_slots();
+        return 1;
+    }
+    if (text_is(what, "test_escape_seven_empty_bars")) {
+        sequence_prepare_builtin(0u, 0, BUILTIN_PREVIOUS_TRIM);
+        for (uint32_t i = 0u; i < sequence.header.count; i++) {
+            uint32_t event = sequence.events[i];
+            sequence.events[i] = sequence_event_make(sequence_event_step(event) + 112u,
+                sequence_event_note(event), sequence_event_duration(event), sequence_event_track(event),
+                sequence_event_instrument(event), sequence_event_variant(event));
+        }
+        sequence.header.bars = (uint8_t)(sequence.header.bars + 7u);
+        *got = sequence_store_slot(SEQUENCE_USER_SLOTS) == 0 ? 1 : 0;
+        sequence_reset();
+        sequence_scan_slots();
+        return 1;
+    }
     if (text_is(what, "test_legacy_builtins") || text_is(what, "test_pretrim_builtins")) {
         int saved = 0;
         int legacy = text_is(what, "test_legacy_builtins");
         for (uint32_t i = 0u; i < SEQUENCE_BUILTIN_COUNT; i++) {
-            sequence_prepare_builtin(i, legacy, 0);
+            sequence_prepare_builtin(i, legacy, BUILTIN_UNTRIMMED);
             if (sequence_store_slot(SEQUENCE_USER_SLOTS + i) == 0)
                 saved++;
         }

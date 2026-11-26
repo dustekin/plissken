@@ -1,0 +1,41 @@
+# Live drum keys share the playback budget and still record at the cursor.
+wait 2000
+tap SEQ
+spin PRESET 4
+tapkey 3
+tapkey 4
+tapkey 5
+tapkey 11
+tapkey 12
+tap PLAY
+wait 10
+expect seq_active_drums 5
+key 6 down
+wait 20
+expect seq_active_drums 5
+expect seq_steals >0
+expect seq_events 6
+key 6 up
+spin PRESET 1
+key 7 down
+wait 20
+expect seq_steal_drops >0
+expect seq_active_drums 5
+key 7 up
+tap PLAY
+# Chord keys reserve four voices atomically during playback.
+reboot
+tap SEQ
+spin SELECT 23
+spin K1 4
+tapkey 0
+tap PLAY
+wait 10
+expect seq_active_piano 4
+key 1 down
+wait 20
+expect seq_active_piano 5
+expect seq_steals >2
+expect seq_steal_peak 5
+key 1 up
+tap PLAY

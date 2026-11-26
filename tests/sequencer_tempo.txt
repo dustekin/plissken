@@ -40,7 +40,9 @@ expect seq_saved 4
 press EDIT
 spin K1 -30
 release EDIT
+press EDIT
 tap SAVE
+release EDIT
 spin PRESET 2
 tap SAVE
 expect seq_saved 5

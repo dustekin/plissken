@@ -32,6 +32,8 @@ tap HOME
 tap PLAY
 turn PRESET 2
 tap REC
+expect seq_saved 3
+tap REC
 expect seq_saved 2
 reboot
 expect seq_saved 3

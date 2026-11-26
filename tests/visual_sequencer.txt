@@ -27,7 +27,9 @@ shot seq_save_name.png
 tap SAVE
 wait 200
 expect seq_saved 4
+press EDIT
 tap SAVE
+release EDIT
 turn PRESET 1
 tap SAVE
 expect seq_saved 5
@@ -54,16 +56,20 @@ tap PLAY
 expect playback_mode 1
 tap PLAY
 expect seq_playing 1
-expect seq_stealing 0
+expect seq_stealing 1
 wait 500
 expect hits3 >0
 tap REC
 expect seq_playing 0
+expect seq_saved 5
+tap REC
 expect seq_saved 4
 tap PLAY
 expect seq_playing 1
 tap REC
 expect seq_playing 0
+expect seq_saved 4
+tap REC
 expect seq_saved 3
 tap HOME
 expect playback_mode 0

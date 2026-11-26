@@ -3,6 +3,91 @@
 Each test build is saved as `plissken###.fwsc` with an increasing number. Newest first.
 Add an entry here whenever a new build is saved.
 
+## v0.32 release preparation
+- Local `0.32` FM-1 package is based on hardware-tested build 044. The versioned package has not been separately
+  hardware-tested. Dense song handling, editor voice limits, saved-song safety, and the Escape opening are included.
+- All 60 top-level host scenarios, ten audio checks and ten MIDI converter tests passed for the same firmware
+  source; the normal versioned FM-1 build passed. CHORD JUNO/PRO timing load remains under investigation.
+- Local device image 468,420 B; RAM .data+.bss 66,148 / 98,304 B; pool 216,676 / 344,064 B; package 614,938 B;
+  identity `FM-1_1981003200`; build ID `70489439`; local package SHA-256
+  `B8440EE6AC99FDEF855E70B9AD238BC74853F6FE52930390A297D4138CAC6137`.
+
+## 044
+- Local `0.32-test044` preserves edited Escape openings instead of trimming them at load, rejects notes extending
+  beyond 128 bars and validates songs before saving, and applies the playback voice budget to live editor keys.
+  Reused guitar and bass sample voices no longer respond to an earlier key's release.
+- All 60 top-level host scenarios, ten audio checks and ten MIDI converter tests passed; the normal FM-1 target
+  build passed. The user reports it works fine on hardware.
+- Device image 468,436 B; RAM .data+.bss 66,148 / 98,304 B; pool 216,676 / 344,064 B; package 614,938 B;
+  identity `FM-1_1981003200`; build ID `653AB456`; package SHA-256
+  `2D0EF652AD30337216597F3BFE70A4242445011B0DD490C6BECBD99DA10DB8E4`.
+
+## 043
+- Local `0.32-test043` starts untouched factory Escape at its first LM-1 drum hit in both the editor and Playback.
+  Older untouched factory versions migrate automatically; edited Escape saves do not receive the new cut. At that
+  build, full-empty-bar normalization still applied when loading Escape.
+- All 57 top-level host scenarios, ten audio checks and ten MIDI converter tests passed; the normal FM-1 target
+  build passed. The user reports the hardware test passed.
+- Device image 468,484 B; RAM .data+.bss 66,148 / 98,304 B; pool 216,676 / 344,064 B; package 614,938 B;
+  identity `FM-1_1981003200`; build ID `092F331C`; package SHA-256
+  `2ABE075E8C12810BB604435DDF5FBDB10DEAFFF01194079B41AEC505A1954FBA`.
+
+## 042
+- Local `0.32-test042` adds single-track bar copy and paste using EDIT + REC and EDIT + SEL. Occupied destination
+  bars require confirmation; compatible tracks and matching meters are required. Fixes reverse track selection.
+- All 54 top-level host scenarios passed, including pitched and layered drum bars, cancellation, limits, 5/4,
+  clipboard persistence and saved-song behavior. The normal FM-1 target build passed. The user reports hardware
+  testing; the result was not specified.
+- Device image 468,244 B; RAM .data+.bss 66,148 / 98,304 B; pool 216,676 / 344,064 B; package 614,938 B;
+  identity `FM-1_1981003200`; build ID `C0013778`; package SHA-256
+  `9E45CE4730A5ADAC32B6C4A16D5093BC5BFD12CCB1D92BB5864CC395B53D4B6D`.
+
+## 041
+- Local `0.32-test041` makes subsequent saves update the active song, and EDIT + SAVE creates a named user-slot
+  copy that becomes active. Built-in copies use the editable arrangement. Full user slots produce a warning.
+- Twelve focused host scenarios passed, including copy persistence, cancelled and failed saves, full slots,
+  built-in preservation and existing saved-song behavior. The normal FM-1 target build passed; the user reports the
+  hardware test passed.
+- Device image 466,880 B; RAM .data+.bss 62,324 / 98,304 B; pool 216,676 / 344,064 B; package 614,938 B;
+  identity `FM-1_1981003200`; build ID `9FA2E108`; package SHA-256
+  `C818490022AF340244597B09AF7D207F54074CF901DF2E01E8B3259EAC7637A9`.
+
+## 040
+- Local `0.32-test040` adds EDIT + ALGO bar navigation in the sequencer. Jumps land at the target bar's start
+  and extend the song when necessary, up to 128 bars. During playback, jumping pauses display follow.
+- Five focused host scenarios passed, covering both directions, multiple meters, extension, limits, and playback;
+  the normal FM-1 target build passed. The user reports the hardware test passed.
+- Device image 466,804 B; RAM .data+.bss 62,324 / 98,304 B; pool 216,676 / 344,064 B; package 614,938 B;
+  identity `FM-1_1981003200`; build ID `AB58368D`; package SHA-256
+  `D8301E794A068C0135C266E2906B4EE738481DF7A6CB37ABA48C4A759CD4E6DD`.
+
+## 039
+- Local `0.32-test039` requires confirmation before deleting a song from Playback; HOME or SEQ cancels.
+  Playback stops when the prompt opens. Sequencer REC help now correctly says it deletes notes.
+- Four focused host scenarios passed, including cancellation, failed deletion and retry, user and built-in songs,
+  and restoration of deleted built-ins. The normal FM-1 target build passed. The user reports hardware testing was fine.
+- Device image 466,596 B; RAM .data+.bss 62,324 / 98,304 B; pool 216,676 / 344,064 B; package 614,938 B;
+  identity `FM-1_1981003200`; build ID `B5A11A61`; package SHA-256
+  `6EDD858B5FF531F5660CFBA35163C4B587FE5A9D2BCD2F4D563F28C22BB1D05B`.
+
+## 038
+- Local `0.32-test038` trims additional full leading empty bars from stored Escape songs when loaded in the editor or Playback.
+  EDIT and SEQ now open the selected Playback song in the editor; the first piano key only navigates and inserts no note.
+- All 46 host scenarios, ten audio checks, and ten MIDI converter tests passed; the normal FM-1 target build passed.
+  The user reports hardware testing was good.
+- Device image 466,284 B; RAM .data+.bss 62,324 / 98,304 B; pool 216,676 / 344,064 B; package 614,938 B;
+  identity `FM-1_1981003200`; build ID `897D82DD`; package SHA-256
+  `B0B87E6BAAB5DBB434D0AD19C9A64A90AD871FAA6F1D9E8135783BA9E3AE314A`.
+
+## 037
+- Local `0.32-test037` allows dense sequencer arrangements to be edited and saved; playback, including editor preview,
+  uses prioritized stealing to stay within five voices. Chord events may steal multiple lower-priority voices.
+- All 45 host scenarios, ten audio checks and MIDI converter tests passed; the normal FM-1 target build passed.
+  Not hardware-tested.
+- Device image 465,984 B; RAM .data+.bss 62,324 / 98,304 B; pool 216,676 / 344,064 B; package 614,938 B;
+  identity `FM-1_1981003200`; build ID `63DA4305`; package SHA-256
+  `499D1EA701120EC2B4D5451E54F63CEB4C7C3318EC6AD2CFF39DF8C594DE7525`.
+
 ## v0.31 release preparation
 - Local normal FM-1 package `build/plissken-0.31.fwsc` retains hardware-tested build 036's preferred Escape
   arrangement and trimmed openings, but removes the temporary CHORD CPU/XRUN display. The user reports that the

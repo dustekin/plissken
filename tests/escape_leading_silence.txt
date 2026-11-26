@@ -1,0 +1,28 @@
+# Intentional leading silence in an edited Escape survives loading and saving.
+expect test_escape_seven_empty_bars 1
+reboot
+expect seq_saved 3
+tap PLAY
+tapkey 0
+expect seq_screen 1
+expect seq_events 950
+expect seq_bars 71
+spin ALGO 112
+expect seq_note 76
+press EDIT
+spin K1 1
+release EDIT
+tap SAVE
+tap SAVE
+tap HOME
+reboot
+tap PLAY
+tap PLAY
+wait 100
+expect hits0 0
+expect hits5 0
+tap EDIT
+expect seq_bars 71
+expect seq_tempo 81
+spin ALGO 112
+expect seq_note 76

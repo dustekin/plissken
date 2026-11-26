@@ -12,4 +12,4 @@ flash_fail 0
 reboot
 tap PLAY
 tapkey 0
-expect seq_bars 64
+expect seq_bars 63

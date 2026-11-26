@@ -20,7 +20,7 @@ tap SAVE
 reboot
 tap PLAY
 tap PLAY
-expect seq_stealing 0
+expect seq_stealing 1
 expect hits1 4
 expect hits5 1
 expect seq_active_piano 4

@@ -3,16 +3,54 @@ wait 2000
 expect seq_saved 3
 tap PLAY
 expect playback_mode 1
+tap EDIT
+expect seq_screen 1
+expect seq_events 949
+expect seq_bars 63
+tap HOME
+tap PLAY
+expect playback_mode 1
+tap SEQ
+expect seq_screen 1
+expect seq_events 949
+expect seq_bars 63
+tap HOME
+tap PLAY
+expect playback_mode 1
 tapkey 0
 expect seq_screen 1
-expect seq_events 950
-expect seq_bars 64
+expect seq_events 949
+expect seq_bars 63
 expect seq_tempo 80
 tap HOME
 tap PLAY
 expect playback_mode 1
 tap REC
+expect seq_saved 3
+tap HOME
+expect playback_mode 1
+expect seq_saved 3
+tap REC
+tap SEQ
+expect playback_mode 1
+expect seq_saved 3
+tap REC
+turn PRESET 1
+tapkey 0
+expect seq_saved 3
+wait 100
+shot seq_confirm_delete.png
+flash_fail 1
+tap REC
+expect playback_mode 1
+expect seq_warning 6
+expect seq_saved 3
+flash_fail 0
+tap REC
+tap REC
 expect seq_saved 2
+tap EDIT
+expect seq_bars 80
 tap HOME
 reboot
 expect seq_saved 3
@@ -28,5 +66,5 @@ expect hits6 0
 tapkey 0
 expect seq_screen 1
 expect seq_playing 0
-expect seq_events 950
+expect seq_events 949
 tap HOME
