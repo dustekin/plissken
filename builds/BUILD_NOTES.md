@@ -7,9 +7,10 @@ Add an entry here whenever a new build is saved.
 - Local `0.32` FM-1 package is based on hardware-tested build 044. The versioned package has not been separately
   hardware-tested. Dense song handling, editor voice limits, saved-song safety, and the Escape opening are included.
 - All 60 top-level host scenarios, ten audio checks and ten MIDI converter tests passed for the same firmware
-  source; the normal versioned FM-1 build passed. CHORD JUNO/PRO timing load remains under investigation.
+  source; the normal versioned FM-1 build passed. A committed-source snapshot produced the same package SHA-256.
+  CHORD JUNO/PRO timing load remains under investigation.
 - Local device image 468,420 B; RAM .data+.bss 66,148 / 98,304 B; pool 216,676 / 344,064 B; package 614,938 B;
-  identity `FM-1_1981003200`; build ID `70489439`; local package SHA-256
+  identity `FM-1_1981003200`; local build ID `70489439`, snapshot build ID `DE99FCE5`; package SHA-256
   `B8440EE6AC99FDEF855E70B9AD238BC74853F6FE52930390A297D4138CAC6137`.
 
 ## 044
