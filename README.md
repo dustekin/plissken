@@ -2,15 +2,17 @@
 
 **HUMAN CONTENT**
 
-WARNING - One user has reported bricking after installing Plissken. I have hardware tested Plissken multiple times, including here https://youtube.com/shorts/GOW90MxLPbM?feature=share. Please always use a bootloader!
+WARNING - One user has reported bricking after installing but thry didn't use F-Install. I highly recommend you don't use browser installers for firmware, they seem to cause problems! I have hardware tested Plissken multiple times, including here https://youtube.com/shorts/GOW90MxLPbM?feature=share. Please always use a bootloader!
+
+Here is a guide to FM-Flasher bootloader https://youtu.be/6htjeFKx5Wo?is=Yi9R9PAuOM8itAnM
 
 Plissken is a live-performance instrument and sequencer prototype for the M-VAVE FM-1. It is built on `fm1-base`; the `base/`
 directory is the build system and platform submodule. The keyboard offers Juno, piano, Pro-1, guitar, bass, LM-1
 drums, CS-50/CS-80 and CHORD sounds, along with a live phrase recorder and a visual five-track sequencer with
 saved-song playback.
 
-**v0.15** adds The Fog as a preloaded track and centers the startup animation vertically. The older published,
-signed v0.11 release does not include the visual sequencer and saved-song playback features described below.
+Current version allows you play a variety of instruments, write your own songs and edit versions of The Fog, Eacape from New York and Halloween themes. 
+Future versions will include midi and export of songs, hopefully. 
 
 It's a crappy little firmware, not meant to be serious, just wanted to prove I could do it with vibecoding.
 
