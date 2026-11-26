@@ -1,8 +1,14 @@
 # Plissken
 
-Plissken is a seven-part soundtrack sketch for the M-VAVE FM-1. It is an early prototype: one shared clock drives
-an eight-voice Juno-style synth with chord stabs and stereo chorus, piano chords and notes, a Pro One-style line,
-simple guitar power chords, electric bass, and 13 LM-1 drum samples.
+Always use a M-Flasher to install Plissken and then to install firmware over it. Your FM1 can and will brick
+randomly.
+
+Plissken is an instrument and sequencer engine. It plays only three built in songs.
+
+The rest you make yourself. It is not a self playing grovebox. 
+
+It is an early prototype: one shared clock drives an eight-voice Juno-style synth with chord stabs and stereo chorus, 
+piano chords and notes, a Pro One-style line, simple guitar power chords, electric bass, and 13 LM-1 drum samples.
 
 ## Controls
 
