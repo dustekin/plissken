@@ -1,0 +1,88 @@
+# Clear confirmation stops playback, retains saves and detaches the working song.
+wait 2000
+tap SEQ
+# Live notes must be released while either confirmation is open.
+spin PRESET 1
+key 0 down 100
+wait 50
+expect chord_piano_keys 1
+press EDIT
+tap HOME
+release EDIT
+key 0 up
+wait 50
+expect chord_piano_keys 0
+tap HOME
+key 1 down 100
+wait 50
+expect chord_piano_keys 2
+press EDIT
+tap PLAY
+release EDIT
+key 1 up
+wait 50
+expect chord_piano_keys 0
+tap HOME
+tap REC
+spin PRESET -1
+tapkey 0
+tap SAVE
+spin PRESET 1
+tap SAVE
+expect seq_saved 4
+tap PLAY
+expect seq_playing 1
+press EDIT
+tap HOME
+release EDIT
+expect seq_confirm_clear 1
+expect seq_playing 0
+expect seq_events 1
+wait 100
+shot seq_clear_confirm.png
+tap HOME
+expect seq_screen 1
+expect seq_events 1
+press EDIT
+tap HOME
+release EDIT
+tap SEL
+expect seq_screen 1
+expect seq_events 0
+expect seq_saved 4
+tapkey 3
+tap SAVE
+spin PRESET 2
+tap SAVE
+expect seq_saved 5
+reboot
+tap PLAY
+tap EDIT
+expect seq_note 53
+tap HOME
+tap PLAY
+spin PRESET 1
+tap EDIT
+expect seq_note 56
+# A built-in is retained after clearing and saving a new song.
+tap HOME
+tap PLAY
+spin PRESET 2
+tap EDIT
+expect seq_tempo 80
+press EDIT
+tap HOME
+release EDIT
+tap SEL
+expect seq_events 0
+tapkey 1
+tap SAVE
+spin PRESET 3
+tap SAVE
+expect seq_saved 6
+reboot
+tap PLAY
+spin PRESET 3
+tap EDIT
+expect seq_tempo 80
+expect seq_events 949

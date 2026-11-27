@@ -25,8 +25,9 @@ simple guitar power chords, electric bass, and 13 LM-1 drum samples.
 | MASTER | Set output volume |
 | Piano keys | Play the selected sound; LM-1 maps keys cyclically to its 13 samples |
 
-In the sequencer editor, PRESET chooses one of four pitched-sound tracks or the fifth LM-1 track, ALGO moves the step cursor, SELECT chooses the track's
-sound, SEL cycles the time signature, and moving MASTER changes only the selected pitched note's length. Hold EDIT
+The sequencer displays one whole bar at a time; the number of steps depends on the time signature.
+In the sequencer editor, PRESET chooses one of four pitched-sound tracks or the fifth LM-1 track, ALGO moves the step cursor, SELECT sets the pitched track's
+default sound for new notes, SEL cycles the time signature, and moving MASTER changes only the selected pitched note's length. Hold EDIT
 and turn ALGO to jump to the start of another bar; jumping beyond the song's end extends it up to 128 bars.
 Piano keys play and
 insert or replace the note at the cursor, including during playback. REC removes a selected note when playback is
@@ -36,8 +37,21 @@ GLO, SEQ or HOME returns to the editor. SEQ or HOME exits the editor. SAVE promp
 later saves update that song. EDIT + SAVE prompts for a name and saves a copy in a free user slot, then edits the
 copy instead. A built-in copy uses its editable arrangement, not its separate factory Playback overlay.
 If all user slots are full, delete a song in Playback first.
+Each pitched note stores its own instrument and variant. Changing a track default with the SELECT encoder does not
+change existing notes; the selected note's sound stays displayed until the cursor moves. Hold EDIT and turn SELECT
+to change only the selected note, or to choose the sound for a new note at an empty step. Moving away from an empty
+step restores the default. Notes are coloured by instrument: Juno cyan, piano green, Pro-1 pink, guitar orange,
+bass red, LM-1 purple, CS-50/CS-80 yellow, and CHORD white. Track labels show defaults; GLO has a colour legend.
+With playback stopped, EDIT + PLAY opens a confirmation to apply the selected sound and variant to notes starting
+in the current pitched track and bar. PLAY confirms; HOME or SEQ cancels. Other bars and tracks and notes sustained
+from an earlier bar are unchanged. The drum track is excluded.
+EDIT + HOME stops playback and prompts to clear the working song. SEL confirms; HOME or SEQ cancels, leaving
+playback stopped. Clearing discards unsaved edits and detaches the working song from its saved slot without deleting
+it, so the next SAVE creates a new user song.
+Untouched factory songs may use a separate Playback overlay; editing and saving a built-in can switch Playback to
+its editable arrangement. Use EDIT + SAVE to preserve the built-in and make a user copy.
 During playback the display and cursor follow the music; moving ALGO pauses follow for editing. Stop and restart
-playback to resume following. On the LM-1 track, SELECT chooses a sample and piano keys choose and insert their
+playback to resume following. Press PLAY twice quickly to stop and return to the start. On the LM-1 track, SELECT chooses a sample and piano keys choose and insert their
 individual samples. Different drum samples can share a step; REC removes only the selected sample.
 With playback stopped, EDIT + REC copies the selected track's current bar, and EDIT + SEL pastes it at the
 selected destination bar. Pitched bars can be pasted to pitched tracks and drum bars to the drum track, provided

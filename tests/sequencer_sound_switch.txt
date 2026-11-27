@@ -1,0 +1,62 @@
+# Defaults, per-note sounds and variants survive saving without changing other notes.
+wait 2000
+tap SEQ
+master 0
+tapkey 0
+expect seq_event_instrument 0
+spin SELECT 1
+expect seq_default_instrument 1
+expect seq_event_instrument 0
+expect seq_instrument 0
+spin ALGO 1
+expect seq_instrument 1
+tapkey 1
+expect seq_event_instrument 1
+press EDIT
+spin SELECT 3
+release EDIT
+expect seq_event_instrument 3
+expect seq_event_variant 1
+expect seq_default_instrument 1
+spin ALGO 1
+press EDIT
+spin SELECT 1
+release EDIT
+expect seq_instrument 2
+tapkey 2
+expect seq_event_instrument 2
+expect seq_default_instrument 1
+spin ALGO 1
+press EDIT
+spin SELECT 2
+release EDIT
+expect seq_instrument 3
+spin ALGO 1
+expect seq_instrument 1
+spin ALGO -4
+expect seq_event_instrument 0
+spin ALGO 1
+expect seq_event_instrument 3
+expect seq_event_variant 1
+tap SAVE
+spin PRESET 1
+tap SAVE
+reboot
+tap PLAY
+tap EDIT
+expect seq_default_instrument 1
+expect seq_event_instrument 0
+spin ALGO 1
+expect seq_event_instrument 3
+expect seq_event_variant 1
+spin ALGO 1
+expect seq_event_instrument 2
+wait 4000
+shot seq_instrument_colors.png
+spin ALGO -2
+tap PLAY
+wait 700
+expect hits0 >0
+expect hits2 >0
+expect hits3 >0
+expect seq_steal_peak <6

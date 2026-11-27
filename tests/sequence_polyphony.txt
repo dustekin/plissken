@@ -27,7 +27,9 @@ expect seq_warning 0
 spin PRESET 1
 spin ALGO -4
 expect seq_sound 0
+press EDIT
 spin SELECT 24
+release EDIT
 expect seq_instrument 7
 expect seq_events 6
 expect seq_warning 0

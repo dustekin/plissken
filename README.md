@@ -86,9 +86,11 @@ padded to whole bars. Older firmware may not recognize the new factory arrangeme
 Build 044 also rejects note lengths that would exceed the 128-bar song limit and includes live editor keys in the
 five-voice playback budget. Live notes may be skipped or cut according to the same priorities as sequenced notes.
 
-Timing concern: the user reported distortion with two CHORD JUNO or CHORD PRO keys in SPLIT mode. With the render
-optimization in build 035, the user reports no audible distortion, but still observed high CPU and XRUNs.
-These indicators do not detect every timing fault; the load remains under investigation.
+## Known issues
+
+- Pressing two piano keys in CHORD mode with JUNO or PRO-1 selected can cause distortion. In an earlier build 035
+  test, no audible distortion was reported, but CPU and XRUN readings remained high. These indicators do not
+  detect every timing fault.
 
 ## Instrument sounds
 
@@ -128,15 +130,19 @@ documented changes.
 
 The **v0.20-rc1** tag builds and publishes a GitHub prerelease with its firmware package and build attestation. The
 final **v0.20** release tag has not been created. Version tags trigger the workflow to build and attest a package.
+Published release packages are named `onlyusefmflashertoinstallplissken.fwsc` to make the required FM-Flasher
+installation method explicit. Numbered local hardware-test packages in `builds/` retain their `plissken###.fwsc`
+names.
 
 ## Numbered internal builds
 
-There are 43 numbered packages in the current sequence, builds 002 through 044. Build 001 is not present in the
+There are 44 numbered packages in the current sequence, builds 002 through 045. Build 001 is not present in the
 builds folder. Hardware status is marked as **tested**, **not tested**, or **not recorded**; missing notes are not
 treated as evidence of a hardware test.
 
 | Build | Summary | FM-1 hardware status |
 | --- | --- | --- |
+| 045 | Adds per-note and bar sound changes, instrument colours, and safe working-song clear. | Tested; user reports it works |
 | 044 | Preserves Escape opening silence, prevents invalid note lengths, and budgets live preview voices. | Tested; user reports it works fine |
 | 043 | Starts untouched factory Escape at the first drum hit while preserving edited saves. | Tested; hardware test passed |
 | 042 | Adds single-track bar copy and paste; fixes reverse track selection. | Tested; result not specified |
@@ -205,12 +211,22 @@ packages in `builds/` are local test artifacts and are not tracked by Git.
 
 ### SEQ screen
 
-The editor has four pitched tracks and one LM-1 drum track.
+The editor has four pitched tracks and one LM-1 drum track and shows one whole bar at a time; the number of grid
+steps depends on the time signature.
 
 - Turn **PRESET** to choose a track; turn **ALGO** to move the step cursor. Hold **EDIT** while turning **ALGO**
   to jump to the beginning of another bar. Moving beyond the end extends the song, up to 128 bars.
-- Turn **SELECT** to choose the track's instrument or drum sample. The LM-1 sound is only available on the drum
-  track.
+- Turn the **SELECT encoder** to change the pitched track's default instrument and variant for new notes; existing
+  notes keep their sounds. On an existing note the selected note's sound remains displayed; move to an empty step
+  to use the default. LM-1 is only offered on the drum track, where SELECT chooses a drum sample.
+- Hold **EDIT** and turn **SELECT** to change only the selected pitched note's instrument or variant. At an empty
+  step, this chooses the sound for the next note there; moving away restores that track's default. Note colours show
+  their instrument: Juno cyan, piano green, Pro-1 pink, guitar orange, bass red, LM-1 purple, CS-50/CS-80 yellow
+  and CHORD white. The track label shows its default; GLO help also shows the colour legend.
+- With playback stopped, hold **EDIT** and press **PLAY** to apply the currently selected sound and variant to
+  all notes starting in the current pitched track and bar. Press **PLAY** to confirm, or **HOME** or **SEQ** to
+  cancel. Other tracks, bars and notes sustained in from a preceding bar are unchanged; drums cannot be changed
+  this way.
 - Press a piano key to play and insert or replace a note at the selected step. On the drum track, keys select and
   insert individual samples; different drum samples can share a step.
 - Press **REC** to remove the selected note. On the drum track it removes only the selected drum sample; it does not
@@ -225,11 +241,16 @@ The editor has four pitched tracks and one LM-1 drum track.
   Copying an empty bar can clear a destination after confirmation. The clipboard remains available until reboot
   and is not saved with the song.
 - Press **PLAY** to start or stop the working sequence. During playback the display follows the play position; moving
-  ALGO pauses that follow so you can edit another step.
+  ALGO pauses that follow so you can edit another step. Press PLAY twice quickly to stop and return to the start.
 - Press **SAVE** to name and save the sequence; subsequent saves update that song. Hold **EDIT** and press **SAVE**
   to name a copy in a free user slot and continue editing the copy. Built-in copies use the editable arrangement,
   not the separate factory Playback overlay. If all user slots are full, free one in Playback before saving a copy.
   There are 16 user slots plus three built-in songs.
+- Hold **EDIT** and press **HOME** to clear the working song; **SEL** confirms and **HOME** or **SEQ** cancels.
+  Playback stops when the prompt opens, even if cancelled. Clearing discards unsaved edits and detaches the working
+  song from its saved slot, but does not delete or overwrite that slot; the next SAVE creates a new user song.
+- Untouched factory songs may use a separate Playback overlay. Editing and saving a built-in can replace that
+  Playback sound with its editable arrangement; use **EDIT + SAVE** to preserve the built-in as a separate copy.
 - Press **SEQ** or **HOME** to return to the main screen. **GLO** opens sequencer help.
 
 ### PLAY screen
@@ -281,7 +302,8 @@ terms; see [CREDITS.md](CREDITS.md) and [base/LICENSING.md](base/LICENSING.md).
 
 ## Future development
 
-- Continue investigating CHORD JUNO/PRO timing load.
+- Revisit the sequencer controls: the new controls work but feel clunky to use.
+- Investigate and fix distortion when playing two keys in CHORD mode with JUNO or PRO-1, including the timing load.
 - Target full song sharing for v0.40 or v0.50, depending on implementation complexity.
 - Continue improving the preloaded songs, including renderer choices, voice allocation, mix balance, and FM-1
   listening tests.

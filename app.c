@@ -199,7 +199,7 @@ typedef struct {
 } sequence_slot_t;
 
 enum { SCREEN_MAIN, SCREEN_SEQUENCE, SCREEN_HELP, SCREEN_NAME, SCREEN_DELETE, SCREEN_PLAYBACK,
-       SCREEN_CONFIRM_DELETE, SCREEN_CONFIRM_PASTE };
+       SCREEN_CONFIRM_DELETE, SCREEN_CONFIRM_PASTE, SCREEN_CONFIRM_CLEAR, SCREEN_CONFIRM_BAR_SOUND };
 enum { METER_4_4, METER_8_4, METER_8_8, METER_16_16, METER_5_4, METER_COUNT };
 enum { BUILTIN_UNTRIMMED, BUILTIN_PREVIOUS_TRIM, BUILTIN_CURRENT_TRIM };
 
@@ -323,7 +323,8 @@ static uint8_t sequence_help_page;
 static uint32_t sequence_help_master;
 static uint8_t sequence_help_return_screen;
 enum { SEQUENCE_NOTICE_NONE, SEQUENCE_NOTICE_NOTE, SEQUENCE_NOTICE_OCTAVE, SEQUENCE_NOTICE_FX,
-       SEQUENCE_NOTICE_BAR_COPIED, SEQUENCE_NOTICE_BAR_PASTED };
+       SEQUENCE_NOTICE_BAR_COPIED, SEQUENCE_NOTICE_BAR_PASTED, SEQUENCE_NOTICE_DEFAULT_SOUND,
+       SEQUENCE_NOTICE_BAR_SOUND };
 static uint8_t sequence_notice, sequence_notice_note, sequence_notice_instrument, sequence_notice_variant;
 static uint8_t sequence_notice_knob, sequence_notice_value;
 static int8_t sequence_notice_octave;
@@ -1157,6 +1158,10 @@ static const uint8_t sequence_steps_per_bar[METER_COUNT] = {16u, 32u, 16u, 16u, 
 static const uint8_t sequence_note_steps[7] = {1u, 2u, 4u, 8u, 16u, 32u, 64u};
 static const char *const sequence_note_names[7] = {"1/16", "1/8", "1/4", "1/2", "1", "2", "4"};
 static const char *const sequence_meter_names[METER_COUNT] = {"4/4", "8/4", "8/8", "16/16", "5/4"};
+static const uint16_t sequence_instrument_colors[INSTRUMENTS] = {
+    RGB(80, 220, 255), RGB(120, 230, 120), RGB(255, 140, 180), RGB(255, 190, 70),
+    RGB(255, 100, 80), RGB(190, 150, 255), RGB(255, 235, 100), RGB(230, 230, 230)
+};
 
 static uint32_t sequence_slot_object(uint32_t slot)
 {
@@ -3730,13 +3735,20 @@ static void sequence_move_cursor(int32_t delta)
     sequence_load_cursor_sound();
 }
 
-static void sequence_change_sound(int32_t delta)
+static void sequence_show_notice(uint8_t notice);
+
+static void sequence_change_sound(int32_t delta, uint8_t note_only)
 {
     int32_t sound_delta;
     int32_t event_index;
+    uint8_t current;
     if (!delta)
         return;
     if (sequence_cursor_track == SEQUENCE_DRUM_TRACK) {
+        if (note_only) {
+            sequence_show_warning(13u);
+            return;
+        }
         sound_delta = ((int32_t)sequence.header.drum_variant + delta % (int32_t)ROSSFLM1_SAMPLE_COUNT)
             % (int32_t)ROSSFLM1_SAMPLE_COUNT;
         if (sound_delta < 0)
@@ -3746,12 +3758,14 @@ static void sequence_change_sound(int32_t delta)
         ui_drawn = 0u;
         return;
     }
-    if (sequence_selected_sound >= 12u && sequence_selected_sound < 25u)
+    current = note_only ? sequence_selected_sound
+        : sequence_sound_index(sequence.header.instrument[sequence_cursor_track],
+                               sequence.header.variant[sequence_cursor_track]);
+    if (current >= 12u && current < 25u)
         sound_delta = delta > 0 ? 12 : 11;
     else
-        sound_delta = sequence_selected_sound < 12u
-            ? sequence_selected_sound : sequence_selected_sound - 13;
-    if (sequence_selected_sound >= 12u && sequence_selected_sound < 25u)
+        sound_delta = current < 12u ? current : current - 13;
+    if (current >= 12u && current < 25u)
         delta += delta > 0 ? -1 : 1;
     sound_delta = (sound_delta + delta % (SEQUENCE_SOUND_COUNT - (int32_t)ROSSFLM1_SAMPLE_COUNT))
         % (SEQUENCE_SOUND_COUNT - (int32_t)ROSSFLM1_SAMPLE_COUNT);
@@ -3761,7 +3775,7 @@ static void sequence_change_sound(int32_t delta)
         sound_delta += (int32_t)ROSSFLM1_SAMPLE_COUNT;
     event_index = sequence_find_event(sequence_cursor_track, sequence_cursor_step);
     sequence_apply_sound((uint8_t)sound_delta);
-    if (event_index >= 0) {
+    if (note_only && event_index >= 0) {
         uint32_t old = sequence.events[event_index];
         uint8_t note = sequence_event_note(old);
         if (selected_instrument == 5u)
@@ -3772,7 +3786,14 @@ static void sequence_change_sound(int32_t delta)
             sequence_event_step(old), note, sequence_event_duration(old),
             sequence_cursor_track, selected_instrument, sequence_current_variant());
     }
-    sequence_store_track_sound();
+    if (!note_only) {
+        sequence_store_track_sound();
+        sequence_notice_instrument = selected_instrument;
+        sequence_notice_variant = sequence_current_variant();
+        sequence_show_notice(SEQUENCE_NOTICE_DEFAULT_SOUND);
+        sequence_load_cursor_sound();
+    }
+    ui_drawn = 0u;
 }
 
 static void sequence_change_duration(uint8_t duration)
@@ -3840,7 +3861,8 @@ static int sequence_insert_note(uint8_t note)
         sequence.header.count++;
     }
     plat_unlock(lock);
-    sequence_store_track_sound();
+    if (sequence_cursor_track == SEQUENCE_DRUM_TRACK)
+        sequence_store_track_sound();
     sequence_extend_to(sequence_cursor_step + sequence_event_length_steps(event, sequence.header.tempo));
     ui_drawn = 0u;
     return 1;
@@ -4286,7 +4308,7 @@ static void sequence_help_toggle(void)
 
 static uint8_t sequence_help_page_count(void)
 {
-    return sequence_help_return_screen == SCREEN_SEQUENCE ? 5u
+    return sequence_help_return_screen == SCREEN_SEQUENCE ? 9u
         : sequence_help_return_screen == SCREEN_PLAYBACK ? 2u : 4u;
 }
 
@@ -4402,6 +4424,43 @@ static void sequence_paste_bar(uint8_t confirmed)
     sequence_load_cursor_sound();
     sequence_warning = 0u;
     sequence_show_notice(SEQUENCE_NOTICE_BAR_PASTED);
+}
+
+static void sequence_change_bar_sound(uint8_t confirmed)
+{
+    uint32_t steps_per_bar = sequence_steps_per_bar[sequence.header.meter];
+    uint32_t first = (sequence_cursor_step / steps_per_bar) * steps_per_bar;
+    uint32_t count = 0u;
+    if (sequence_cursor_track == SEQUENCE_DRUM_TRACK) {
+        sequence_show_warning(13u);
+        return;
+    }
+    for (uint32_t i = 0u; i < sequence.header.count; i++) {
+        uint32_t event = sequence.events[i], step = sequence_event_step(event);
+        if (sequence_event_track(event) == sequence_cursor_track
+            && step >= first && step < first + steps_per_bar)
+            count++;
+    }
+    if (!count) {
+        sequence_show_warning(14u);
+        return;
+    }
+    if (!confirmed) {
+        sequence_screen = SCREEN_CONFIRM_BAR_SOUND;
+        ui_drawn = 0u;
+        return;
+    }
+    for (uint32_t i = 0u; i < sequence.header.count; i++) {
+        uint32_t event = sequence.events[i], step = sequence_event_step(event);
+        if (sequence_event_track(event) == sequence_cursor_track
+            && step >= first && step < first + steps_per_bar)
+            sequence.events[i] = sequence_event_make(step, sequence_event_note(event),
+                sequence_event_duration(event), sequence_cursor_track, selected_instrument,
+                sequence_current_variant());
+    }
+    sequence_load_cursor_sound();
+    sequence_warning = 0u;
+    sequence_show_notice(SEQUENCE_NOTICE_BAR_SOUND);
 }
 
 #ifdef HAVE_SONG
@@ -4601,15 +4660,24 @@ static void sequence_input(uint32_t buttons, uint32_t pressed, uint32_t keys,
 {
     uint8_t screen = sequence_screen;
     uint32_t keys_pressed = keys & ~previous_keys;
-    if (screen == SCREEN_CONFIRM_PASTE) {
+    if (screen == SCREEN_CONFIRM_PASTE || screen == SCREEN_CONFIRM_CLEAR
+        || screen == SCREEN_CONFIRM_BAR_SOUND) {
         for (uint32_t key = 0; key < NKEYS; key++)
             if (!(keys & (1u << key)) && (previous_keys & (1u << key)))
                 release_live_key(key);
         if (pressed & ((1u << B_HOME) | (1u << B_SEQ))) {
             sequence_screen = SCREEN_SEQUENCE;
-        } else if (pressed & (1u << B_SEL)) {
+        } else if (screen == SCREEN_CONFIRM_PASTE && (pressed & (1u << B_SEL))) {
             sequence_screen = SCREEN_SEQUENCE;
             sequence_paste_bar(1u);
+        } else if (screen == SCREEN_CONFIRM_CLEAR && (pressed & (1u << B_SEL))) {
+            all_notes_off();
+            sequence_reset();
+            sequence_editing_saved = 0u;
+            sequence_enter();
+        } else if (screen == SCREEN_CONFIRM_BAR_SOUND && (pressed & (1u << B_PLAY))) {
+            sequence_screen = SCREEN_SEQUENCE;
+            sequence_change_bar_sound(1u);
         }
         previous_keys = keys;
         previous_buttons = buttons;
@@ -4653,6 +4721,18 @@ static void sequence_input(uint32_t buttons, uint32_t pressed, uint32_t keys,
         return;
     }
 
+    if (screen == SCREEN_SEQUENCE && (pressed & (1u << B_HOME)) && (buttons & (1u << B_EDIT))) {
+        sequence_stop();
+        for (uint32_t key = 0; key < NKEYS; key++)
+            if (!(keys & (1u << key)) && (previous_keys & (1u << key)))
+                release_live_key(key);
+        sequence_screen = SCREEN_CONFIRM_CLEAR;
+        ui_drawn = 0u;
+        previous_keys = keys;
+        previous_buttons = buttons;
+        portrait_master_last = master_position;
+        return;
+    }
     if (pressed & (1u << B_HOME)) {
         if (screen == SCREEN_PLAYBACK)
             sequence_to_main();
@@ -4786,7 +4866,7 @@ static void sequence_input(uint32_t buttons, uint32_t pressed, uint32_t keys,
             }
         }
         if (select_delta && (!sequence_playing || sequence_cursor_track == SEQUENCE_DRUM_TRACK))
-            sequence_change_sound(select_delta);
+            sequence_change_sound(select_delta, (buttons & (1u << B_EDIT)) != 0u);
         if (pressed & (1u << B_SEL)) {
             if (buttons & (1u << B_EDIT)) {
                 if (sequence_playing)
@@ -4812,7 +4892,12 @@ static void sequence_input(uint32_t buttons, uint32_t pressed, uint32_t keys,
                 sequence_delete_note();
             }
         }
-        if (pressed & (1u << B_PLAY)) {
+        if ((pressed & (1u << B_PLAY)) && (buttons & (1u << B_EDIT))) {
+            if (sequence_playing)
+                sequence_show_warning(12u);
+            else
+                sequence_change_bar_sound(0u);
+        } else if (pressed & (1u << B_PLAY)) {
             uint32_t now = plat_ms();
             if (sequence_last_play_press_valid
                 && (uint32_t)(now - sequence_last_play_press) <= SEQUENCE_PLAY_RESET_MS) {
@@ -4831,6 +4916,11 @@ static void sequence_input(uint32_t buttons, uint32_t pressed, uint32_t keys,
                 sequence_last_play_press = now;
                 sequence_last_play_press_valid = 1u;
             }
+        }
+        if (sequence_screen == SCREEN_CONFIRM_BAR_SOUND) {
+            previous_buttons = buttons;
+            portrait_master_last = master_position;
+            return;
         }
         if ((pressed & (1u << B_SAVE)) && !sequence_playing)
             sequence_begin_save((buttons & (1u << B_EDIT)) != 0u);
@@ -5348,6 +5438,18 @@ static const char *sequence_sound_name(uint8_t instrument, uint8_t variant)
     return instrument_names[instrument < INSTRUMENTS ? instrument : 0u];
 }
 
+static void sequence_draw_sound(int32_t x, int32_t y, uint8_t instrument, uint8_t variant,
+                                uint16_t color)
+{
+    if (instrument == 3u)
+        x = cv_text(x, y, &FONT_XS, "GUITAR ", color);
+    else if (instrument == 4u)
+        x = cv_text(x, y, &FONT_XS, "BASS ", color);
+    else if (instrument == 6u && variant)
+        x = cv_text(x, y, &FONT_XS, "CS-80 ", color);
+    cv_text(x, y, &FONT_XS, sequence_sound_name(instrument, variant), color);
+}
+
 static void sequence_draw_notice(void)
 {
     if (sequence_notice == SEQUENCE_NOTICE_NOTE) {
@@ -5369,8 +5471,7 @@ static void sequence_draw_notice(void)
         } else {
             x = cv_text(x, 42, &FONT_XS, "LM-1 ", C_GRAY);
         }
-        cv_text(x, 42, &FONT_XS,
-                sequence_sound_name(sequence_notice_instrument, sequence_notice_variant), C_HI);
+        sequence_draw_sound(x, 42, sequence_notice_instrument, sequence_notice_variant, C_HI);
     } else if (sequence_notice == SEQUENCE_NOTICE_OCTAVE) {
         char text[] = "OCTAVE +0";
         int32_t octave = sequence_notice_octave;
@@ -5390,6 +5491,11 @@ static void sequence_draw_notice(void)
         draw_text(6, 42, "BAR COPIED", C_HI);
     } else if (sequence_notice == SEQUENCE_NOTICE_BAR_PASTED) {
         draw_text(6, 42, "BAR PASTED", C_HI);
+    } else if (sequence_notice == SEQUENCE_NOTICE_DEFAULT_SOUND) {
+        int32_t x = cv_text(6, 42, &FONT_XS, "DEFAULT ", C_GRAY);
+        sequence_draw_sound(x, 42, sequence_notice_instrument, sequence_notice_variant, C_HI);
+    } else if (sequence_notice == SEQUENCE_NOTICE_BAR_SOUND) {
+        draw_text(6, 42, "BAR SOUND SET", C_HI);
     }
 }
 
@@ -5478,7 +5584,8 @@ static void sequence_draw_grid(void)
         if (x + w > x0 + width - 1)
             w = x0 + width - 1 - x;
         if (w > 0)
-            cv_rect(x, y, w, 10, colors[track]);
+            cv_rect(x, y, w, 10,
+                    sequence_instrument_colors[sequence_event_instrument(event)]);
     }
     if ((!sequence_playing || !sequence_follow_playback)
         && sequence_cursor_step / steps_per_bar == bar && ((plat_ms() / 300u) & 1u) == 0u) {
@@ -5502,7 +5609,9 @@ static void sequence_draw_grid(void)
             : sequence_warning == 9u ? "COPY A BAR FIRST"
             : sequence_warning == 10u ? "WRONG TRACK TYPE"
             : sequence_warning == 11u ? "METER MISMATCH"
-            : sequence_warning == 12u ? "STOP PLAYBACK FIRST" : "SAVE FAILED";
+            : sequence_warning == 12u ? "STOP PLAYBACK FIRST"
+            : sequence_warning == 13u ? "PITCHED TRACKS ONLY"
+            : sequence_warning == 14u ? "NO NOTES IN BAR" : "SAVE FAILED";
         int32_t chars = 0;
         for (const char *p = message; *p; p++)
             chars++;
@@ -5518,7 +5627,6 @@ static void sequence_draw_info(void)
     uint8_t instrument = selected_instrument;
     uint8_t variant = sequence_current_variant();
     uint8_t duration = sequence_duration_index;
-    const char *name;
     char tempo_text[] = "BPM 000";
     char length_text[] = "0000 MS";
     uint8_t tempo = sequence.header.tempo;
@@ -5528,10 +5636,9 @@ static void sequence_draw_info(void)
         variant = sequence_event_variant(event);
         duration = sequence_event_duration(event);
     }
-    name = sequence_sound_name(instrument, variant);
     cv_begin(240, 96, C_BLACK);
     draw_text(6, 12, "SOUND", C_GRAY);
-    draw_text(46, 12, name, C_WHITE);
+    sequence_draw_sound(46, 12, instrument, variant, C_WHITE);
     draw_text(6, 26, "LENGTH", C_GRAY);
     if (sequence_cursor_track == SEQUENCE_DRUM_TRACK) {
         uint32_t samples = drum_sample_lengths[variant];
@@ -5552,6 +5659,7 @@ static void sequence_draw_info(void)
     } else {
         draw_text(52, 26, sequence_note_names[duration < 7u ? duration : 0u], C_HI);
     }
+    draw_text(120, 26, "EDIT+HOME: CLEAR", C_HI);
     sequence_draw_notice();
     draw_text(6, 56, "PRESET: TRACK   ALGO: STEP   REC: DELETE", C_DIM);
     draw_text(6, 78, "GLO=HELP", C_HI);
@@ -5575,16 +5683,20 @@ static void sequence_draw_help(void)
         {"PRESET: PICK SONG", "PLAY: START / STOP", "REC: DELETE SONG", "EDIT / SEQ: LOAD"},
         {"REC AGAIN: DELETE", "HOME / SEQ: CANCEL", "KEY: LOAD TO EDIT", "FIRST KEY: IGNORED"}
     };
-    static const char *const sequence_lines[5][4] = {
-        {"PRESET: TRACK", "ALGO: STEP", "SELECT: SOUND", "MASTER: LENGTH"},
+    static const char *const sequence_lines[9][4] = {
+        {"PRESET: TRACK", "ALGO: STEP", "SELECT: DEFAULT", "MASTER: LENGTH"},
         {"KEYS: SET NOTE", "REC: DELETE NOTE", "OCT +/-: OCTAVE", "K1-K4: FX"},
         {"EDIT+K1: BPM", "SEL: METER", "PLAY: START / STOP", "SAVE: STORE"},
         {"EDIT+ALGO: BAR", "JUMP TO BAR START", "EDIT+SAVE: COPY", "ALGO: PAUSE FOLLOW"},
-        {"EDIT+REC: COPY BAR", "EDIT+SEL: PASTE BAR", "SEL: CONFIRM", "HOME/SEQ: CANCEL"}
+        {"EDIT+REC: COPY BAR", "EDIT+SEL: PASTE BAR", "SEL: CONFIRM", "HOME/SEQ: CANCEL"},
+        {"EDIT+SELECT: NOTE", "EDIT+PLAY: BAR SOUND", "EDIT+HOME: CLEAR", "PLAY 2X: RESET"},
+        {"PLAY: APPLY SOUND", "SEL: CLEAR / PASTE", "HOME/SEQ: CANCEL", "CLEAR KEEPS SAVED"},
+        {"JUNO", "PIANO", "PRO-1", "GUITAR"},
+        {"BASS", "LM-1", "CS-50 / CS-80", "CHORD"}
     };
     char main_title[] = "MAIN HELP 1/4";
     char playback_title[] = "PLAYBACK HELP 1/2";
-    char sequence_title[] = "SEQUENCER HELP 1/5";
+    char sequence_title[] = "SEQUENCER HELP 1/9";
     const char *const (*lines)[4];
     char *title;
     int32_t title_x;
@@ -5608,8 +5720,12 @@ static void sequence_draw_help(void)
     title[title_page_index] = (char)('1' + sequence_help_page);
     cv_begin(240, 144, C_BLACK);
     draw_text(title_x, 4, title, C_WHITE);
-    for (uint32_t i = 0; i < 4u; i++)
-        cv_text(8, 24 + (int32_t)i * 28, &FONT_M, lines[sequence_help_page][i], C_GRAY);
+    for (uint32_t i = 0; i < 4u; i++) {
+        uint16_t color = C_GRAY;
+        if (sequence_help_return_screen == SCREEN_SEQUENCE && sequence_help_page >= 7u)
+            color = sequence_instrument_colors[(sequence_help_page - 7u) * 4u + i];
+        cv_text(8, 24 + (int32_t)i * 28, &FONT_M, lines[sequence_help_page][i], color);
+    }
     cv_blit(0, 0);
     cv_begin(240, 96, C_BLACK);
     cv_text(8, 6, &FONT_M, "ANY KNOB: PAGE", C_HI);
@@ -5702,6 +5818,37 @@ static void sequence_draw_confirm_paste(void)
     cv_blit(0, 0);
     cv_begin(240, 96, C_BLACK);
     draw_text(12, 72, "SEL: REPLACE  HOME/SEQ: CANCEL", C_HI);
+    cv_blit(0, 144);
+}
+
+static void sequence_draw_confirm_clear(void)
+{
+    cv_begin(240, 144, C_BLACK);
+    draw_text(60, 14, "CLEAR WORKING SONG?", C_WHITE);
+    draw_text(24, 60, "SAVED SONG IS KEPT", C_HI);
+    draw_text(24, 100, "UNSAVED EDITS ARE LOST", C_GRAY);
+    cv_blit(0, 0);
+    cv_begin(240, 96, C_BLACK);
+    draw_text(12, 72, "SEL: CLEAR   HOME/SEQ: CANCEL", C_HI);
+    cv_blit(0, 144);
+}
+
+static void sequence_draw_confirm_bar_sound(void)
+{
+    uint32_t bar = sequence_cursor_step / sequence_steps_per_bar[sequence.header.meter] + 1u;
+    char target[] = "TRACK 0  BAR 000";
+    target[6] = (char)('1' + sequence_cursor_track);
+    target[13] = (char)('0' + bar / 100u);
+    target[14] = (char)('0' + (bar / 10u) % 10u);
+    target[15] = (char)('0' + bar % 10u);
+    cv_begin(240, 144, C_BLACK);
+    draw_text(54, 14, "CHANGE BAR SOUND?", C_WHITE);
+    draw_text(70, 45, target, C_HI);
+    sequence_draw_sound(24, 75, selected_instrument, sequence_current_variant(), C_WHITE);
+    draw_text(24, 105, "NOTES IN THIS BAR ONLY", C_GRAY);
+    cv_blit(0, 0);
+    cv_begin(240, 96, C_BLACK);
+    draw_text(12, 72, "PLAY: APPLY  HOME/SEQ: CANCEL", C_HI);
     cv_blit(0, 144);
 }
 
@@ -5840,6 +5987,10 @@ void app_frame(void)
                 sequence_draw_confirm_delete();
             else if (sequence_screen == SCREEN_CONFIRM_PASTE)
                 sequence_draw_confirm_paste();
+            else if (sequence_screen == SCREEN_CONFIRM_CLEAR)
+                sequence_draw_confirm_clear();
+            else if (sequence_screen == SCREEN_CONFIRM_BAR_SOUND)
+                sequence_draw_confirm_bar_sound();
             else
                 sequence_draw_playback();
             ui_drawn = 1u;
@@ -5849,6 +6000,7 @@ void app_frame(void)
             uint32_t lights = 0u;
             if (sequence_screen == SCREEN_SEQUENCE || sequence_screen == SCREEN_NAME
                 || sequence_screen == SCREEN_CONFIRM_PASTE
+                || sequence_screen == SCREEN_CONFIRM_CLEAR || sequence_screen == SCREEN_CONFIRM_BAR_SOUND
                 || sequence_screen == SCREEN_DELETE
                 || (sequence_screen == SCREEN_HELP && sequence_help_return_screen == SCREEN_SEQUENCE))
                 lights |= 1u << B_SEQ;
@@ -6172,6 +6324,28 @@ int app_expect(const char *what, int *got)
     if (text_is(what, "seq_note")) {
         int32_t event_index = sequence_find_event(sequence_cursor_track, sequence_cursor_step);
         *got = event_index >= 0 ? sequence_event_note(sequence.events[event_index]) : -1;
+        return 1;
+    }
+    if (text_is(what, "seq_event_instrument") || text_is(what, "seq_event_variant")) {
+        int32_t event_index = sequence_find_event(sequence_cursor_track, sequence_cursor_step);
+        *got = event_index < 0 ? -1 : text_is(what, "seq_event_instrument")
+            ? sequence_event_instrument(sequence.events[event_index])
+            : sequence_event_variant(sequence.events[event_index]);
+        return 1;
+    }
+    if (text_is(what, "seq_default_instrument") || text_is(what, "seq_default_variant")) {
+        *got = sequence_cursor_track == SEQUENCE_DRUM_TRACK ? -1
+            : text_is(what, "seq_default_instrument")
+            ? sequence.header.instrument[sequence_cursor_track]
+            : sequence.header.variant[sequence_cursor_track];
+        return 1;
+    }
+    if (text_is(what, "seq_confirm_clear")) {
+        *got = sequence_screen == SCREEN_CONFIRM_CLEAR;
+        return 1;
+    }
+    if (text_is(what, "seq_confirm_bar_sound")) {
+        *got = sequence_screen == SCREEN_CONFIRM_BAR_SOUND;
         return 1;
     }
     if (text_is(what, "seq_event_duration")) {

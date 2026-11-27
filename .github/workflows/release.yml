@@ -19,8 +19,11 @@ jobs:
       build: |
         set -euo pipefail
         git submodule update --init --recursive
-        python3 base/tools/build.py . --release "${GITHUB_REF_NAME#v}"
-      packages: build/plissken-*.fwsc
+        version="${GITHUB_REF_NAME#v}"
+        python3 base/tools/build.py . --release "$version"
+        mv "build/plissken-$version.fwsc" \
+          build/onlyusefmflashertoinstallplissken.fwsc
+      packages: build/onlyusefmflashertoinstallplissken.fwsc
 
   title-release:
     needs: release

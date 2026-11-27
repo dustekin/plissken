@@ -1,0 +1,80 @@
+# Apply a note's sound to starts in one track and bar, with confirmation.
+wait 2000
+tap SEQ
+master 4095
+tapkey 0
+expect seq_event_duration 6
+press EDIT
+spin ALGO 1
+release EDIT
+master 0
+tapkey 1
+press EDIT
+spin SELECT 4
+release EDIT
+expect seq_event_instrument 3
+expect seq_event_variant 1
+spin ALGO 1
+tapkey 2
+expect seq_event_instrument 0
+spin PRESET 1
+tapkey 3
+spin PRESET -1
+spin ALGO -1
+press EDIT
+tap PLAY
+release EDIT
+expect seq_confirm_bar_sound 1
+wait 4000
+shot seq_bar_sound_confirm.png
+tap HOME
+spin ALGO 1
+expect seq_event_instrument 0
+spin ALGO -1
+press EDIT
+tap PLAY
+release EDIT
+tap PLAY
+expect seq_screen 1
+spin ALGO 1
+expect seq_event_instrument 3
+expect seq_event_variant 1
+spin PRESET 1
+expect seq_event_instrument 1
+spin PRESET -1
+press EDIT
+spin ALGO -1
+release EDIT
+expect seq_event_instrument 0
+press EDIT
+spin ALGO 2
+tap PLAY
+release EDIT
+expect seq_warning 14
+spin PRESET 4
+press EDIT
+tap PLAY
+spin SELECT 1
+release EDIT
+expect seq_warning 13
+spin PRESET 1
+tap PLAY
+expect seq_playing 1
+press EDIT
+tap PLAY
+release EDIT
+expect seq_warning 12
+wait 600
+tap PLAY
+tap SAVE
+spin PRESET 1
+tap SAVE
+reboot
+tap PLAY
+tap EDIT
+press EDIT
+spin ALGO 1
+release EDIT
+spin ALGO 1
+expect seq_event_instrument 3
+expect seq_event_variant 1

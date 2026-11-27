@@ -15,8 +15,10 @@ expect seq_duration 6
 tapkey 4
 expect seq_events 1
 expect seq_bars 5
-# SELECT edits the sound at the cursor. SEL cycles the time signature.
+# EDIT + SELECT edits the sound at the cursor. SEL cycles the time signature.
+press EDIT
 turn SELECT 1
+release EDIT
 expect seq_instrument 3
 tap SEL
 expect seq_meter 1

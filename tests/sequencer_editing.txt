@@ -80,6 +80,22 @@ expect seq_help_page 4
 wait 100
 shot seq_help_5.png
 spin ALGO 1
+expect seq_help_page 5
+wait 100
+shot seq_help_6.png
+spin ALGO 1
+expect seq_help_page 6
+wait 100
+shot seq_help_7.png
+spin ALGO 1
+expect seq_help_page 7
+wait 100
+shot seq_help_8.png
+spin ALGO 1
+expect seq_help_page 8
+wait 100
+shot seq_help_9.png
+spin ALGO 1
 expect seq_help_page 0
 master 1280
 expect seq_help_page 1

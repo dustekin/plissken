@@ -2,6 +2,19 @@
 
 Each test build is saved as `plissken###.fwsc` with an increasing number. Newest first.
 Add an entry here whenever a new build is saved.
+For every future session handoff, remind the next session to save test packages in this `builds` folder with the
+next available number, check before copying to avoid overwriting, and update these notes.
+
+## 045
+- Local `0.33-test045` adds per-note instrument and variant selection, instrument-coloured notes, confirmed
+  bar-wide sound changes, and confirmed working-song clear without deleting the saved song. The five-voice
+  playback limit and saved-song format are unchanged.
+- All 63 host scenarios passed before the final label-only UI change; six focused scenarios passed after it.
+  Ten audio checks and ten MIDI converter tests passed; the final FM-1 target build passed. The user reports it
+  works on hardware, but the sequencer controls feel clunky and may need revisiting in a future build.
+- Device image 470,220 B; RAM .data+.bss 66,148 / 98,304 B; pool 216,676 / 344,064 B; package 614,938 B;
+  identity `FM-1_1981003300`; build ID `54A4940E`; package SHA-256
+  `10EA95049CBFA1FC04319C8DBECF72EC6F2440263031AD1B60C87A24C710B987`.
 
 ## v0.32 release preparation
 - Local `0.32` FM-1 package is based on hardware-tested build 044. The versioned package has not been separately
