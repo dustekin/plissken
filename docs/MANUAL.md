@@ -44,11 +44,16 @@ Press SEL again to resume automatic changes. ALGO or K4 sets energy, K1 sets tem
 and K3 transposes the generated music. REC schedules a fill. PLAY starts or stops the accompaniment. GLO opens
 the Groovebox help screen without stopping playback. Piano keys remain available as a live lead using the
 currently selected Plissken instrument.
+FX queues a new variation for the next bar; pressing FX again changes immediately. ENV, LFO, and ARP mute or unmute
+the generated synth, bass, and drums without stopping timing or affecting live lead. The screen counts down to the
+next automatic four-bar change.
 From Playback, EDIT enters Groovebox; SEQ or a piano key still opens the selected song in the sequencer.
 
-Action has syncopated LM-1 rhythm, Pro-1 arpeggios, piano stabs and restrained bass at 132 BPM. Horror begins at
-92 BPM with sustained CS-50, piano stabs, sparse bass and drums, minor-second Juno tension and descending Pro-1
-fills. Startup and four-bar transitions randomly select sections without immediately repeating the current one.
+Action has syncopated LM-1 rhythm, a repeated Pro-1 motif, piano octave answers and restrained bass at 132 BPM.
+Horror begins at 92 BPM with a sustained CS-50 bed, sparse piano/Pro-1 call-and-response, and descending Pro-1
+fills; transitions swell through a low semitone into a fifth. Each section repeats its ostinato and uses a
+sparser third bar. Startup and four-bar transitions randomly
+select sections without immediately repeating the current one.
 Generated and live notes fall down the display in Plissken's instrument colours. EDIT or HOME exits, releases all
 live notes and restores the previous main-screen tempo. Groovebox is generated from original patterns rather than
 playing the supplied reference recordings or reproducing their MIDI melodies.

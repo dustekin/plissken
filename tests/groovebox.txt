@@ -26,9 +26,22 @@ turn PRESET 1
 expect groove_style 1
 expect tempo 92
 wait 700
-expect hits0 >0
+expect hits6 >0
 expect hits5 >0
 expect groove_mix_peak_milli <1000
+tap ENV
+tap LFO
+tap ARP
+expect groove_mutes 7
+tap ENV
+tap LFO
+tap ARP
+expect groove_mutes 0
+tap FX
+expect groove_change_queued 1
+tap FX
+expect groove_change_queued 0
+expect groove_transitions >0
 tap PLAY
 expect groove_playing 0
 key 0 down 50
@@ -49,14 +62,14 @@ tap PLAY
 tap PLAY
 wait 11000
 expect groove_variation >=0
-expect groove_transitions 0
+expect groove_transitions 1
 tap SEL
 expect groove_hold 0
 tap PLAY
 tap PLAY
 wait 11000
 expect groove_variation >=0
-expect groove_transitions >0
+expect groove_transitions >1
 tap EDIT
 expect groove_mode 0
 expect tempo 80

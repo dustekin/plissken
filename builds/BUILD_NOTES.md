@@ -5,6 +5,37 @@ Add an entry here whenever a new build is saved.
 For every future session handoff, remind the next session to save test packages in this `builds` folder with the
 next available number, check before copying to avoid overwriting, and update these notes.
 
+## 054
+- Local `0.34-test054` makes Horror transitions slower and more ominous. It replaces the short descending
+  Pro-1 run with a low CS-50 semitone dissonance followed by a sustained Juno fifth. Manual REC fills retain a
+  separate Pro-1 tension response.
+- All 64 host scenarios and the FM-1 target build passed. The user reports the hardware test passed and the new
+  Horror transition works well.
+- Device image 475,288 B; RAM .data+.bss 66,404 / 98,304 B; pool 216,676 / 344,064 B; package 614,938 B;
+  identity `FM-1_1981003400`; build ID `1B4C2E29`; package SHA-256
+  `B403DDB991205D400731F7E75CAE5E162168EAAB3175C468947973BF9CD57BB1`.
+
+## 053
+- Local `0.34-test053` applies the local MIDI phrase analysis to Groovebox. Action uses a repeated Pro-1 motif with
+  piano octave answers, a restrained bass pulse and a deliberately sparse third bar. Horror holds a CS-50 bed under
+  sparse piano/Pro-1 call-and-response. Section transitions change root/voicing rather than randomizing every step.
+- All 64 host scenarios and the FM-1 target build passed. Hardware listening is pending; musical quality remains
+  experimental and should be judged on physical output.
+- Device image 475,192 B; RAM .data+.bss 66,404 / 98,304 B; pool 216,676 / 344,064 B; package 614,938 B;
+  identity `FM-1_1981003400`; build ID `52D3FD2C`; package SHA-256
+  `EC621ADDB8AD4746F19217E608A6CE39AE4F921588783C3920D90FB73B821A0F`.
+
+## 052
+- Local `0.34-test052` adds a four-bar transition countdown and queued/forced section changes with FX. ENV, LFO
+  and ARP now toggle generated synth, bass and drum performance mutes without affecting timing or live lead.
+  Groovebox help and screen text document the performance controls.
+- All 64 host scenarios passed, including queue/force transitions and all three mutes. The FM-1 target build
+  passed. The user reports the hardware tests passed, but the music quality needs further work; future builds
+  should consider removing notes and simplifying the accompaniment to create a smaller, cleaner arrangement.
+- Device image 475,724 B; RAM .data+.bss 66,404 / 98,304 B; pool 216,676 / 344,064 B; package 614,938 B;
+  identity `FM-1_1981003400`; build ID `C3D032A1`; package SHA-256
+  `312D8309EBBCE45812E91DA4EF5F03328518BE8BD34B227C42D5100839680921`.
+
 ## 051
 - Local `0.34-test051` seeds Groovebox startup from time and audio-state noise, then randomly chooses a different
   four-bar section at each transition. Piano stabs and Pro-1 phrases are more frequent and louder, while bass notes

@@ -93,8 +93,9 @@ may change substantially after further hardware listening.
 
 Tap **EDIT** on the main screen to enter the one-key Groovebox. It generates original, live Action and Horror
 patterns in the John Carpenter-inspired synth-soundtrack style without storing or playing the supplied reference
-recordings. Action uses a driving 132 BPM pulse, Pro-1 arpeggios, piano stabs, restrained bass, and LM-1 rhythm.
-Horror starts at 92 BPM with sustained CS-50, piano stabs, a sparse pulse, minor-second tension, and descending fills.
+recordings. Action uses a driving 132 BPM pulse, a repeated Pro-1 motif, piano octave answers, restrained bass, and
+LM-1 rhythm. Horror starts at 92 BPM with sustained CS-50, sparse piano/Pro-1 call-and-response, minor-third/fifth
+tension, and slow dissonant transitions that swell into a fifth.
 Each entry and four-bar transition uses a fresh random section while avoiding immediate repetition.
 
 - **PRESET** switches Action / Horror.
@@ -102,6 +103,12 @@ Each entry and four-bar transition uses a fresh random section while avoiding im
   are excluded.
 - Variations change automatically every four bars, with a new melodic sequence, bass rhythm/register, drum accents,
   and a transition fill. Press **SEL** to hold the current variation; press it again to resume automatic changes.
+- Four-bar sections use stable ostinati and octave/fifth cross-instrument doubling. The third bar is deliberately
+  sparser, and harmony/voicing changes at the boundary rather than step-by-step randomness.
+- **FX** queues a new variation for the next bar; press FX again to switch immediately. The display shows a
+  four-bar countdown and queued transition state.
+- **ENV**, **LFO**, and **ARP** toggle synth, bass, and drum performance mutes respectively. Mutes do not remove
+  generated notes from timing and do not affect live lead keys.
 - **GLO** opens Groovebox help and returns to the performance screen without stopping playback.
 - **ALGO** and **K4** set energy.
 - **K1** changes tempo, **K2** changes swing, and **K3** transposes the generated music.
@@ -167,12 +174,15 @@ names.
 
 ## Numbered internal builds
 
-There are 50 numbered packages in the current sequence, builds 002 through 051. Build 001 is not present in the
+There are 53 numbered packages in the current sequence, builds 002 through 054. Build 001 is not present in the
 builds folder. Hardware status is marked as **tested**, **not tested**, or **not recorded**; missing notes are not
 treated as evidence of a hardware test.
 
 | Build | Summary | FM-1 hardware status |
 | --- | --- | --- |
+| 054 | Replaces the Horror transition run with a low semitone swell into a fifth. | Tested; user reports it works well |
+| 053 | Reworks Groovebox into stable ostinati, octave answers, sparse bars, and long synth beds. | Not tested |
+| 052 | Adds Groovebox transition countdown, queued/forced changes, and live synth/bass/drum mutes. | Tested; user reports hardware passed |
 | 051 | Randomizes Groovebox startup/transitions and foregrounds piano and Pro-1 with less bass. | Tested; user reports hardware passed |
 | 050 | Adds Groovebox entry help and selectable live lead instruments while excluding drums. | Tested; user reports hardware passed |
 | 049 | Makes Groovebox four-bar changes audible with distinct melodies, bass, drums, registers, and fills. | Not tested |

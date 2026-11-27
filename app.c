@@ -83,6 +83,7 @@ typedef struct {
 static uint32_t trigger_piano(int32_t note, uint32_t duration, uint32_t velocity);
 static void stop_audio_voices(void);
 static void groove_visual_push(uint8_t instrument, uint8_t note);
+static uint8_t groove_random_variation(void);
 
 typedef struct {
     float phase;
@@ -293,6 +294,8 @@ static uint8_t groove_active, groove_playing, groove_style, groove_variation, gr
 static uint8_t groove_swing, groove_transpose, groove_fill;
 static uint8_t groove_step, groove_audio_started, groove_hold, groove_help;
 static uint8_t groove_bar_count;
+static uint8_t groove_change_queued, groove_next_variation;
+static uint8_t groove_mutes;
 static uint8_t groove_last_note;
 static uint32_t groove_random;
 static uint8_t groove_transitions;
@@ -2124,6 +2127,11 @@ static void groove_trigger(uint8_t instrument, uint8_t note, uint32_t steps, uin
 {
     uint32_t duration = (uint32_t)((float)steps * samples_per_step);
     uint32_t index;
+    if (((groove_mutes & 1u) && (instrument == 0u || instrument == 1u
+                                || instrument == 2u || instrument == 6u))
+        || ((groove_mutes & 2u) && instrument == 4u)
+        || ((groove_mutes & 4u) && instrument == 5u))
+        return;
     if (!sequence_reserve_voices(instrument, instrument == 5u ? drum : 0u, drum))
         return;
     if (duration < 1500u)
@@ -2161,75 +2169,69 @@ static void groove_trigger(uint8_t instrument, uint8_t note, uint32_t steps, uin
 
 static void groove_trigger_step(uint8_t s)
 {
-    static const int8_t action_bass[4][8] = {
-        {0, 0, 7, 0, 0, 3, 7, 10}, {0, 7, 10, 7, 3, 5, 3, 0},
-        {-2, 0, 3, 7, 10, 7, 3, 0}, {0, 12, 10, 7, 5, 3, 7, 10}
+    static const int8_t action_roots[4] = {0, 3, -2, 7};
+    static const int8_t action_motif[4][4] = {
+        {0, 0, 7, 12}, {0, 7, 3, 12},
+        {0, 3, 10, 7}, {0, 12, 7, 3}
     };
-    static const int8_t action_arp[4][8] = {
-        {0, 7, 12, 3, 7, 15, 12, 7}, {12, 10, 7, 3, 0, 3, 7, 15},
-        {3, 10, 15, 10, 7, 12, 19, 12}, {0, 3, 10, 15, 12, 10, 7, 3}
-    };
-    static const uint16_t action_kick[4] = {0x0501u, 0x4501u, 0x0521u, 0x4509u};
-    static const uint16_t action_snare[4] = {0x1010u, 0x1810u, 0x1028u, 0x1250u};
-    static const int8_t horror_bass[4][4] = {
-        {0, 0, 1, 0}, {0, -1, 1, 7}, {0, 1, -2, 5}, {0, -5, 1, -1}
-    };
-    static const int8_t horror_arp[4][4] = {
-        {0, 7, 1, 12}, {-2, 5, 12, 19}, {0, 13, 1, 8}, {7, 0, 6, 1}
+    static const uint8_t action_motif_steps[4] = {0x41u, 0x51u, 0x91u, 0x45u};
+    static const uint8_t action_answer_steps[4] = {0x22u, 0x0Au, 0x44u, 0x2Au};
+    static const uint16_t action_kick[4] = {0x0101u, 0x1101u, 0x0501u, 0x4501u};
+    static const uint16_t action_snare[4] = {0x1010u, 0x1020u, 0x1050u, 0x1210u};
+    static const int8_t horror_roots[4] = {0, 3, -2, 7};
+    static const int8_t horror_tension[4][3] = {
+        {0, 7, 1}, {0, 5, 12}, {0, 3, 10}, {0, 7, 6}
     };
     uint8_t variation = groove_variation & 3u;
-    uint8_t transition_fill = !groove_hold && groove_bar_count == 3u && s >= 12u;
+    uint8_t phrase_bar = groove_bar_count & 3u;
+    uint8_t sparse_bar = phrase_bar == 2u;
+    uint8_t motif_index = (uint8_t)((s / 2u) & 3u);
+    uint8_t transition_fill = ((!groove_hold && groove_bar_count == 3u)
+        || groove_change_queued) && s >= 12u;
     if (groove_style == GROOVE_ACTION) {
-        if ((((s == 0u || s == 3u || s == 6u || s == 8u || s == 11u || s == 14u)
-              && variation != 2u)
-             || (variation == 2u && (s == 0u || s == 2u || s == 5u || s == 8u
-                                     || s == 10u || s == 13u || s == 15u)))
-            && groove_intensity)
-            groove_trigger(4u, groove_note(28u, action_bass[variation], 8u, s / 2u),
-                           variation == 3u ? 3u : 2u, 0u);
-        if ((s & 1u) == 0u && groove_intensity)
-            groove_trigger(2u, groove_note(52u, action_arp[variation], 8u, s / 2u), 1u, 0u);
-        if (s == 2u || s == 6u || s == 10u || s == 14u)
-            groove_trigger(1u, groove_note(57u, action_arp[variation], 8u, s / 2u + 1u),
-                           groove_intensity >= 3u ? 3u : 2u, 0u);
+        if (s == 0u && groove_intensity >= 1u)
+            groove_trigger(6u, (uint8_t)(40u + action_roots[variation]), 14u, 0u);
+        if ((s == 0u || s == 8u) && !sparse_bar && groove_intensity >= 1u)
+            groove_trigger(4u, (uint8_t)(28u + action_roots[variation]), 6u, 0u);
+        if ((action_motif_steps[variation] >> (s / 2u) & 1u) && groove_intensity >= 1u)
+            groove_trigger(2u, (uint8_t)(52u + action_roots[variation]
+                + action_motif[variation][motif_index]), 2u, 0u);
+        if ((action_answer_steps[variation] >> (s / 2u) & 1u) && groove_intensity >= 2u)
+            groove_trigger(1u, (uint8_t)(64u + action_roots[variation]
+                + action_motif[variation][motif_index]), 2u, 0u);
         if ((action_kick[variation] >> s & 1u)
-            || (groove_intensity >= 3u && variation == 3u && s == 12u))
+            || (!sparse_bar && groove_intensity >= 3u && variation == 3u && s == 12u))
             groove_trigger(5u, 0u, 0u, ROSSFLM1_KICK);
         if (action_snare[variation] >> s & 1u)
             groove_trigger(5u, 0u, 0u, ROSSFLM1_SNARE);
-        if (((s & 1u) == 0u || (variation & 1u && (s == 7u || s == 15u)))
-            && groove_intensity >= 2u)
+        if (!sparse_bar && groove_intensity >= 2u
+            && (s == 2u || s == 6u || s == 10u || s == 14u))
             groove_trigger(5u, 0u, 0u, ROSSFLM1_HAT_CLOSED);
         if ((groove_fill || transition_fill) && s >= 12u)
-            groove_trigger(s == 15u ? 0u : 2u, groove_note(55u + s - 12u,
-                action_arp[variation], 8u, s & 7u), 1u, 0u);
+            groove_trigger(s == 15u ? 1u : 2u, (uint8_t)(55u + action_roots[variation]
+                + action_motif[variation][motif_index]), 1u, 0u);
     } else {
         if (s == 0u)
-            groove_trigger(6u, groove_note((uint8_t)(40u + (variation == 3u ? 12u : 0u)),
-                horror_bass[variation], 4u, 0u), 14u, 0u);
-        if (variation == 2u && (s == 0u || s == 8u || s == 12u))
-            groove_trigger(4u, groove_note(variation == 1u ? 40u : 28u,
-                horror_bass[variation], 4u, s / 4u), variation == 3u ? 3u : 6u, 0u);
-        if (((variation == 0u && (s == 2u || s == 6u || s == 10u || s == 14u))
-             || (variation == 1u && (s == 4u || s == 9u || s == 14u))
-             || (variation == 2u && (s == 1u || s == 5u || s == 9u || s == 13u))
-             || (variation == 3u && (s == 3u || s == 7u || s == 11u || s == 15u)))
-            && groove_intensity >= 2u)
-            groove_trigger(0u, groove_note(variation == 3u ? 64u : 52u,
-                horror_arp[variation], 4u, s / 4u), 2u, 0u);
-        if (s == 0u || s == 8u || (groove_intensity >= 3u && s == 12u))
-            groove_trigger(1u, groove_note(52u, horror_arp[variation], 4u, s / 4u),
-                           s == 0u ? 8u : 4u, 0u);
-        if ((s == 3u || s == 7u || s == 11u || s == 15u) && groove_intensity >= 2u)
-            groove_trigger(2u, groove_note(59u, horror_arp[variation], 4u, s / 4u),
-                           2u, 0u);
-        if (s == 0u || (groove_intensity >= 2u
-            && ((variation & 1u) ? s == 9u : s == 11u)))
+            groove_trigger(6u, (uint8_t)(40u + horror_roots[variation]), 14u, 0u);
+        if (s == 8u && sparse_bar)
+            groove_trigger(4u, (uint8_t)(28u + horror_roots[variation]), 6u, 0u);
+        if ((s == 2u || s == 10u) && groove_intensity >= 2u)
+            groove_trigger(1u, (uint8_t)(52u + horror_roots[variation]
+                + horror_tension[variation][(s / 8u) & 1u]), 4u, 0u);
+        if ((s == 6u || s == 14u) && groove_intensity >= 1u)
+            groove_trigger(2u, (uint8_t)(59u + horror_roots[variation]
+                + horror_tension[variation][(variation + phrase_bar) % 3u]), 3u, 0u);
+        if (s == 0u || (groove_intensity >= 3u && s == 11u && !sparse_bar))
             groove_trigger(5u, 0u, 0u, ROSSFLM1_KICK);
-        if (groove_intensity >= 3u && (s == 4u + variation * 2u || s == 12u))
+        if (groove_intensity >= 3u && s == 12u && !sparse_bar)
             groove_trigger(5u, 0u, 0u, ROSSFLM1_SNARE);
-        if ((groove_fill || transition_fill) && s >= 12u)
-            groove_trigger(2u, (uint8_t)(76u - (s - 12u)), 1u, 0u);
+        if (transition_fill && s == 12u)
+            groove_trigger(6u, (uint8_t)(39u + horror_roots[variation] + 1), 4u, 0u);
+        if (transition_fill && s == 14u)
+            groove_trigger(0u, (uint8_t)(47u + horror_roots[variation] + 7), 4u, 0u);
+        if (groove_fill && s >= 12u && s != 12u)
+            groove_trigger(2u, (uint8_t)(59u + horror_roots[variation]
+                + horror_tension[variation][(s - 12u) % 3u]), 2u, 0u);
     }
 }
 
@@ -2255,19 +2257,17 @@ static void groove_audio_advance(void)
     groove_step = (uint8_t)((groove_step + 1u) & 15u);
     if (groove_step == 0u) {
         groove_bar_count++;
+        if (groove_change_queued) {
+            groove_variation = groove_next_variation;
+            groove_change_queued = 0u;
+            groove_bar_count = 0u;
+            groove_transitions++;
+        }
         if (groove_bar_count >= 4u) {
             groove_bar_count = 0u;
+            groove_change_queued = 0u;
             if (!groove_hold) {
-                uint32_t state = groove_random;
-                uint8_t next;
-                state ^= state << 13;
-                state ^= state >> 17;
-                state ^= state << 5;
-                groove_random = state ? state : 0x9e3779b9u;
-                next = (uint8_t)(groove_random % 3u);
-                if (next >= groove_variation)
-                    next++;
-                groove_variation = next;
+                groove_variation = groove_random_variation();
                 groove_transitions++;
             }
         }
@@ -2275,6 +2275,20 @@ static void groove_audio_advance(void)
     groove_trigger_step(groove_step);
     if (groove_step == 15u)
         groove_fill = 0u;
+}
+
+static uint8_t groove_random_variation(void)
+{
+    uint32_t state = groove_random;
+    uint8_t next;
+    state ^= state << 13;
+    state ^= state >> 17;
+    state ^= state << 5;
+    groove_random = state ? state : 0x9e3779b9u;
+    next = (uint8_t)(groove_random % 3u);
+    if (next >= groove_variation)
+        next++;
+    return next;
 }
 
 static void groove_style_changed(void)
@@ -3772,6 +3786,7 @@ static void groove_enter(void)
     groove_transitions = 0u;
     groove_hold = 0u;
     groove_help = 0u;
+    groove_mutes = 0u;
 #ifdef PLAT_HOST
     groove_mix_peak = 0.0f;
 #endif
@@ -5318,6 +5333,24 @@ static void groove_input(uint32_t buttons, uint32_t pressed, uint32_t keys,
     }
     if (pressed & (1u << B_REC))
         groove_fill = 1u;
+    if (pressed & (1u << B_ENV))
+        groove_mutes ^= 1u;
+    if (pressed & (1u << B_LFO))
+        groove_mutes ^= 2u;
+    if (pressed & (1u << B_ARP))
+        groove_mutes ^= 4u;
+    if (pressed & (1u << B_FX)) {
+        if (groove_change_queued) {
+            groove_variation = groove_next_variation;
+            groove_change_queued = 0u;
+            groove_bar_count = 0u;
+            groove_transitions++;
+            groove_fill = 1u;
+        } else {
+            groove_next_variation = groove_random_variation();
+            groove_change_queued = 1u;
+        }
+    }
     if (pressed & (1u << B_SEL))
         groove_hold = (uint8_t)!groove_hold;
     if (preset_delta) {
@@ -6354,6 +6387,13 @@ static void groove_draw(void)
     draw_text(38, 28, text, C_HI);
     draw_text(8, 42, "LEAD", C_GRAY);
     draw_text(48, 42, instrument_names[selected_instrument], C_HI);
+    draw_text(166, 42, groove_change_queued ? "NEXT NOW" : "NEXT", groove_change_queued ? RGB(255, 140, 180) : C_GRAY);
+    if (!groove_change_queued && !groove_hold) {
+        text[0] = (char)('1' + (3u - groove_bar_count));
+        text[1] = 'B';
+        text[2] = 0;
+        draw_text(218, 42, text, C_HI);
+    }
     draw_text(52, 8, groove_hold ? "HOLD" : "AUTO 4",
              groove_hold ? RGB(255, 140, 180) : C_HI);
     draw_text(66, 28, "ENERGY", C_GRAY);
@@ -6367,8 +6407,8 @@ static void groove_draw(void)
     text[3] = 0;
     draw_text(166, 28, "BPM", C_GRAY);
     draw_text(202, 28, text, C_HI);
-    draw_text(8, 52, "PRESET: STYLE  SELECT: VAR  ALGO: ENERGY", C_GRAY);
-    draw_text(8, 66, "SELECT: LEAD  SEL: HOLD/AUTO  K1: BPM", C_GRAY);
+    draw_text(8, 52, "PRESET STYLE  SELECT LEAD  ALGO ENERGY", C_GRAY);
+    draw_text(8, 66, "FX NEXT  REC FILL  SEL HOLD  K1 BPM", C_GRAY);
     draw_text(8, 80, "PLAY: START/STOP  EDIT OR HOME: EXIT", C_HI);
     cv_blit(0, 144);
 }
@@ -6376,8 +6416,8 @@ static void groove_draw(void)
 static void groove_draw_help(void)
 {
     static const char *const lines[5] = {
-        "PRESET: ACTION / HORROR", "SELECT: LIVE LEAD", "SEL: HOLD CURRENT / AUTO",
-        "ALGO OR K4: ENERGY", "K1: BPM  K2: SWING  K3: KEY"
+        "PRESET: ACTION / HORROR", "SELECT: LIVE LEAD", "FX: QUEUE / FORCE NEXT",
+        "SEL: HOLD / AUTO", "REC: FILL  ALGO/K4: ENERGY"
     };
     cv_begin(240, 144, C_BLACK);
     draw_text(74, 8, "GROOVEBOX HELP", C_WHITE);
@@ -6385,8 +6425,8 @@ static void groove_draw_help(void)
         cv_text(10, 30 + (int32_t)i * 21, &FONT_M, lines[i], C_HI);
     cv_blit(0, 0);
     cv_begin(240, 96, C_BLACK);
-    draw_text(10, 8, "KEYS: LIVE LEAD   REC: FILL", C_GRAY);
-    draw_text(10, 28, "PLAY: START / STOP", C_GRAY);
+    draw_text(10, 8, "KEYS: LEAD  ENV: SYNTH MUTE", C_GRAY);
+    draw_text(10, 28, "LFO: BASS MUTE  ARP: DRUM MUTE", C_GRAY);
     draw_text(10, 48, "AUTO CHANGES VARIATION EVERY 4 BARS", C_HI);
     draw_text(10, 68, "GLO, EDIT OR HOME: RETURN", C_GRAY);
     cv_blit(0, 144);
@@ -6445,6 +6485,10 @@ void app_frame(void)
         }
         plat_lights((groove_playing ? 1u << B_PLAY : 0u) | (1u << B_EDIT)
                     | (groove_help ? 1u << B_GLO : 0u)
+                    | (groove_change_queued ? 1u << B_FX : 0u)
+                    | ((groove_mutes & 1u) ? 1u << B_ENV : 0u)
+                    | ((groove_mutes & 2u) ? 1u << B_LFO : 0u)
+                    | ((groove_mutes & 4u) ? 1u << B_ARP : 0u)
                     | (groove_hold ? 1u << B_SEL : 0u) | (groove_fill ? 1u << B_REC : 0u),
                     previous_keys, 0u, 0u, 1);
         return;
@@ -6719,6 +6763,14 @@ int app_expect(const char *what, int *got)
     }
     if (text_is(what, "groove_help")) {
         *got = groove_help;
+        return 1;
+    }
+    if (text_is(what, "groove_change_queued")) {
+        *got = groove_change_queued;
+        return 1;
+    }
+    if (text_is(what, "groove_mutes")) {
+        *got = groove_mutes;
         return 1;
     }
     if (text_is(what, "groove_seeded")) {
