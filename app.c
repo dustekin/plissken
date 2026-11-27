@@ -7,6 +7,7 @@
 #include "piano_samples.h"
 #include "startup_splash.h"
 #include "jc_face.h"
+#include "warning_portrait.h"
 #include "knob_images.h"
 #include "dsp/escape_sequence.h"
 #include "dsp/halloween_sequence.h"
@@ -385,6 +386,7 @@ static uint32_t startup_splash_until;
 #define STARTUP_SCREEN_HEIGHT 240u
 #define STARTUP_SPLASH_Y ((STARTUP_SCREEN_HEIGHT - STARTUP_SPLASH_HEIGHT) / 2u)
 static uint8_t splash_booted;
+static uint8_t startup_warning_drawn;
 static uint32_t splash_sweep_frame = 0xFFFFu;
 static int8_t live_key_voice[NKEYS];
 static uint8_t live_key_instrument[NKEYS];
@@ -536,7 +538,9 @@ typedef struct {
 /* Opening: four seconds of escape_from_ny.mid from 21.0 s on the Pro-1. The repeated
    low E2/E3 pulse is represented by E4 to keep the startup clear on the FM-1.
    One beat is 33075 samples (80 BPM). */
-#define STARTUP_MS 3000u
+#define STARTUP_ART_MS 2000u
+#define STARTUP_WARNING_MS 2000u
+#define STARTUP_MS (STARTUP_ART_MS + STARTUP_WARNING_MS)
 #define SP(t, dur_q, n, v) {(t), (dur_q), (n), (v), 1u}
 static const startup_event_t startup_events[] = {
     SP(0u, 132300u, 76u, 29u),
@@ -544,10 +548,12 @@ static const startup_event_t startup_events[] = {
     SP(33075u, 22050u, 64u, 127u),
     SP(66150u, 9648u, 64u, 127u),
     SP(82688u, 40307u, 64u, 127u),
-    SP(115763u, 7925u, 62u, 84u), SP(124031u, 7925u, 64u, 84u)
+    SP(115763u, 7925u, 62u, 84u), SP(124031u, 7925u, 64u, 84u),
+    SP(132300u, 17912u, 64u, 120u), SP(148838u, 12000u, 64u, 100u),
+    SP(160838u, 7925u, 62u, 84u), SP(169106u, 7294u, 64u, 84u)
 };
 #define STARTUP_EVENTS (sizeof(startup_events) / sizeof(startup_events[0]))
-static const uint32_t startup_end = 132300u;
+static const uint32_t startup_end = 176400u;
 static uint8_t startup_active;
 static uint8_t startup_event;
 static uint32_t startup_sample;
@@ -3067,6 +3073,7 @@ void app_boot(void)
 {
     startup_requested = 1u;
     startup_splash_until = plat_ms() + STARTUP_MS;
+    startup_warning_drawn = 0u;
     splash_booted = 1u;
 }
 
@@ -3503,6 +3510,56 @@ static void splash_clear_margins(void)
     lcd_fill(0, 0, STARTUP_SPLASH_WIDTH, STARTUP_SPLASH_Y, C_BLACK);
     lcd_fill(0, STARTUP_SPLASH_Y + STARTUP_SPLASH_HEIGHT, STARTUP_SPLASH_WIDTH,
              STARTUP_SCREEN_HEIGHT - STARTUP_SPLASH_Y - STARTUP_SPLASH_HEIGHT, C_BLACK);
+}
+
+static void draw_startup_warning_portrait(void)
+{
+    static const uint16_t orange[4] = {
+        C_BLACK, RGB(120, 45, 0), RGB(235, 105, 0), RGB(255, 190, 45)
+    };
+    uint32_t i, out = 0u, run;
+    int32_t x = 240 - WARNING_PORTRAIT_WIDTH - 6;
+    int32_t y = 38;
+    for (i = 0u; i < WARNING_PORTRAIT_RLE_SIZE; i += 2u) {
+        uint8_t color = warning_portrait_rle[i + 1u];
+        for (run = 0u; run < warning_portrait_rle[i]; run++, out++)
+            if (color)
+                cv_px[(y + (int32_t)(out / WARNING_PORTRAIT_WIDTH)) * 240u + x
+                      + (int32_t)(out % WARNING_PORTRAIT_WIDTH)] = swap16(orange[color]);
+    }
+}
+
+static void startup_warning(void)
+{
+    const uint16_t dark_orange = RGB(70, 22, 0);
+    const uint16_t bright_orange = RGB(255, 150, 20);
+    int32_t text_x;
+    cv_begin(240, 144, C_BLACK);
+    cv_rect(4, 4, 232, 136, dark_orange);
+    cv_line(4, 4, 235, 4, bright_orange);
+    cv_line(4, 139, 235, 139, bright_orange);
+    cv_line(4, 4, 4, 139, bright_orange);
+    cv_line(235, 4, 235, 139, bright_orange);
+    cv_text(14, 8, &FONT_M, "NEVER INSTALL", C_WHITE);
+    cv_text(14, 38, &FONT_M, "ANY FIRMWARE VIA", C_WHITE);
+    text_x = cv_text(14, 68, &FONT_M, "BROWSER, ", C_WHITE);
+    cv_text(text_x, 68, &FONT_M, "PLISSKEN!", bright_orange);
+    cv_text(14, 102, &FONT_M, "USE M-FLASHER!", bright_orange);
+    cv_blit(0, 0);
+
+    cv_begin(240, 96, C_BLACK);
+    cv_rect(4, 0, 232, 92, dark_orange);
+    cv_line(4, 0, 235, 0, bright_orange);
+    cv_line(4, 91, 235, 91, bright_orange);
+    cv_line(4, 0, 4, 91, bright_orange);
+    cv_line(235, 0, 235, 91, bright_orange);
+    cv_text(14, 8, &FONT_S, "DEBRICKING ADVICE", C_WHITE);
+    cv_text(14, 30, &FONT_S, "IN README.MD,", C_WHITE);
+    cv_text(14, 55, &FONT_M, "SNAKE!", bright_orange);
+    draw_startup_warning_portrait();
+    cv_line(186, 78, 199, 60, bright_orange);
+    cv_line(186, 78, 201, 78, bright_orange);
+    cv_blit(0, 144);
 }
 
 void app_splash(void)
@@ -6468,7 +6525,13 @@ void app_frame(void)
     }
 #endif
     if ((int32_t)(plat_ms() - startup_splash_until) < 0) {
-        splash_sweep(STARTUP_MS - (uint32_t)(startup_splash_until - plat_ms()));
+        uint32_t elapsed = STARTUP_MS - (uint32_t)(startup_splash_until - plat_ms());
+        if (elapsed < STARTUP_ART_MS)
+            splash_sweep(elapsed);
+        else if (!startup_warning_drawn) {
+            startup_warning();
+            startup_warning_drawn = 1u;
+        }
         return;
     }
     splash_sweep_frame = 0xFFFFu;

@@ -98,6 +98,9 @@ release.
 - **User-provided portrait:** `assets/jc-face.png`, supplied for the instrument screen. The build scales it to
   48 pixels high, converts it to a four-color grayscale palette with a transparent background, and RLE-packs it
   into the generated firmware header.
+- **User-provided startup warning portrait:** `assets/vancleef2.png`, supplied by the project owner for the startup
+  safety screen. The build scales it to 48 pixels high, converts it to four grayscale shades, and recolours those
+  shades orange at render time.
 - **User-provided knob artwork:** `assets/snake-sma.png` and `assets/snake-sma2.png` through
   `assets/snake-sma4.png`, supplied for the instrument screen. The build converts the ordered 50×50 grayscale
   images to transparent, tintable shades and RLE-packs them into firmware.

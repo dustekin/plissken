@@ -164,6 +164,37 @@ documented changes.
 | **v0.13** | Adds the animated startup splash and Pro-1 startup phrase; build 014 shortens the phrase after its stacked ending distorted. Build 014 was hardware-tested and the startup no longer distorted. |
 | **v0.12** | Adds the visual five-track sequencer and saved-song Playback screen, including the Escape From Firmware track and 16 user slots. Build 012 was hardware-tested. |
 | **v0.11** | Signed firmware baseline; it predates the visual sequencer and saved-song playback. |
+
+See the [browser updater compliance report](docs/BROWSER_UPDATER_COMPLIANCE.md) for package format, OTA handshake,
+identity, flash-chip, metadata, release-workflow, and remaining hardware-test findings.
+
+## Recovering or unbricking an FM-1
+
+Charge the FM-1 first, use a known-good USB data cable, and do not unplug while writing. Make a full-flash backup
+before restoring or replacing firmware. Use only firmware and recovery procedures intended for the exact FM-1
+variant; recovery writes can erase saves and an incorrect process can damage calibration.
+
+Start with [The Firmware Hub rescue guide](https://thefirmwarehub.com/tools/rescue/) to identify the symptom and
+select the appropriate tool:
+
+- [M-Flasher](https://github.com/jvitkauskas/m-flasher): Windows, macOS and Linux; enters download mode, backs up the
+  whole flash, and installs a `.fwsc`. [Usage guide](https://github.com/jvitkauskas/m-flasher/blob/main/docs/usage.md).
+- [MvaveFM1Unbricker](https://github.com/Quixotic7/MvaveFM1Unbricker): Windows/Linux recovery with a verified full
+  backup, verified write, and byte-by-byte checks. It includes an
+  [illustrated recovery guide](https://quixotic7.github.io/MvaveFM1Unbricker/) and
+  [step-by-step repository guide](https://github.com/Quixotic7/MvaveFM1Unbricker/blob/main/UNBRICK-GUIDE.md).
+- [FM1 Recovery](https://github.com/SikkenWorks/FM1recovery): guided Windows and Android recovery flow to V15,
+  including backup and verification.
+- [Melodee `fm1-recover`](https://github.com/keremimo/melodee/blob/main/docs/RECOVERY.md): command-line recovery
+  for Windows, macOS and Linux. Check its current flash-chip support before use.
+- [Firmware Hub Linux rescue instructions](https://thefirmwarehub.com/#rescue) and
+  [felucca-bsp recovery tools](https://github.com/hugelton/felucca-bsp/tree/main/tools): command-line alternatives
+  for advanced users.
+
+If the computer sees `WL82 UBOOT1.00`, the chip's ROM bootloader is still reachable. If the device exposes no USB
+device at all, do not keep trying unrelated software methods; follow the
+[FM-1 Transporter guide](https://github.com/Quixotic7/MvaveFM1Unbricker/blob/main/TRANSPORTER-GUIDE.md) instead.
+When unsure, stop and contact the recovery guide's maintainer rather than trying installers sequentially. |
 | **v0.1** | Early tag. The tag history records the root MPL-2.0 license; no fuller release notes were found. |
 
 The **v0.20-rc1** tag builds and publishes a GitHub prerelease with its firmware package and build attestation. The
@@ -174,12 +205,14 @@ names.
 
 ## Numbered internal builds
 
-There are 53 numbered packages in the current sequence, builds 002 through 054. Build 001 is not present in the
+There are 55 numbered packages in the current sequence, builds 002 through 056. Build 001 is not present in the
 builds folder. Hardware status is marked as **tested**, **not tested**, or **not recorded**; missing notes are not
 treated as evidence of a hardware test.
 
 | Build | Summary | FM-1 hardware status |
 | --- | --- | --- |
+| 056 | Uses the revised Van Cleef startup portrait, larger fitted warning text, and a two-second warning. | Tested; user reports hardware passed |
+| 055 | Adds a one-second orange startup warning with portrait while the startup chime continues. | Not tested |
 | 054 | Replaces the Horror transition run with a low semitone swell into a fifth. | Tested; user reports it works well |
 | 053 | Reworks Groovebox into stable ostinati, octave answers, sparse bars, and long synth beds. | Not tested |
 | 052 | Adds Groovebox transition countdown, queued/forced changes, and live synth/bass/drum mutes. | Tested; user reports hardware passed |

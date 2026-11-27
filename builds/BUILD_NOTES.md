@@ -5,6 +5,28 @@ Add an entry here whenever a new build is saved.
 For every future session handoff, remind the next session to save test packages in this `builds` folder with the
 next available number, check before copying to avoid overwriting, and update these notes.
 
+## 056
+- Local `0.34-test056` is the finalized startup-warning preview candidate. It displays the `vancleef2.png`
+  portrait at 48x48 in orange shades, fits the requested wording without crossing the portrait, highlights
+  `PLISSKEN!` in orange, and shows the warning for two seconds with the startup melody continuing for four seconds.
+- All 64 host scenarios and the FM-1 target build passed. The warning screenshot and startup audio were checked.
+  The user reports the hardware test passed.
+- Device image 476,704 B; RAM .data+.bss 66,420 / 98,304 B; pool 216,676 / 344,064 B; package 614,938 B;
+  identity `FM-1_1981003400`; build ID `15E846BA`; package SHA-256
+  `DA9F736C4A5B6AB009E9C328DD37EEDCF8EBDCDD62FE6EA7F19289B3BC085EB7`.
+
+## 055
+- Local `0.34-test055` keeps the scanline startup animation and chime. The animation/splash portion now occupies
+  two seconds, followed by a one-second orange warning. The project-owner-supplied Van Cleef portrait is
+  recoloured in orange shades at the bottom right. The warning says to avoid browser firmware installation and use
+  M-Flasher, with debricking advice in README.md. The chime continues through the warning and total startup time
+  remains three seconds.
+- All 64 host scenarios passed. The startup screenshot was visually inspected, and the startup audio check passed.
+  The FM-1 target build passed. Hardware testing is pending.
+- Device image 476,400 B; RAM .data+.bss 66,420 / 98,304 B; pool 216,676 / 344,064 B; package 614,938 B;
+  identity `FM-1_1981003400`; build ID `594CFD07`; package SHA-256
+  `5213FCA4406E7CC806CFAE2560C146FCBD65199D7E330E2E4BA9C932002F7324`.
+
 ## 054
 - Local `0.34-test054` makes Horror transitions slower and more ominous. It replaces the short descending
   Pro-1 run with a low CS-50 semitone dissonance followed by a sustained Juno fifth. Manual REC fills retain a

@@ -13,6 +13,7 @@ gen = [
     "tools/pack_piano.py assets/piano-cc0 --output {gen}/piano_samples.h",
     "tools/pack_splash.py assets/startup.png --out {gen}/startup_splash.h",
     "tools/pack_portrait.py assets/jc-face.png --out {gen}/jc_face.h",
+    "tools/pack_warning_portrait.py assets/vancleef2.png --out {gen}/warning_portrait.h",
     "tools/pack_knob_images.py assets/snake-sma4.png assets/snake-sma2.png assets/snake-sma3.png assets/snake-sma.png --out {gen}/knob_images.h",
 ]
 ble = false

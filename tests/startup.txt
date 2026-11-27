@@ -1,6 +1,8 @@
 # The Pro-1 phrase plays automatically after boot.
 wav startup.wav
-wait 3600
+wait 2200
+shot startup_warning.png
+wait 4600
 wavstop
 expect peak_db_min -18
 expect peak_db_max -13
