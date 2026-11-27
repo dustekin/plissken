@@ -12,6 +12,7 @@ simple guitar power chords, electric bass, and 13 LM-1 drum samples.
 | SELECT encoder | Choose the sound played by the piano keys: Juno, piano, Pro-1, guitar, bass, LM-1 drums, CS-50/CS-80 or CHORD |
 | PRESET / ALGO knobs | Switch instrument variants: bass, guitar modes, CS-50/CS-80 patches, piano engine (ALGO), and CHORD voice/layout |
 | SEQ | Open the visual sequencer editor |
+| EDIT (tap) | Enter Groovebox; exit again with EDIT or HOME |
 | FX / SEL | FX cycles the selected sound's effect setting; SEL steps through guitar modes, bass, CS-80 and CHORD variants |
 | REC | Record, loop and replay a live phrase; EDIT + REC clears it |
 | OCT− / OCT+ | Shift the selected pitched keyboard sound down or up an octave, within −2 to +2 |
@@ -24,6 +25,28 @@ simple guitar power chords, electric bass, and 13 LM-1 drum samples.
 | SAVE | Store the current tempo on the main screen; save a named song in the sequencer editor |
 | MASTER | Set output volume |
 | Piano keys | Play the selected sound; LM-1 maps keys cyclically to its 13 samples |
+
+## Groovebox
+
+Groovebox is experimental and basic. Its patterns, transitions, controls, and mix are expected to evolve after
+more hardware listening.
+
+A short EDIT press on the main screen opens Groovebox with generated Action or Horror music. PRESET selects the
+style, SELECT changes the live lead through Juno, piano, Pro-1, guitar, bass, CS-50/CS-80 and CHORD while excluding
+LM-1 drums, and SEL holds the current variation instead of changing it automatically every
+four bars; automatic changes introduce a new melody, bass rhythm/register, drum accents and transition fill.
+Press SEL again to resume automatic changes. ALGO or K4 sets energy, K1 sets tempo, K2 changes swing,
+and K3 transposes the generated music. REC schedules a fill. PLAY starts or stops the accompaniment. GLO opens
+the Groovebox help screen without stopping playback. Piano keys remain available as a live lead using the
+currently selected Plissken instrument.
+From Playback, EDIT enters Groovebox; SEQ or a piano key still opens the selected song in the sequencer.
+
+Action has syncopated LM-1 rhythm, Pro-1 arpeggios, piano stabs and restrained bass at 132 BPM. Horror begins at
+92 BPM with sustained CS-50, piano stabs, sparse bass and drums, minor-second Juno tension and descending Pro-1
+fills. Startup and four-bar transitions randomly select sections without immediately repeating the current one.
+Generated and live notes fall down the display in Plissken's instrument colours. EDIT or HOME exits, releases all
+live notes and restores the previous main-screen tempo. Groovebox is generated from original patterns rather than
+playing the supplied reference recordings or reproducing their MIDI melodies.
 
 The sequencer displays one whole bar at a time; the number of steps depends on the time signature.
 In the sequencer editor, PRESET chooses one of four pitched-sound tracks or the fifth LM-1 track, ALGO moves the step cursor, SELECT sets the pitched track's

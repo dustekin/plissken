@@ -22,7 +22,7 @@ tap REC
 release EDIT
 tap HOME
 tap PLAY
-tap EDIT
+tap SEQ
 expect seq_events 949
 spin PRESET 4
 press EDIT

@@ -86,6 +86,37 @@ padded to whole bars. Older firmware may not recognize the new factory arrangeme
 Build 044 also rejects note lengths that would exceed the 128-bar song limit and includes live editor keys in the
 five-voice playback budget. Live notes may be skipped or cut according to the same priorities as sequenced notes.
 
+## Groovebox
+
+**Experimental and basic:** Groovebox is an early performance mode. Its patterns, transitions, controls, and mix
+may change substantially after further hardware listening.
+
+Tap **EDIT** on the main screen to enter the one-key Groovebox. It generates original, live Action and Horror
+patterns in the John Carpenter-inspired synth-soundtrack style without storing or playing the supplied reference
+recordings. Action uses a driving 132 BPM pulse, Pro-1 arpeggios, piano stabs, restrained bass, and LM-1 rhythm.
+Horror starts at 92 BPM with sustained CS-50, piano stabs, a sparse pulse, minor-second tension, and descending fills.
+Each entry and four-bar transition uses a fresh random section while avoiding immediate repetition.
+
+- **PRESET** switches Action / Horror.
+- **SELECT** cycles the live lead through Juno, piano, Pro-1, guitar, bass, CS-50/CS-80 and CHORD; LM-1 drums
+  are excluded.
+- Variations change automatically every four bars, with a new melodic sequence, bass rhythm/register, drum accents,
+  and a transition fill. Press **SEL** to hold the current variation; press it again to resume automatic changes.
+- **GLO** opens Groovebox help and returns to the performance screen without stopping playback.
+- **ALGO** and **K4** set energy.
+- **K1** changes tempo, **K2** changes swing, and **K3** transposes the generated music.
+- **REC** schedules a fill for the current phrase.
+- **PLAY** starts or stops the accompaniment.
+- Piano keys remain live lead instruments and use the selected main-screen sound.
+- **EDIT** or **HOME** stops playback, releases live notes, restores the previous tempo, and exits.
+
+From the saved-song Playback screen, **EDIT** opens Groovebox instead of loading the selected song; use **SEQ** or a
+piano key to edit the song. Playback and main-screen GLO help both mention this shortcut.
+
+The accompaniment uses prioritized stealing, reserving room for live lead; generated notes and live lead are
+shown as short instrument-coloured trails falling through the upper display. Action and Horror patterns are
+compact algorithms, not copied MIDI arrangements or embedded MP3 audio.
+
 ## Known issues
 
 - Pressing two piano keys in CHORD mode with JUNO or PRO-1 selected can cause distortion. In an earlier build 035
@@ -136,12 +167,18 @@ names.
 
 ## Numbered internal builds
 
-There are 44 numbered packages in the current sequence, builds 002 through 045. Build 001 is not present in the
+There are 50 numbered packages in the current sequence, builds 002 through 051. Build 001 is not present in the
 builds folder. Hardware status is marked as **tested**, **not tested**, or **not recorded**; missing notes are not
 treated as evidence of a hardware test.
 
 | Build | Summary | FM-1 hardware status |
 | --- | --- | --- |
+| 051 | Randomizes Groovebox startup/transitions and foregrounds piano and Pro-1 with less bass. | Tested; user reports hardware passed |
+| 050 | Adds Groovebox entry help and selectable live lead instruments while excluding drums. | Tested; user reports hardware passed |
+| 049 | Makes Groovebox four-bar changes audible with distinct melodies, bass, drums, registers, and fills. | Not tested |
+| 048 | Changes Groovebox variations every four bars, adds SEL hold, and opens controls with GLO. | Not tested |
+| 047 | Makes Groovebox EDIT entry reliable with MASTER jitter and preserves EDIT+knob modifiers. | Not tested |
+| 046 | Adds Action and Horror Groovebox patterns, live lead, and an instrument-coloured note waterfall. | Not tested |
 | 045 | Adds per-note and bar sound changes, instrument colours, and safe working-song clear. | Tested; user reports it works |
 | 044 | Preserves Escape opening silence, prevents invalid note lengths, and budgets live preview voices. | Tested; user reports it works fine |
 | 043 | Starts untouched factory Escape at the first drum hit while preserving edited saves. | Tested; hardware test passed |

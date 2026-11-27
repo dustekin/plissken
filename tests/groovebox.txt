@@ -1,0 +1,79 @@
+# Action and Horror groovebox playback, controls, live lead and clean exit.
+wait 2000
+press EDIT
+master 2049
+wait 20
+release EDIT
+expect groove_mode 1
+expect groove_playing 1
+expect groove_style 0
+expect tempo 132
+expect groove_seeded 1
+wait 700
+expect groove_visual_count >0
+expect hits4 >0
+expect hits5 >0
+expect hits1 >0
+expect hits2 >0
+expect groove_mix_peak_milli <1000
+turn SELECT 1
+expect instrument 2
+turn SELECT 3
+expect instrument 6
+turn ALGO 1
+expect groove_intensity 3
+turn PRESET 1
+expect groove_style 1
+expect tempo 92
+wait 700
+expect hits0 >0
+expect hits5 >0
+expect groove_mix_peak_milli <1000
+tap PLAY
+expect groove_playing 0
+key 0 down 50
+key 0 up
+tap PLAY
+expect groove_playing 1
+key 1 down 100
+wait 50
+key 1 up
+expect groove_visual_count >0
+tap GLO
+expect groove_help 1
+tap GLO
+expect groove_help 0
+tap SEL
+expect groove_hold 1
+tap PLAY
+tap PLAY
+wait 11000
+expect groove_variation >=0
+expect groove_transitions 0
+tap SEL
+expect groove_hold 0
+tap PLAY
+tap PLAY
+wait 11000
+expect groove_variation >=0
+expect groove_transitions >0
+tap EDIT
+expect groove_mode 0
+expect tempo 80
+expect seq_screen 0
+tap EDIT
+expect groove_mode 1
+tap HOME
+expect groove_mode 0
+# EDIT remains a modifier; a long or used press must not enter Groovebox.
+press EDIT
+turn K1 1
+release EDIT
+expect groove_mode 0
+tap PLAY
+expect playback_mode 1
+tap EDIT
+expect groove_mode 1
+tap HOME
+expect playback_mode 1
+tap HOME

@@ -95,6 +95,6 @@ reboot
 expect seq_saved 19
 tap PLAY
 spin PRESET 15
-tap EDIT
+tap SEQ
 expect seq_note 54
 tap HOME

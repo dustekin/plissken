@@ -3,7 +3,7 @@ wait 2000
 expect seq_saved 3
 tap PLAY
 expect playback_mode 1
-tap EDIT
+tap SEQ
 expect seq_screen 1
 expect seq_events 949
 expect seq_bars 63
@@ -49,7 +49,7 @@ flash_fail 0
 tap REC
 tap REC
 expect seq_saved 2
-tap EDIT
+tap SEQ
 expect seq_bars 80
 tap HOME
 reboot

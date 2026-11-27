@@ -19,7 +19,7 @@ tap SAVE
 tap SAVE
 reboot
 tap PLAY
-tap EDIT
+tap SEQ
 expect seq_screen 1
 spin ALGO 2047
 expect seq_note 53
@@ -42,7 +42,7 @@ tap SAVE
 reboot
 tap PLAY
 spin PRESET 1
-tap EDIT
+tap SEQ
 spin ALGO 1984
 expect seq_note 54
 expect seq_event_duration 6

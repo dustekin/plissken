@@ -21,7 +21,7 @@ tap PLAY
 wait 100
 expect hits0 0
 expect hits5 0
-tap EDIT
+tap SEQ
 expect seq_bars 71
 expect seq_tempo 81
 spin ALGO 112

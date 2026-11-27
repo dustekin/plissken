@@ -6,7 +6,7 @@ wait 100
 expect hits5 >0
 expect hits0 0
 tap PLAY
-tap EDIT
+tap SEQ
 expect seq_events 949
 expect seq_bars 63
 expect seq_note -1

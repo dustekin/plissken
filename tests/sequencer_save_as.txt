@@ -37,20 +37,20 @@ tap SAVE
 expect seq_saved 5
 reboot
 tap PLAY
-tap EDIT
+tap SEQ
 spin ALGO 1
 expect seq_note 54
 tap HOME
 tap PLAY
 spin PRESET 1
-tap EDIT
+tap SEQ
 spin ALGO 1
 expect seq_note 55
 tap HOME
 # Saving a built-in as a user copy must not change its source.
 tap PLAY
 spin PRESET 2
-tap EDIT
+tap SEQ
 expect seq_tempo 80
 press EDIT
 spin K1 10
@@ -68,11 +68,11 @@ expect seq_saved 6
 reboot
 tap PLAY
 spin PRESET 2
-tap EDIT
+tap SEQ
 expect seq_tempo 95
 tap HOME
 tap PLAY
 spin PRESET 3
-tap EDIT
+tap SEQ
 expect seq_tempo 80
 tap HOME

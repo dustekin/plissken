@@ -5,6 +5,67 @@ Add an entry here whenever a new build is saved.
 For every future session handoff, remind the next session to save test packages in this `builds` folder with the
 next available number, check before copying to avoid overwriting, and update these notes.
 
+## 051
+- Local `0.34-test051` seeds Groovebox startup from time and audio-state noise, then randomly chooses a different
+  four-bar section at each transition. Piano stabs and Pro-1 phrases are more frequent and louder, while bass notes
+  are reduced, especially in Horror. Action remains rhythm-driven and Horror remains synth-led.
+- All 64 host scenarios passed, including piano/Pro-1 activity, random transition, hold behavior and clipping checks.
+  The FM-1 target build passed. The user reports the hardware test passed. Groovebox remains experimental and
+  basic, with its patterns and mix expected to change.
+- Device image 475,196 B; RAM .data+.bss 66,404 / 98,304 B; pool 216,676 / 344,064 B; package 614,938 B;
+  identity `FM-1_1981003400`; build ID `C4A6079B`; package SHA-256
+  `3F8B2AFC3CDBBA98EB6E710270271DDB40746DCF8DB85C1D51B926EE58ADED47`.
+
+## 050
+- Local `0.34-test050` labels EDIT as the Groovebox entry on the Playback screen and in Playback GLO help, while
+  retaining SEQ/key song editing. SELECT in Groovebox now switches the live lead through every main-screen
+  pitched sound, including CHORD, and skips LM-1 drums. Groovebox and main help document the controls.
+- All 64 host scenarios passed after updating Playback editing tests to use SEQ. The focused Groovebox test
+  verifies drum skipping and EDIT entry from Playback. The FM-1 target build passed. The user reports the
+  hardware tests passed.
+- Device image 474,828 B; RAM .data+.bss 66,404 / 98,304 B; pool 216,676 / 344,064 B; package 614,938 B;
+  identity `FM-1_1981003400`; build ID `71C291AA`; package SHA-256
+  `4AC910A727B6D3C9E4425B1F9BB4E30CD3B4B756B90703A446D5C32D477E3A96`.
+
+## 049
+- Local `0.34-test049` makes each Action and Horror Groovebox variation a distinct musical section. Four-bar
+  changes now select different melody and bass sequences, register/rhythm choices, drum accents, and a transition
+  fill; the section is deterministic so automatic playback remains repeatable. SEL still holds a section.
+- All 64 host scenarios passed, including automatic variation and hold behavior. The FM-1 target build passed.
+  Hardware listening is pending.
+- Device image 474,764 B; RAM .data+.bss 66,404 / 98,304 B; pool 216,676 / 344,064 B; package 614,938 B;
+  identity `FM-1_1981003400`; build ID `AECA6ED7`; package SHA-256
+  `DA05889292F7093C09B99DB868A1B35C48B0FDC96A3A9506AA3E1957D02B9D7E`.
+
+## 048
+- Local `0.34-test048` automatically advances the Groovebox variation every four bars. SEL toggles a hold on the
+  current variation, and GLO opens a dedicated help screen without stopping playback.
+- All 64 host scenarios passed, including automatic and held variations plus GLO help. The FM-1 target build
+  passed. Hardware testing is pending.
+- Device image 474,476 B; RAM .data+.bss 66,404 / 98,304 B; pool 216,676 / 344,064 B; package 614,938 B;
+  identity `FM-1_1981003400`; build ID `77BF29B5`; package SHA-256
+  `10335E141EBEB85C0B87A9C1354E703A8851E8C44691528C3FD7FE049D2F7AFF`.
+
+## 047
+- Local `0.34-test047` fixes Groovebox entry on hardware by ignoring small MASTER ADC movement while EDIT is held.
+  Only a short unused EDIT press enters Groovebox; long presses and EDIT+knob modifiers remain modifiers.
+- All 64 host scenarios passed, including MASTER movement during the EDIT press. The FM-1 target build passed.
+  Hardware testing is pending.
+- Device image 473,596 B; RAM .data+.bss 66,404 / 98,304 B; pool 216,676 / 344,064 B; package 614,938 B;
+  identity `FM-1_1981003400`; build ID `700A9841`; package SHA-256
+  `39917766AD4648CF9CD312FA0F8C465D3C6365FBC0578800864FA4CD39979AAF`.
+
+## 046
+- Local `0.34-test046` adds a one-tap EDIT Groovebox with original generated Action and Horror patterns, live
+  piano-key lead, four-voice accompaniment plus the live voice, variation, energy, swing, transposition and fill
+  controls, and an instrument-coloured waterfall display. Reference MP3 and MIDI files are not embedded.
+- All 64 host scenarios passed, including the focused Groovebox controls, playback, live lead and mix checks.
+  Action and Horror raw mix peaks remained below 1.0 in the host scenario. The FM-1 target build passed.
+  Hardware testing is pending.
+- Device image 473,708 B; RAM .data+.bss 66,388 / 98,304 B; pool 216,676 / 344,064 B; package 614,938 B;
+  identity `FM-1_1981003400`; build ID `719D3903`; package SHA-256
+  `0E5E61E7B204F0807FFDC6C57ABF27E64FD057B3CD8128A28EF2B11A0862A106`.
+
 ## 045
 - Local `0.33-test045` adds per-note instrument and variant selection, instrument-coloured notes, confirmed
   bar-wide sound changes, and confirmed working-song clear without deleting the saved song. The five-voice

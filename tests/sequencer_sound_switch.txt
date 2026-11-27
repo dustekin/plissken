@@ -43,7 +43,7 @@ spin PRESET 1
 tap SAVE
 reboot
 tap PLAY
-tap EDIT
+tap SEQ
 expect seq_default_instrument 1
 expect seq_event_instrument 0
 spin ALGO 1

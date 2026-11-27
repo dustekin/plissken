@@ -31,7 +31,7 @@ tap SAVE
 expect seq_saved 5
 tap HOME
 tap PLAY
-tap EDIT
+tap SEQ
 # The clipboard survives loading another song; a tail spanning the destination remains untouched.
 press EDIT
 spin ALGO 2
@@ -47,7 +47,7 @@ tap SAVE
 tap SAVE
 reboot
 tap PLAY
-tap EDIT
+tap SEQ
 expect seq_bars 4
 spin ALGO 19
 expect seq_note 53

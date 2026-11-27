@@ -89,7 +89,7 @@ spin PRESET 1
 tap SAVE
 reboot
 tap PLAY
-tap EDIT
+tap SEQ
 spin ALGO 18
 expect seq_note 53
 press EDIT

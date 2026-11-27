@@ -3,7 +3,7 @@ wait 4000
 expect test_previous_escape 1
 reboot
 tap PLAY
-tap EDIT
+tap SEQ
 expect seq_events 949
 expect seq_bars 63
 expect seq_note -1
@@ -17,7 +17,7 @@ expect hits0 0
 tap HOME
 expect test_previous_escape 1
 tap PLAY
-tap EDIT
+tap SEQ
 expect seq_note 76
 tapkey 0
 expect seq_note 53
@@ -26,7 +26,7 @@ tap SAVE
 tap HOME
 reboot
 tap PLAY
-tap EDIT
+tap SEQ
 expect seq_events 950
 expect seq_bars 64
 expect seq_note 53

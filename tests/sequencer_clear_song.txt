@@ -57,18 +57,18 @@ tap SAVE
 expect seq_saved 5
 reboot
 tap PLAY
-tap EDIT
+tap SEQ
 expect seq_note 53
 tap HOME
 tap PLAY
 spin PRESET 1
-tap EDIT
+tap SEQ
 expect seq_note 56
 # A built-in is retained after clearing and saving a new song.
 tap HOME
 tap PLAY
 spin PRESET 2
-tap EDIT
+tap SEQ
 expect seq_tempo 80
 press EDIT
 tap HOME
@@ -83,6 +83,6 @@ expect seq_saved 6
 reboot
 tap PLAY
 spin PRESET 3
-tap EDIT
+tap SEQ
 expect seq_tempo 80
 expect seq_events 949

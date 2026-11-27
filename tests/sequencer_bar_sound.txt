@@ -71,7 +71,7 @@ spin PRESET 1
 tap SAVE
 reboot
 tap PLAY
-tap EDIT
+tap SEQ
 press EDIT
 spin ALGO 1
 release EDIT

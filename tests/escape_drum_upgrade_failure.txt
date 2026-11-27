@@ -8,7 +8,7 @@ expect seq_warning 7
 tap PLAY
 wait 100
 expect hits0 >0
-tap EDIT
+tap SEQ
 expect seq_events 950
 expect seq_bars 64
 expect seq_note 76
@@ -16,7 +16,7 @@ tap HOME
 flash_fail 0
 reboot
 tap PLAY
-tap EDIT
+tap SEQ
 expect seq_events 949
 expect seq_bars 63
 expect seq_note -1
