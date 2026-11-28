@@ -2,7 +2,7 @@
 
 **HUMAN CONTENT**
 
-WARNING - One user has reported bricking after installing but thry didn't use F-Install. I highly recommend you don't use browser installers for firmware, they seem to cause problems! I have hardware tested Plissken multiple times, including here https://youtube.com/shorts/GOW90MxLPbM?feature=share. Please always use a bootloader!
+WARNING - One user has reported bricking after installing but they didn't use F-Install. I highly recommend you don't use browser installers for firmware, they seem to cause problems! I have hardware tested Plissken multiple times, including here https://youtube.com/shorts/GOW90MxLPbM?feature=share. Please always use a bootloader!
 
 Here is a guide to FM-Flasher bootloader https://youtu.be/6htjeFKx5Wo?is=Yi9R9PAuOM8itAnM
 
